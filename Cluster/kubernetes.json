@@ -1,0 +1,50 @@
+{
+  "apiVersion": "vlabs",
+  "properties": {
+    "orchestratorProfile": {
+      "orchestratorType": "Kubernetes",
+      "orchestratorRelease": "1.10",
+      "kubernetesConfig": {
+        "networkPolicy": "calico"
+      }
+    },
+    "masterProfile": {
+      "count": 1,
+      "vmSize": "Standard_D2_v2"
+    },
+    "agentPoolProfiles": [
+      {
+        "name": "agentpool1",
+        "count": 2,
+        "vmSize": "Standard_D4_v3",
+        "availabilityProfile": "AvailabilitySet",
+        "extensions": [
+          { 
+            "name": "prometheus-grafana-k8s"
+          }
+        ]
+      }
+    ],
+    "linuxProfile": {
+      "adminUsername": "azureuser",
+      "ssh": {
+        "publicKeys": [
+          {
+            "keyData": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDd9blxUntfTxCAt1EAibYn6IUccWmu1CDSa11TtKUEcoxZg+y3w+RP+pB+rj58GMJnNR0LlPW7D/VIMfyGaDpLugGZUj13ybw8ONczBvIvGx3O74s4XHaw4Cfm17WFGqgS+f39O6jitmh5vYlPAcTJeUfRzsyZfn5pqAPZE39Wz7K+slodBER5P7iTG0mv6TS5y0NJW10dOGPN4N+LDnE2LYf5BiesZ8vtdV2/X5Jyw6nhjPPKYrYZRq3PS6I19KbH+03+TrKMcCXtpPp47fq0UXICkbA9zxAWO26s4m8LGOi8Z4BNUFQyxKhzOs/N1BRXk53SbVHJua4b4Nia9reT"
+          }
+        ]
+      }
+    },
+    "extensionProfiles": [
+      { 
+        "name": "prometheus-grafana-k8s", 
+        "version": "v1",
+        "rootURL": "https://raw.githubusercontent.com/Azure/acs-engine/master/"
+      }
+    ],
+    "servicePrincipalProfile": {
+      "clientId": "bd40ff65-be08-4d1e-8002-02e9c00344ce",
+      "secret": "04010265-c540-4980-9875-3a9eb2c6b87b"
+    }
+  }
+}

@@ -1,0 +1,67 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26124.0
+MinimumVisualStudioVersion = 15.0.26124.0
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Common", "Common\Common.csproj", "{202E8615-0FB5-46F2-85FB-2B7905EB0574}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Portal", "Portal\Portal.csproj", "{3DEAACE4-7B58-465B-B258-D97441B514D2}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Test", "Test", "{E3846F04-BD74-46F3-9D13-F78840CFB0C3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Common", "Test\Common\CommonTest.csproj", "{013A60B3-A929-43E6-82B1-C8D774DFC736}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{202E8615-0FB5-46F2-85FB-2B7905EB0574}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{202E8615-0FB5-46F2-85FB-2B7905EB0574}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{202E8615-0FB5-46F2-85FB-2B7905EB0574}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{202E8615-0FB5-46F2-85FB-2B7905EB0574}.Debug|x64.Build.0 = Debug|Any CPU
+		{202E8615-0FB5-46F2-85FB-2B7905EB0574}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{202E8615-0FB5-46F2-85FB-2B7905EB0574}.Debug|x86.Build.0 = Debug|Any CPU
+		{202E8615-0FB5-46F2-85FB-2B7905EB0574}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{202E8615-0FB5-46F2-85FB-2B7905EB0574}.Release|Any CPU.Build.0 = Release|Any CPU
+		{202E8615-0FB5-46F2-85FB-2B7905EB0574}.Release|x64.ActiveCfg = Release|Any CPU
+		{202E8615-0FB5-46F2-85FB-2B7905EB0574}.Release|x64.Build.0 = Release|Any CPU
+		{202E8615-0FB5-46F2-85FB-2B7905EB0574}.Release|x86.ActiveCfg = Release|Any CPU
+		{202E8615-0FB5-46F2-85FB-2B7905EB0574}.Release|x86.Build.0 = Release|Any CPU
+		{3DEAACE4-7B58-465B-B258-D97441B514D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3DEAACE4-7B58-465B-B258-D97441B514D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3DEAACE4-7B58-465B-B258-D97441B514D2}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{3DEAACE4-7B58-465B-B258-D97441B514D2}.Debug|x64.Build.0 = Debug|Any CPU
+		{3DEAACE4-7B58-465B-B258-D97441B514D2}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{3DEAACE4-7B58-465B-B258-D97441B514D2}.Debug|x86.Build.0 = Debug|Any CPU
+		{3DEAACE4-7B58-465B-B258-D97441B514D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3DEAACE4-7B58-465B-B258-D97441B514D2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3DEAACE4-7B58-465B-B258-D97441B514D2}.Release|x64.ActiveCfg = Release|Any CPU
+		{3DEAACE4-7B58-465B-B258-D97441B514D2}.Release|x64.Build.0 = Release|Any CPU
+		{3DEAACE4-7B58-465B-B258-D97441B514D2}.Release|x86.ActiveCfg = Release|Any CPU
+		{3DEAACE4-7B58-465B-B258-D97441B514D2}.Release|x86.Build.0 = Release|Any CPU
+		{013A60B3-A929-43E6-82B1-C8D774DFC736}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{013A60B3-A929-43E6-82B1-C8D774DFC736}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{013A60B3-A929-43E6-82B1-C8D774DFC736}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{013A60B3-A929-43E6-82B1-C8D774DFC736}.Debug|x64.Build.0 = Debug|Any CPU
+		{013A60B3-A929-43E6-82B1-C8D774DFC736}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{013A60B3-A929-43E6-82B1-C8D774DFC736}.Debug|x86.Build.0 = Debug|Any CPU
+		{013A60B3-A929-43E6-82B1-C8D774DFC736}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{013A60B3-A929-43E6-82B1-C8D774DFC736}.Release|Any CPU.Build.0 = Release|Any CPU
+		{013A60B3-A929-43E6-82B1-C8D774DFC736}.Release|x64.ActiveCfg = Release|Any CPU
+		{013A60B3-A929-43E6-82B1-C8D774DFC736}.Release|x64.Build.0 = Release|Any CPU
+		{013A60B3-A929-43E6-82B1-C8D774DFC736}.Release|x86.ActiveCfg = Release|Any CPU
+		{013A60B3-A929-43E6-82B1-C8D774DFC736}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{013A60B3-A929-43E6-82B1-C8D774DFC736} = {E3846F04-BD74-46F3-9D13-F78840CFB0C3}
+	EndGlobalSection
+EndGlobal

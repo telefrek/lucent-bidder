@@ -1,0 +1,28 @@
+@model List<Lucent.Portal.Entities.Creative>
+<h2>Creatives</h2>
+<form method="post">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var creative in Model)
+            {
+                <tr>
+                    <td>@creative.Id</td>
+                    <td>@creative.Name</td>
+                    <td>
+                        <a asp-page="./Edit" asp-route-id="@creative.Id">edit</a>
+                        <button type="submit" asp-page-handler="delete" 
+                                asp-route-id="@creative.Id">delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <a asp-page="./Create">Create</a>
+</form>

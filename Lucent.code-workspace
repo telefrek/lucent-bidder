@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"editor.wordWrap": "on",
+		"editor.wordSeparators": "`~!@#$%^&*(-=+[{]}\\|:'\",.<>/?",
+		"editor.wrappingIndent": "indent",
+		"editor.wordWrapColumn": 100
+	}
+}
