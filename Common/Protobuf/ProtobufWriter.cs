@@ -34,6 +34,10 @@ namespace Lucent.Common.Protobuf
         /// </summary>
         public void Flush() => _raw.Flush();
 
+        /// <summary>
+        /// Flushes the underlying stream asynchronously
+        /// </summary>
+        /// <returns></returns>
         public async Task FlushAsync() => await _raw.FlushAsync();
 
         /// <summary>
