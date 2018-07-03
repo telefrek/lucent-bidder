@@ -427,7 +427,7 @@ namespace Lucent.Common.Protobuf
         /// </summary>
         public void Close()
         {
-            if(!_leaveOpen)
+            if (!_leaveOpen)
                 _raw.Close();
         }
 
@@ -480,7 +480,7 @@ namespace Lucent.Common.Protobuf
     /// </summary>
     sealed class LenEncodedReader : ProtobufReader
     {
-        long _rem;
+        long _endOfStream;
 
         /// <summary>
         /// Default constructor
@@ -488,7 +488,7 @@ namespace Lucent.Common.Protobuf
         /// <param name="s"></param>
         /// <param name="length"></param>
         /// <returns></returns>
-        public LenEncodedReader(Stream s, long length) : base(s, true) => _rem = length;
+        public LenEncodedReader(Stream s, long length) : base(s, true) => _endOfStream = s.Position + length;
 
         /// <summary>
         /// Check if there is more data on the stream
@@ -496,7 +496,7 @@ namespace Lucent.Common.Protobuf
         /// <returns>False if the stream is empty</returns>
         public sealed override bool Read()
         {
-            if (_rem > 0)
+            if (_raw.Position < _endOfStream)
                 return base.Read();
 
             return false;
@@ -508,143 +508,17 @@ namespace Lucent.Common.Protobuf
         /// <returns>False if the stream is empty</returns>
         public sealed override async Task<bool> ReadAsync()
         {
-            if (_rem > 0)
+            if (_raw.Position < _endOfStream)
                 return await base.ReadAsync();
 
             return false;
         }
 
         /// <summary>
-        /// Utility method to get an object reader for embedded messages
+        /// Check if the stream is done
         /// </summary>
-        /// <returns></returns>
-        public override ProtobufReader GetNextMessageReader()
-        {
-            var reader = new LenEncodedReader(this._raw, (long)ReadVarint());
-            _rem -= reader._rem;
-            return reader;
-        }
-
-        /// <summary>
-        /// Utility method to get an object reader for embedded messages
-        /// </summary>
-        /// <returns></returns>
-        public override async Task<ProtobufReader> GetNextMessageReaderAsync()
-        {
-            var reader = new LenEncodedReader(this._raw, (long)await ReadVarintAsync());
-            _rem -= reader._rem;
-            return reader;
-        }
-
-        public sealed override bool IsEmpty() => _rem <= 0;
-
-        /// <summary>
-        /// Read the next encoded value as a string
-        /// </summary>
-        /// <returns>A UTF-8 string representation of the value</returns>
-        public sealed override string ReadString()
-        {
-            var start = _raw.Position;
-            var s = base.ReadString();
-            _rem -= _raw.Position - start;
-
-            return s;
-        }
-
-        /// <summary>
-        /// Read the next encoded value as a string
-        /// </summary>
-        /// <returns>A UTF-8 string representation of the value</returns>
-        public sealed override async Task<string> ReadStringAsync()
-        {
-            var start = _raw.Position;
-            var s = await base.ReadStringAsync();
-            _rem -= _raw.Position - start;
-
-            return s;
-        }
-
-        /// <summary>
-        /// Read a fixed 32 bit field from the stream
-        /// </summary>
-        /// <returns>An unsigned integer (4 bytes)</returns>
-        public sealed override uint ReadFixed32()
-        {
-            _rem -= 4;
-            return base.ReadFixed32();
-        }
-
-        /// <summary>
-        /// Read a fixed 32 bit field from the stream
-        /// </summary>
-        /// <returns>An unsigned integer (4 bytes)</returns>
-        public sealed override async Task<uint> ReadFixed32Async()
-        {
-            _rem -= 4;
-            return await base.ReadFixed32Async();
-        }
-
-        /// <summary>
-        /// Read a fixed 64 bit field from the stream
-        /// </summary>
-        /// <returns>An unsigned long (8 bytes)</returns>
-        public sealed override ulong ReadFixed64()
-        {
-            _rem -= 8;
-            return base.ReadFixed64();
-        }
-
-        /// <summary>
-        /// Read a fixed 64 bit field from the stream
-        /// </summary>
-        /// <returns>An unsigned long (8 bytes)</returns>
-        public sealed override async Task<ulong> ReadFixed64Async()
-        {
-            _rem -= 8;
-            return await base.ReadFixed64Async();
-        }
-
-        /// <summary>
-        /// Read the next variable sized numeric value from the stream
-        /// </summary>
-        /// <returns>The raw bytes representing the number</returns>
-        protected sealed override ulong ReadVarint()
-        {
-            var v = 0UL;
-
-            // Read the next N bytes off the stream
-            for (var i = 0; i < 8; ++i)
-            {
-                _rem--;
-                var b = (byte)_raw.ReadByte();
-                v |= (ulong)(b & 0x7F) << (i * 7);
-                if ((b & 0x80) == 0)
-                    break;
-            }
-
-            return v;
-        }
-
-        /// <summary>
-        /// Read the next variable sized numeric value from the stream
-        /// </summary>
-        /// <returns>The raw bytes representing the number</returns>
-        protected sealed override Task<ulong> ReadVarintAsync()
-        {
-            var v = 0UL;
-
-            // Read the next N bytes off the stream
-            for (var i = 0; i < 8; ++i)
-            {
-                _rem--;
-                var b = (byte)_raw.ReadByte();
-                v |= (ulong)(b & 0x7F) << (i * 7);
-                if ((b & 0x80) == 0)
-                    break;
-            }
-
-            return Task.FromResult(v);
-        }
+        /// <returns>True if we have consumed all of our alloted capacity</returns>
+        public sealed override bool IsEmpty() => _raw.Position >= _endOfStream;
 
         protected sealed override void _Dispose(bool disposing)
         {
