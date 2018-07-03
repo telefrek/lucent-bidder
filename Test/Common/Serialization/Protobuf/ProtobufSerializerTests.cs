@@ -87,7 +87,7 @@ namespace Lucent.Common.Serialization.Protobuf.Test
                 {
                     Age = 1,
                     Name = "Test",
-                    Keywords = new string[] { "Key1", "Key 2" },
+                    Keywords = new string[] { "Key1", "ᚠᛇᚻ᛫ᛒᛦᚦ᛫ᚠᚱᚩᚠᚢᚱ᛫ᚠᛁᚱᚪ᛫ᚷᛖᚻᚹᛦᛚᚳᚢᛗ" },
                 };
 
                 var prop = new ProtobufProperty { PropertyIndex = 0, Type = WireType.LEN_ENCODED };

@@ -123,8 +123,9 @@ namespace Lucent.Common.Protobuf
         /// <param name="value">The string to write</param>
         public void Write(string value)
         {
-            WriteVarint((ulong)value.Length);
-            _raw.Write(Encoding.UTF8.GetBytes(value), 0, Encoding.UTF8.GetByteCount(value));
+            var bytes = Encoding.UTF8.GetBytes(value);
+            Write(bytes.Length);            
+            _raw.Write(bytes, 0, bytes.Length);
         }
 
         /// <summary>
