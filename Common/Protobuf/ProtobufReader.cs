@@ -215,7 +215,7 @@ namespace Lucent.Common.Protobuf
         /// Utility method to get an object reader for embedded messages
         /// </summary>
         /// <returns></returns>
-        public ProtobufReader GetNextMessageReader() => new LenEncodedReader(this._raw, ReadInt64());
+        public virtual ProtobufReader GetNextMessageReader() => new LenEncodedReader(this._raw, (long)ReadVarint());
 
         /// <summary>
         /// Read the next variable sized numeric value from the stream
@@ -400,7 +400,7 @@ namespace Lucent.Common.Protobuf
         /// Utility method to get an object reader for embedded messages
         /// </summary>
         /// <returns></returns>
-        public async Task<ProtobufReader> GetNextMessageReaderAsync() => new LenEncodedReader(this._raw, await ReadInt64Async());
+        public virtual async Task<ProtobufReader> GetNextMessageReaderAsync() => new LenEncodedReader(this._raw, (long)await ReadVarintAsync());
 
         /// <summary>
         /// Read the next variable sized numeric value from the stream
@@ -514,6 +514,28 @@ namespace Lucent.Common.Protobuf
             return false;
         }
 
+        /// <summary>
+        /// Utility method to get an object reader for embedded messages
+        /// </summary>
+        /// <returns></returns>
+        public override ProtobufReader GetNextMessageReader()
+        {
+            var reader = new LenEncodedReader(this._raw, (long)ReadVarint());
+            _rem -= reader._rem;
+            return reader;
+        }
+
+        /// <summary>
+        /// Utility method to get an object reader for embedded messages
+        /// </summary>
+        /// <returns></returns>
+        public override async Task<ProtobufReader> GetNextMessageReaderAsync()
+        {
+            var reader = new LenEncodedReader(this._raw, (long)await ReadVarintAsync());
+            _rem -= reader._rem;
+            return reader;
+        }
+
         public sealed override bool IsEmpty() => _rem <= 0;
 
         /// <summary>
@@ -522,8 +544,9 @@ namespace Lucent.Common.Protobuf
         /// <returns>A UTF-8 string representation of the value</returns>
         public sealed override string ReadString()
         {
+            var start = _raw.Position;
             var s = base.ReadString();
-            _rem -= (s ?? "").Length;
+            _rem -= _raw.Position - start;
 
             return s;
         }
@@ -534,8 +557,9 @@ namespace Lucent.Common.Protobuf
         /// <returns>A UTF-8 string representation of the value</returns>
         public sealed override async Task<string> ReadStringAsync()
         {
+            var start = _raw.Position;
             var s = await base.ReadStringAsync();
-            _rem -= (s ?? "").Length;
+            _rem -= _raw.Position - start;
 
             return s;
         }

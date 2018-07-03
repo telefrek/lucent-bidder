@@ -60,7 +60,7 @@ namespace Lucent.Common.Protobuf
         /// <param name="src">The source writer to copy from</param>
         public void CopyFrom(ProtobufWriter src)
         {
-            WriteFixed64((ulong)src._raw.Length);
+            WriteVarint((ulong)src._raw.Length);
 
             // This may not be entirely safe, but only used from MemoryStream for now so...meh
             src._raw.Seek(0, SeekOrigin.Begin);

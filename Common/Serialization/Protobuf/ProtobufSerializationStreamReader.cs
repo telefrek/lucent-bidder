@@ -99,7 +99,7 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public bool HasNext()
         {
-            if (_protoReader.Read())
+            if (!_protoReader.IsEmpty() && _protoReader.Read())
             {
                 updateToken();
                 return true;
@@ -115,7 +115,7 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public async Task<bool> HasNextAsync()
         {
-            if (await _protoReader.ReadAsync())
+            if (!_protoReader.IsEmpty() && await _protoReader.ReadAsync())
             {
                 await updateTokenAsync();
                 return true;
@@ -132,21 +132,14 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public T ReadAs<T>()
         {
-            try
-            {
-                // Hate the double casting =\
-                if (typeof(ProtobufProperty).IsAssignableFrom(typeof(T)))
-                    return (T)(object)new ProtobufProperty { PropertyIndex = _protoReader.FieldNumber, Type = _protoReader.FieldType };
+            // Hate the double casting =\
+            if (typeof(ProtobufProperty).IsAssignableFrom(typeof(T)))
+                return (T)(object)new ProtobufProperty { PropertyIndex = _protoReader.FieldNumber, Type = _protoReader.FieldType };
 
-                _token.Guard(SerializationToken.Object);
-                _registry.Guard<T>();
+            _registry.Guard<T>();
 
-                return _registry.GetSerializer<T>().Read(this);
-            }
-            finally
-            {
-                updateToken();
-            }
+            var protoReader = _protoReader.GetNextMessageReader();
+            return _registry.GetSerializer<T>().Read(new ProtobufSerializationStreamReader(protoReader, _registry, _log));
         }
 
         /// <summary>
@@ -156,7 +149,6 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public T[] ReadAsArray<T>()
         {
-            _token.Guard(SerializationToken.Object);
             _registry.Guard<T>();
 
             // Get the serializer and a place to store the values
@@ -168,7 +160,7 @@ namespace Lucent.Common.Serialization.Protobuf
             var arrayStreamReader = new ProtobufSerializationStreamReader(arrayReader, _registry, _log);
 
             // Keep reading objects from the stream
-            while (arrayStreamReader.HasNext())
+            while (!arrayReader.IsEmpty())
                 array.Add(arrayStreamReader.ReadAs<T>());
 
             // Return the array
@@ -182,7 +174,6 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public async Task<T[]> ReadAsArrayAsync<T>()
         {
-            _token.Guard(SerializationToken.Object);
             _registry.Guard<T>();
 
             // Get the serializer and a place to store the values
@@ -194,7 +185,7 @@ namespace Lucent.Common.Serialization.Protobuf
             var arrayStreamReader = new ProtobufSerializationStreamReader(arrayReader, _registry, _log);
 
             // Keep reading objects from the stream
-            while (await arrayStreamReader.HasNextAsync())
+            while (!arrayReader.IsEmpty())
                 array.Add(await arrayStreamReader.ReadAsAsync<T>());
 
             // Return the array
@@ -208,21 +199,13 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public async Task<T> ReadAsAsync<T>()
         {
-            try
-            {
-                // Hate the double casting =\
-                if (typeof(ProtobufProperty).IsAssignableFrom(typeof(T)))
-                    return (T)(object)new ProtobufProperty { PropertyIndex = _protoReader.FieldNumber, Type = _protoReader.FieldType };
+            // Hate the double casting =\
+            if (typeof(ProtobufProperty).IsAssignableFrom(typeof(T)))
+                return (T)(object)new ProtobufProperty { PropertyIndex = _protoReader.FieldNumber, Type = _protoReader.FieldType };
 
-                _token.Guard(SerializationToken.Object);
-                _registry.Guard<T>();
+            _registry.Guard<T>();
 
-                return await _registry.GetSerializer<T>().ReadAsync(this, CancellationToken.None);
-            }
-            finally
-            {
-                await updateTokenAsync();
-            }
+            return await _registry.GetSerializer<T>().ReadAsync(this, CancellationToken.None);
         }
 
         /// <summary>
@@ -365,18 +348,15 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public string[] ReadStringArray()
         {
-            _token.Guard(SerializationToken.Object);
-
             // Get the serializer and a place to store the values
             var array = new List<string>();
 
             // Get the portion of the reader associated with this chunk
             var arrayReader = _protoReader.GetNextMessageReader();
-            var arrayStreamReader = new ProtobufSerializationStreamReader(arrayReader, _registry, _log);
 
             // Keep reading objects from the stream
-            while (arrayStreamReader.HasNext())
-                array.Add(arrayStreamReader.ReadString());
+            while (!arrayReader.IsEmpty())
+                array.Add(arrayReader.ReadString());
 
             // Return the array
             return array.ToArray();
@@ -388,18 +368,15 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public async Task<string[]> ReadStringArrayAsync()
         {
-            _token.Guard(SerializationToken.Object);
-
             // Get the serializer and a place to store the values
             var array = new List<string>();
 
             // Get the portion of the reader associated with this chunk
             var arrayReader = await _protoReader.GetNextMessageReaderAsync();
-            var arrayStreamReader = new ProtobufSerializationStreamReader(arrayReader, _registry, _log);
 
             // Keep reading objects from the stream
-            while (await arrayStreamReader.HasNextAsync())
-                array.Add(await arrayStreamReader.ReadStringAsync());
+            while (!arrayReader.IsEmpty())
+                array.Add(await arrayReader.ReadStringAsync());
 
             // Return the array
             return array.ToArray();
@@ -411,7 +388,6 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public async Task<string> ReadStringAsync()
         {
-            _token.Guard(SerializationToken.Object);
             return await _protoReader.ReadStringAsync();
         }
 
