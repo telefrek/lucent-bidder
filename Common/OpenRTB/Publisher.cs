@@ -1,4 +1,4 @@
-namespace Lucent.Core.Entities.OpenRTB
+namespace Lucent.Common.OpenRTB
 {
     public class Publisher
     {
