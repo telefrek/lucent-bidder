@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Lucent.Portal.Data;
+using System.Threading;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -10,6 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Telefrek.LDAP;
 
 namespace Portal
 {
@@ -36,10 +38,14 @@ namespace Portal
                               options.UseInMemoryDatabase("local"));
 
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+
             services.AddMvc().AddRazorOptions(options =>
             {
                 options.PageViewLocationFormats.Add("/Pages/Partials/{0}.cshtml");
             });
+
+            // Add the ldap auth
+            services.AddLDAPAuth(Configuration);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -57,10 +63,9 @@ namespace Portal
 
             //app.UseHttpsRedirection();
             app.UseStaticFiles();
-            app.UseCookiePolicy();
+            app.UseLDAPAuth();
 
             app.UseMvc();
-
             app.Run(async (context) =>
             {
                 await context.Response.WriteAsync("Hello World!");

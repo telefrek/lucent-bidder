@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -xe
 
 # Setup environment variables
 SUBSCRIPTION_ID=
