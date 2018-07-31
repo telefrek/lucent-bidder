@@ -29,7 +29,7 @@ namespace Lucent.Portal.Models
 
         public async Task<IActionResult> OnPostAsync()
         {
-            if (true)//ModelState.IsValid)
+            if (ModelState.IsValid)
             {
                 var principal = await _manager.TryAuthenticate(LoginEntity.Username, LoginEntity.Domain, LoginEntity.Credentials, CancellationToken.None);
 
