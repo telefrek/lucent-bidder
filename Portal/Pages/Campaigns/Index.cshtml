@@ -12,14 +12,16 @@
             <tr>
                 <th>ID</th>
                 <th>Name</th>
+                <th>Spend</th>
             </tr>
         </thead>
         <tbody>
             @foreach (var campaign in Model.Campaigns)
             {
-                <tr>
-                    <td>@campaign.Id</td>
-                    <td>@campaign.Name</td>
+                <tr id="@campaign.Id">
+                    <td id="@campaign.Id-id">@campaign.Id</td>
+                    <td id="@campaign.Id-name">@campaign.Name</td>
+                    <td id="@campaign.Id-spend">@campaign.Spend</td>
                     <td>
                         <a asp-page="./Edit" asp-route-id="@campaign.Id">edit</a>
                         <button type="submit" asp-page-handler="delete" 
@@ -31,4 +33,6 @@
     </table>
 
     <a asp-page="./Create">Create</a>
-</form>
+</form>  
+<script src="~/lib/signalr/signalr.min.js"></script>
+<script src="~/js/campaigns.js"></script>

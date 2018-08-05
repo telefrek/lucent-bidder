@@ -10,7 +10,7 @@
 }
 
 <h1>Edit Campaign - @Model.Campaign.Id</h1>
-<form method="post">
+<form method="POST">
     <div asp-validation-summary="All"></div>
     <input asp-for="Campaign.Id" type="hidden" />
     <div>
@@ -19,13 +19,7 @@
             <input asp-for="Campaign.Name" />
             <span asp-validation-for="Campaign.Name" ></span>
         </div>
-        <div>
-            @await Html.PartialAsync("CampaignCreative", @Model.Campaign.Creatives)
-        </div>
         
     </div>
- 
-    <div>
-        <button type="submit">Save</button>
-    </div>
+    <input type="submit" />
 </form>

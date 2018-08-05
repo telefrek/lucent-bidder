@@ -10,6 +10,7 @@ namespace Lucent.Portal.Entities
 
         [Required, StringLength(100)]
         public string Name { get; set; }
+        public double Spend { get; set; }
 
         public List<Creative> Creatives { get; set; } = new List<Creative>();
     }

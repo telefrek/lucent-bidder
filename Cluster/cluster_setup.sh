@@ -7,18 +7,7 @@ SUBSCRIPTION_ID=
 DNS_PREFIX=lucent-dev
 AZURE_REGION=westus2
 
-# Function blocks
-function info(){
-    echo -e "\033[0;36m$(date +%H:%M:%s) ${1:-unknown}\033[0m"
-}
-
-function warn(){
-    echo -e "\033[1;33m$(date +%H:%M:%s) ${1:-unknown}\033[0m"
-}
-
-function error(){
-    echo -e "\033[0;31m$(date +%H:%M:%s) ${1:-unknown}\033[0m"
-}
+source ./common.sh
 
 info 'Starting deployment'
 echo
@@ -43,7 +32,7 @@ info 'Deploying cluster to Azure'
 acs-engine deploy --subscription-id $SUBSCRIPTION_ID --location $AZURE_REGION --api-model _output/$DNS_PREFIX/apimodel.json --force-overwrite
 
 info 'Setting up kubectl'
-export KUBECONFIG=_output/$DNS_PREFIX/kubeconfig/kubeconfig.westus2.json
+export KUBECONFIG=`pwd`_output/$DNS_PREFIX/kubeconfig/kubeconfig.westus2.json
 
 info 'Checking cluster information'
 kubectl cluster-info
@@ -70,5 +59,25 @@ info 'User Credentials: '
 warn $(kubectl get secret dashboard-grafana -o jsonpath="{.data.grafana-admin-user}" | base64 --decode)
 info 'Password: '
 warn $(kubectl get secret dashboard-grafana -o jsonpath="{.data.grafana-admin-password}" | base64 --decode)
+
+info 'Waiting for tiller to come up'
+until [ "$(kubectl get pods -n kube-system | grep tiller | awk '{print $3}') == 'Running'"]; do
+    echo -n '.'
+    sleep 5
+done
+
+info 'Upgrading to client helm version'
+helm init --upgrade
+
+info 'Waiting for tiller to come back up'
+until [ "$(kubectl get pods -n kube-system | grep tiller | awk '{print $3}') == 'Running'"]; do
+    echo -n '.'
+    sleep 5
+done
+
+
+cd charts
+info 'Installing lucent-bid into cluster'
+./install_lucentbid.sh
 
 info 'Deployment finished!'
