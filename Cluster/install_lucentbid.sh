@@ -10,12 +10,13 @@ LUCENT_NAMESPACE='lucent-bidder'
 cd charts
 
 info 'Installing LucentBid cluster'
+[ -z "$(kubectl get ns | grep $LUCENT_NAMESPACE)" ] && kubectl create ns $LUCENT_NAMESPACE
 
 info 'Ensuring Helm Cluster-Role exists'
 cat ../create_admin_role.yaml | envsubst | kubectl apply -f -
 
 info 'Ensuring helm installed with correct permissions'
-helm init --upgrade --tiller-namespace=$LUCENT_NAMESPACE --tiller-service-account helm
+helm init --upgrade --tiller-namespace=$LUCENT_NAMESPACE --wait --service-account helm
 
 info 'Waiting for tiller to come back up'
 until [ "$(kubectl get pods -n $LUCENT_NAMESPACE | grep tiller | awk '{print $3}') == 'Running'" ]; do

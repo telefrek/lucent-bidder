@@ -32,15 +32,16 @@ info 'Deploying cluster to Azure'
 acs-engine deploy --subscription-id $SUBSCRIPTION_ID --location $AZURE_REGION --api-model _output/$DNS_PREFIX/apimodel.json --force-overwrite
 
 info 'Setting up kubectl'
-export KUBECONFIG=`pwd`_output/$DNS_PREFIX/kubeconfig/kubeconfig.westus2.json
+export KUBECONFIG=`pwd`/_output/$DNS_PREFIX/kubeconfig/kubeconfig.westus2.json
 
 info 'Checking cluster information'
 kubectl cluster-info
 echo
 
-info 'Setting up admin account'
-kubectl create -f create_admin_role.yaml
-echo
+# info 'Setting up admin account'
+# LUCENT_NAMESPACE=kube-system
+# kubectl create -f create_admin_role.yaml
+# echo
 
 info 'Admin Token: '
 warn $(kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep admin-user | awk '{print $1}') | grep token: | awk '{print $2}')
@@ -67,14 +68,7 @@ until [ "$(kubectl get pods -n kube-system | grep tiller | awk '{print $3}') == 
 done
 
 info 'Upgrading to client helm version'
-helm init --upgrade
-
-info 'Waiting for tiller to come back up'
-until [ "$(kubectl get pods -n kube-system | grep tiller | awk '{print $3}') == 'Running'"]; do
-    echo -n '.'
-    sleep 5
-done
-
+helm init --upgrade --wait
 
 cd charts
 info 'Installing lucent-bid into cluster'
