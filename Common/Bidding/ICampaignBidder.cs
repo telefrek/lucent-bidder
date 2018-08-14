@@ -9,6 +9,11 @@ namespace Lucent.Common.Bidding
     public interface ICampaignBidder
     {
         /// <summary>
+        /// Gets the campaign identifier
+        /// </summary>
+        string CampaignId { get; }
+
+        /// <summary>
         /// Create a bid for the given impression
         /// </summary>
         /// <param name="impression"></param>

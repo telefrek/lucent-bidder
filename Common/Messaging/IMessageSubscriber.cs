@@ -2,9 +2,21 @@ using System;
 
 namespace Lucent.Common.Messaging
 {
-    // Want the client to subscribe and be able to control concurrent executions.
-    public interface IMessageSubscriber : IDisposable
+    /// <summary>
+    /// Abstract message subscriber interface
+    /// </summary>
+    public interface IMessageSubscriber<T> : IDisposable
+        where T : IMessage
     {
-        Action<IMessage> OnReceive { get; set; }
+        /// <summary>
+        /// Gets the topic this subscriber listens to
+        /// </summary>
+        string Topic { get; }
+
+        /// <summary>
+        /// Gets/Sets the action this subscriber should perform when a message is received
+        /// </summary>
+        /// <value></value>
+        Action<T> OnReceive { get; set; }
     }
 }

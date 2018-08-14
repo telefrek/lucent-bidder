@@ -18,6 +18,6 @@ namespace Lucent.Common.Messaging
         /// <param name="topic"></param>
         /// <param name="maxConcurrency"></param>
         /// <returns></returns>
-        IMessageSubscriber CreateSubscriber(string topic, int maxConcurrency);
+        IMessageSubscriber<T> CreateSubscriber<T>(string topic, ushort maxConcurrency) where T : IMessage, new();
     }
 }
