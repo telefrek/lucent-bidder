@@ -43,7 +43,21 @@ namespace Lucent.Common.Messaging
         public IMessageSubscriber<T> CreateSubscriber<T>(string topic, ushort maxConcurrency)
             where T : IMessage, new()
         {
-            return new RabbitSubscriber<T>(_factory.CreateConnection(), topic, maxConcurrency);
+            return new RabbitSubscriber<T>(_factory.CreateConnection(), topic, maxConcurrency, null);
+        }
+
+
+        /// <summary>
+        /// Creates a subscriber for the given topic
+        /// </summary>
+        /// <param name="topic"></param>
+        /// <param name="maxConcurrency"></param>
+        /// <param name="filter"></param>
+        /// <returns></returns>
+        public IMessageSubscriber<T> CreateSubscriber<T>(string topic, ushort maxConcurrency, string filter)
+            where T : IMessage, new()
+        {
+            return new RabbitSubscriber<T>(_factory.CreateConnection(), topic, maxConcurrency, filter);
         }
     }
 }

@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
@@ -17,7 +18,7 @@ namespace Lucent.Common.Serialization
     {
         Stream _wrappedStream;
         SerializationFormat _streamFormat;
-        ServiceProvider _serviceProvider;
+        IServiceProvider _serviceProvider;
         bool _leaveOpen;
 
         /// <summary>
@@ -27,7 +28,7 @@ namespace Lucent.Common.Serialization
         /// <param name="streamFormat"></param>
         /// <param name="serviceProvider"></param>
         /// <param name="leaveOpen"></param>
-        public SerializationStream(Stream source, SerializationFormat streamFormat, ServiceProvider serviceProvider, bool leaveOpen = false)
+        public SerializationStream(Stream source, SerializationFormat streamFormat, IServiceProvider serviceProvider, bool leaveOpen = false)
         {
             _wrappedStream = source;
             _streamFormat = streamFormat;
@@ -78,13 +79,20 @@ namespace Lucent.Common.Serialization
         {
             get
             {
+                var target = _wrappedStream;
+                if ((_streamFormat & SerializationFormat.COMPRESSED) == SerializationFormat.COMPRESSED)
+                    target = new GZipStream(target, CompressionMode.Compress, _leaveOpen);
+
                 if ((_streamFormat & SerializationFormat.JSON) == SerializationFormat.JSON)
                 {
+                    var jsonWriter = new JsonTextWriter(new StreamWriter(target, Encoding.UTF8, 4096, _leaveOpen));
+                    return _serviceProvider.CreateInstance<JsonSerializationStreamWriter>(jsonWriter);
 
                 }
                 else if ((_streamFormat & SerializationFormat.PROTOBUF) == SerializationFormat.PROTOBUF)
                 {
-
+                    var protoWriter = new ProtobufWriter(target, _leaveOpen);
+                    return _serviceProvider.CreateInstance<ProtobufSerializationStreamWriter>(protoWriter);
                 }
 
                 return null;

@@ -188,12 +188,11 @@ namespace Lucent.Common.Serialization.Json
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public T ReadAs<T>()
+        public T ReadAs<T>() where T : new()
         {
             try
             {
                 _token.Guard(SerializationToken.Object);
-                _registry.Guard<T>();
 
                 return _registry.GetSerializer<T>().Read(this);
             }
@@ -208,12 +207,11 @@ namespace Lucent.Common.Serialization.Json
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public async Task<T> ReadAsAsync<T>()
+        public async Task<T> ReadAsAsync<T>() where T : new()
         {
             try
             {
                 _token.Guard(SerializationToken.Object);
-                _registry.Guard<T>();
 
                 return await _registry.GetSerializer<T>().ReadAsync(this, CancellationToken.None);
             }
@@ -228,12 +226,11 @@ namespace Lucent.Common.Serialization.Json
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public T[] ReadAsArray<T>()
+        public T[] ReadAsArray<T>() where T : new()
         {
             try
             {
                 _token.Guard(SerializationToken.Array);
-                _registry.Guard<T>();
 
                 // Get the serializer and a place to store the values
                 var serializer = _registry.GetSerializer<T>();
@@ -272,12 +269,11 @@ namespace Lucent.Common.Serialization.Json
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public async Task<T[]> ReadAsArrayAsync<T>()
+        public async Task<T[]> ReadAsArrayAsync<T>() where T : new()
         {
             try
             {
                 _token.Guard(SerializationToken.Array);
-                _registry.Guard<T>();
 
                 // Get the serializer and a place to store the values
                 var serializer = _registry.GetSerializer<T>();

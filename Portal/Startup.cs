@@ -16,6 +16,9 @@ using Lucent.Portal.Hubs;
 using Microsoft.AspNetCore.Routing;
 using System.IO;
 using Newtonsoft.Json;
+using Lucent.Common;
+using Lucent.Common.Messaging;
+using Newtonsoft.Json.Linq;
 
 namespace Portal
 {
@@ -25,6 +28,7 @@ namespace Portal
         {
             Configuration = configuration;
         }
+        IMessageSubscriber<LucentMessage> _sub;
 
         public IConfiguration Configuration { get; }
 
@@ -51,7 +55,8 @@ namespace Portal
             services.AddScoped<ICampaignUpdateContext, CampaignUpdateContext>();
 
             // Add the ldap auth
-            //services.AddLDAPAuth(Configuration);
+            services.AddLDAPAuth(Configuration);
+            services.AddMessaging(Configuration);
             services.AddSignalR();
             services.AddRouting();
         }
@@ -71,9 +76,7 @@ namespace Portal
 
             //app.UseHttpsRedirection();
             app.UseStaticFiles();
-            //app.UseLDAPAuth();
-
-            var routeBuilder = new RouteBuilder(app);
+            app.UseLDAPAuth();
 
             app.UseMvc();
             app.UseSignalR(routes =>
@@ -81,66 +84,18 @@ namespace Portal
                 routes.MapHub<CampaignHub>("/campaignHub");
             });
 
-            routeBuilder.MapPost("/v1/callback", async (context) =>
+            _sub = app.ApplicationServices.GetRequiredService<IMessageFactory>().CreateSubscriber<LucentMessage>("campaigns", 0);
+            _sub.OnReceive = (m) =>
             {
-                try
+                if (m != null)
                 {
-                    var req = context.Request;
-                    var id = Guid.Empty;
-                    var amount = 0d;
-                    using (var jsonReader = new JsonTextReader(new StreamReader(req.Body)))
-                    {
-                        while (await jsonReader.ReadAsync())
-                        {
-                            switch (jsonReader.TokenType)
-                            {
-                                case JsonToken.StartArray:
-                                    await jsonReader.SkipAsync();
-                                    break;
-                                case JsonToken.StartObject:
-                                    while (await jsonReader.ReadAsync())
-                                    {
-                                        if (jsonReader.TokenType == JsonToken.EndObject)
-                                            break;
-                                        if (jsonReader.TokenType == JsonToken.PropertyName)
-                                        {
-                                            switch (jsonReader.Value.ToString().ToLowerInvariant())
-                                            {
-                                                case "id":
-                                                    id = Guid.Parse(await jsonReader.ReadAsStringAsync());
-                                                    break;
-                                                case "cpm":
-                                                    amount = (await jsonReader.ReadAsDoubleAsync()).GetValueOrDefault(0d);
-                                                    break;
-                                                default:
-                                                    await jsonReader.SkipAsync();
-                                                    break;
-                                            }
-                                        }
-                                    }
-                                    break;
-                                default:
-                                    await jsonReader.SkipAsync();
-                                    break;
-                            }
-                        }
-                    }
+                    dynamic obj = JObject.Parse(m.Body);
+                    var id = Guid.Parse((string)obj.id);
+                    var amt = (double)obj.amount;
 
-                    if (id != Guid.Empty)
-                    {
-                        await context.RequestServices.GetRequiredService<ICampaignUpdateContext>().UpdateCampaignSpendAsync(id, amount, CancellationToken.None);
-                        context.Response.StatusCode = 202;
-                    }
-                    else
-                        context.Response.StatusCode = 204;
+                    app.ApplicationServices.CreateScope().ServiceProvider.GetService<ICampaignUpdateContext>().UpdateCampaignSpendAsync(id, amt, CancellationToken.None).Wait();
                 }
-                catch
-                {
-                    context.Response.StatusCode = 204;
-                }
-            });
-
-            app.UseRouter(routeBuilder.Build());
+            };
         }
     }
 }

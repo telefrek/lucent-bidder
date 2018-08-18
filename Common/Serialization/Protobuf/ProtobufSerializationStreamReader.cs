@@ -130,7 +130,7 @@ namespace Lucent.Common.Serialization.Protobuf
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public T ReadAs<T>()
+        public T ReadAs<T>() where T : new()
         {
             // Hate the double casting =\
             if (typeof(ProtobufProperty).IsAssignableFrom(typeof(T)))
@@ -147,7 +147,7 @@ namespace Lucent.Common.Serialization.Protobuf
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public T[] ReadAsArray<T>()
+        public T[] ReadAsArray<T>() where T : new()
         {
             _registry.Guard<T>();
 
@@ -172,7 +172,7 @@ namespace Lucent.Common.Serialization.Protobuf
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public async Task<T[]> ReadAsArrayAsync<T>()
+        public async Task<T[]> ReadAsArrayAsync<T>() where T : new()
         {
             _registry.Guard<T>();
 
@@ -197,7 +197,7 @@ namespace Lucent.Common.Serialization.Protobuf
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public async Task<T> ReadAsAsync<T>()
+        public async Task<T> ReadAsAsync<T>() where T : new()
         {
             // Hate the double casting =\
             if (typeof(ProtobufProperty).IsAssignableFrom(typeof(T)))

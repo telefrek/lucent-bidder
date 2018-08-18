@@ -11,9 +11,29 @@ namespace Lucent.Common.Messaging
         string MessageId { get; set; }
 
         /// <summary>
+        /// The message Route
+        /// </summary>
+        string Route { get; set; }
+
+        /// <summary>
         /// Gets/Sets the current message state
         /// </summary>
-        MessageState State {get;set;}
+        MessageState State { get; set; }
+
+        /// <summary>
+        /// The message timestamp when it was created
+        /// </summary>
+        long Timestamp { get; set; }
+
+        /// <summary>
+        /// The message correlation id
+        /// </summary>
+        string CorrelationId { get; set; }
+
+        /// <summary>
+        /// Flag to track if this is the first delivery of the message
+        /// </summary>
+        bool FirstDelivery { get; set; }
 
         /// <summary>
         /// Transforms the message into a byte array for transport

@@ -1,13 +1,17 @@
+using System;
+using System.IO;
+using System.Reflection;
+using Lucent.Common.Serialization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Lucent.Common.Serialization
+namespace Lucent.Common
 {
     /// <summary>
     /// Serialization extension methods
     /// </summary>
-    public static class SerializationExtensions
+    public static partial class LucentExtensions
     {
         /// <summary>
         /// Hook to configure serialization registry creation during runtime
@@ -18,5 +22,57 @@ namespace Lucent.Common.Serialization
         public static IServiceCollection AddSerialization(this IServiceCollection services, IConfiguration configuration) =>
             // Each request should get it's own seriailzation registry, depending on context
             services.AddScoped<ISerializationRegistry, SerializationRegistry>();
+
+        /// <summary>
+        /// Validates if an object is the default for it's type
+        /// </summary>
+        /// <param name="instance">an instance of the object</param>
+        /// <typeparam name="T">The type of object</typeparam>
+        /// <returns></returns>
+        public static bool IsNullOrDefault<T>(this T instance)
+        {
+            // deal with normal scenarios
+            if (instance == null) return true;
+            if (object.Equals(instance, default(T))) return true;
+
+            // deal with non-null nullables
+            Type methodType = typeof(T);
+            if (Nullable.GetUnderlyingType(methodType) != null) return false;
+
+            // deal with boxed value types
+            Type instanceType = instance.GetType();
+            if (instanceType.IsValueType && instanceType != methodType)
+            {
+                object obj = Activator.CreateInstance(instance.GetType());
+                return obj.Equals(instance);
+            }
+
+            return false;
+        }
+
+        public static ISerializationStream WrapSerializer(this Stream target, IServiceProvider provider, SerializationFormat format, bool leaveOpen) =>  new SerializationStream(target, format, provider, leaveOpen);
+
+        public static object UnwrapValue<T>(this T instance)
+        {
+            Type instanceType = instance.GetType();
+            if (instanceType.IsEnum)
+                return Convert.ToInt32(instance);
+            return instance;
+        }
+
+        public static void SetWrapValue(this PropertyInfo info, object target, object value)
+        {
+            if (info.PropertyType.IsEnum)
+            {
+                foreach (var val in Enum.GetValues(info.PropertyType))
+                    if (Convert.ToInt32(val).Equals(Convert.ToInt32(value)))
+                    {
+                        info.SetValue(target, val);
+                        return;
+                    }
+            }
+            else
+                info.SetValue(target, Convert.ChangeType(value, info.PropertyType));
+        }
     }
 }

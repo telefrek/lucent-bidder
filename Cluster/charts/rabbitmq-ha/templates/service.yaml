@@ -5,7 +5,7 @@ metadata:
   annotations:
 {{ toYaml .Values.service.annotations | indent 4 }}
 {{- end }}
-  name: {{ template "rabbitmq-ha.fullname" . }}
+  name: rabbitmq
   labels:
     app: {{ template "rabbitmq-ha.name" . }}
     chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}

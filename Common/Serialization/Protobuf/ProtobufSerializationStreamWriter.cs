@@ -47,7 +47,7 @@ namespace Lucent.Common.Serialization.Protobuf
         /// </summary>
         /// <param name="value"></param>
         /// <typeparam name="T"></typeparam>
-        public void Write<T>(T value)
+        public void Write<T>(T value) where T : new()
         {
             if (typeof(T).IsAssignableFrom(typeof(ProtobufProperty)))
             {
@@ -80,7 +80,7 @@ namespace Lucent.Common.Serialization.Protobuf
         /// </summary>
         /// <param name="value"></param>
         /// <typeparam name="T"></typeparam>
-        public void Write<T>(T[] value)
+        public void Write<T>(T[] value) where T : new()
         {
             if (value == null)
                 throw new SerializationException("Cannot serialize a null object");
@@ -191,7 +191,7 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <param name="value"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public async Task WriteAsync<T>(T value)
+        public async Task WriteAsync<T>(T value) where T : new()
         {
             if (typeof(T).IsAssignableFrom(typeof(ProtobufProperty)))
             {
@@ -225,7 +225,7 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <param name="value"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public async Task WriteAsync<T>(T[] value)
+        public async Task WriteAsync<T>(T[] value) where T : new()
         {
             if (value == null)
                 throw new SerializationException("Cannot serialize a null object");

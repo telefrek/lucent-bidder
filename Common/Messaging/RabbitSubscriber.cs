@@ -15,7 +15,7 @@ namespace Lucent.Common.Messaging
         readonly EventingBasicConsumer _consumer;
         readonly string _queueName;
 
-        public RabbitSubscriber(IConnection conn, string topic, ushort maxConcurrency)
+        public RabbitSubscriber(IConnection conn, string topic, ushort maxConcurrency, string filter)
         {
             _conn = conn;
             _channel = conn.CreateModel();
@@ -25,12 +25,12 @@ namespace Lucent.Common.Messaging
             if (maxConcurrency > 0)
                 _channel.BasicQos(maxConcurrency, maxConcurrency, false);
 
-            _channel.ExchangeDeclare(exchange: topic, type: "fanout");
+            _channel.ExchangeDeclare(exchange: topic, type: "topic");
             _queueName = _channel.QueueDeclare().QueueName;
 
             _channel.QueueBind(queue: _queueName,
                   exchange: topic,
-                  routingKey: "");
+                  routingKey: filter ?? "#"); // Match everything
 
             _consumer = new EventingBasicConsumer(_channel);
             _consumer.Received += (model, ea) =>
@@ -39,8 +39,14 @@ namespace Lucent.Common.Messaging
                 {
                     try
                     {
+                        // Build the message
                         var msg = new T();
+                        msg.Route = ea.RoutingKey;
+                        msg.Timestamp = ea.BasicProperties.Timestamp.UnixTime;
+                        msg.CorrelationId = ea.BasicProperties.CorrelationId;
+                        msg.FirstDelivery = !ea.Redelivered;
                         msg.Load(ea.Body);
+
                         OnReceive.Invoke(msg);
                     }
                     catch

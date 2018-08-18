@@ -8,7 +8,7 @@ using Lucent.Common;
 /// Contains global extension methods that are useful in a variety of scenarios and not scoped to a single
 /// package or utility
 /// </summary>
-public static class GlobalExtensions
+public static partial class LucentExtensions
 {
     /// <summary>
     /// Format a string in place

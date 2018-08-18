@@ -26,13 +26,13 @@ namespace Lucent.Common.Serialization
         /// Writes the value to the stream
         /// </summary>
         /// <param name="value"></param>
-        void Write<T>(T value);
+        void Write<T>(T value) where T : new();
 
         /// <summary>
         /// Writes the value to the stream
         /// </summary>
         /// <param name="value"></param>
-        void Write<T>(T[] value);
+        void Write<T>(T[] value) where T : new();
 
         /// <summary>
         /// Writes the value to the stream
@@ -105,13 +105,13 @@ namespace Lucent.Common.Serialization
         /// Writes the value to the stream asynchronously
         /// </summary>
         /// <param name="value"></param>
-        Task WriteAsync<T>(T value);
+        Task WriteAsync<T>(T value) where T : new();
 
         /// <summary>
         /// Writes the value to the stream asynchronously
         /// </summary>
         /// <param name="value"></param>
-        Task WriteAsync<T>(T[] value);
+        Task WriteAsync<T>(T[] value) where T : new();
 
         /// <summary>
         /// Writes the value to the stream asynchronously

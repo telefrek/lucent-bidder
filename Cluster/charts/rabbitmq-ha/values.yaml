@@ -1,8 +1,8 @@
 ## RabbitMQ application credentials
 ## Ref: http://rabbitmq.com/access-control.html
 ##
-rabbitmqUsername: guest
-rabbitmqPassword: guest
+#rabbitmqUsername: guest
+#rabbitmqPassword: guest
 
 ## RabbitMQ default VirtualHost
 ## Ref: https://www.rabbitmq.com/vhosts.html

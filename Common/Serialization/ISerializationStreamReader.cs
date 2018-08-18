@@ -60,14 +60,14 @@ namespace Lucent.Common.Serialization
         /// </summary>
         /// <typeparam name="T">The type of object to read</typeparam>
         /// <returns>An object of the given type</returns>
-        T ReadAs<T>();
+        T ReadAs<T>() where T : new();
 
         /// <summary>
         /// Reads the next token as the given type asynchronously
         /// </summary>
         /// <typeparam name="T">The type of object to read</typeparam>
         /// <returns>An object of the given type</returns>
-        Task<T> ReadAsAsync<T>();
+        Task<T> ReadAsAsync<T>() where T : new();
 
         /// <summary>
         /// Reads the next token as an array of dynamic objects
@@ -86,14 +86,14 @@ namespace Lucent.Common.Serialization
         /// </summary>
         /// <typeparam name="T">The type of object to read</typeparam>
         /// <returns>An array of 0 or more objects of the given type</returns>
-        T[] ReadAsArray<T>();
+        T[] ReadAsArray<T>() where T : new();
 
         /// <summary>
         /// Reads the next token as an array of the given type asynchronously
         /// </summary>
         /// <typeparam name="T">The type of object to read</typeparam>
         /// <returns>An array of 0 or more objects of the given type</returns>
-        Task<T[]> ReadAsArrayAsync<T>();
+        Task<T[]> ReadAsArrayAsync<T>() where T : new();
 
         /// <summary>
         /// Reads the next token as a boolean value

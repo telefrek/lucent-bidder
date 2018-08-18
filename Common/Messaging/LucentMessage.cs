@@ -12,6 +12,10 @@ namespace Lucent.Common.Messaging
         public string MessageId { get; set; } = Guid.NewGuid().ToString();
         public MessageState State { get; set; }
         public string Body { get; set; }
+        public long Timestamp { get; set; }
+        public string CorrelationId { get; set; }
+        public string Route { get; set; }
+        public bool FirstDelivery { get; set; }
 
         public void Load(byte[] buffer) => Body = Encoding.UTF8.GetString(buffer);
 
@@ -27,6 +31,10 @@ namespace Lucent.Common.Messaging
         public string MessageId { get; set; } = Guid.NewGuid().ToString();
         public MessageState State { get; set; }
         public T Body { get; set; }
+        public long Timestamp { get; set; }
+        public string CorrelationId { get; set; }
+        public string Route { get; set; }
+        public bool FirstDelivery { get; set; }
 
         public void Load(byte[] buffer)
         {

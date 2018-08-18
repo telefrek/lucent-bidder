@@ -1,8 +1,17 @@
+using System.Threading.Tasks;
+
 namespace Lucent.Common.Storage
 {
+    /// <summary>
+    /// Representation of a generic data repository
+    /// </summary>
+    /// <typeparam name="T">The type of object managed by the repository</typeparam>
     public interface ILucentRepository<T>
     where T : new()
     {
-
+        Task<T> Get<K>(K key);
+        Task<bool> TryInsert(T obj);
+        Task<bool> TryUpdate(T obj);
+        Task<bool> TryRemove(T obj);
     }
 }

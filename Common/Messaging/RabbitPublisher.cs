@@ -7,21 +7,25 @@ namespace Lucent.Common.Messaging
         readonly IConnection _conn;
         readonly IModel _channel;
 
-        public string Topic {get;set;}
+        public string Topic { get; set; }
 
         public RabbitPublisher(IConnection conn, string topic)
         {
             _conn = conn;
             _channel = conn.CreateModel();
-            _channel.ExchangeDeclare(topic, "fanout");
+            _channel.ExchangeDeclare(topic, "topic");
             Topic = topic;
         }
 
         public bool TryPublish(IMessage message)
         {
+            var props = _channel.CreateBasicProperties();
+            if (!string.IsNullOrEmpty(message.CorrelationId))
+                props.CorrelationId = message.CorrelationId;
+
             _channel.BasicPublish(exchange: Topic,
-                     routingKey: "",
-                     basicProperties: null,
+                     routingKey: message.Route ?? "undefined",
+                     basicProperties: props,
                      body: message.ToBytes());
 
             return true;

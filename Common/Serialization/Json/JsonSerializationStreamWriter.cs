@@ -83,13 +83,12 @@ namespace Lucent.Common.Serialization.Json
         /// </summary>
         /// <param name="value"></param>
         /// <typeparam name="T"></typeparam>
-        public void Write<T>(T value)
+        public void Write<T>(T value) where T : new()
         {
             if (value == null)
                 _jsonWriter.WriteNull();
             else
             {
-                _registry.Guard<T>();
                 var serializer = _registry.GetSerializer<T>();
                 serializer.Write(this, value);
             }
@@ -100,7 +99,7 @@ namespace Lucent.Common.Serialization.Json
         /// </summary>
         /// <param name="value"></param>
         /// <typeparam name="T"></typeparam>
-        public void Write<T>(T[] value)
+        public void Write<T>(T[] value) where T : new()
         {
             if (value == null)
                 _jsonWriter.WriteNull();
@@ -240,14 +239,12 @@ namespace Lucent.Common.Serialization.Json
         /// <param name="value"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public async Task WriteAsync<T>(T value)
+        public async Task WriteAsync<T>(T value) where T : new()
         {
             if (value == null)
                 await _jsonWriter.WriteNullAsync();
             else
             {
-                _registry.Guard<T>();
-
                 var serializer = _registry.GetSerializer<T>();
                 await serializer.WriteAsync(this, value, CancellationToken.None);
             }
@@ -259,7 +256,7 @@ namespace Lucent.Common.Serialization.Json
         /// <param name="value"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public async Task WriteAsync<T>(T[] value)
+        public async Task WriteAsync<T>(T[] value) where T : new()
         {
             if (value == null)
                 await _jsonWriter.WriteNullAsync();
