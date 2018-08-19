@@ -21,7 +21,7 @@ namespace Lucent.Common.Serialization.Test
             var ms = new MemoryStream(Encoding.UTF8.GetBytes("{\"name\":\"test\"}"));
             ms.Position = 0;
 
-            var serialStream = ms.WrapSerializer(ServiceProvider, SerializationFormat.JSON, true);
+            var serialStream = ms.WrapSerializer(ServiceProvider, SerializationFormat.JSON, false);
             Assert.IsTrue(ms.Position == 0, "Serialization stream should leave the base stream alone");
 
             using (var reader = serialStream.Reader)
