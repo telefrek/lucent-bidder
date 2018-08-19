@@ -30,6 +30,10 @@ namespace Lucent.Common.Serialization.Json
             _log = log;
         }
 
+        public void Flush() => _jsonWriter.Flush();
+
+        public async Task FlushAsync() => await _jsonWriter.FlushAsync();
+
         /// <summary>
         /// 
         /// </summary>

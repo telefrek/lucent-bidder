@@ -1,23 +1,23 @@
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Lucent.Common.Test;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Lucent.Common.Messaging.Test
 {
     [TestClass]
-    public class RabbitTests
-    {
-        class TestOptions : RabbitConfiguration, IOptions<RabbitConfiguration>
-        {
-            public RabbitConfiguration Value => this;
-        }
-                
+    public class RabbitTests : BaseTestClass
+    {    
+        [TestInitialize]
+        public override void TestInitialize() => base.TestInitialize();
+
         [TestMethod]
         public void TestPubSubMismatchRoute()
         {
-            IMessageFactory factory = new RabbitFactory(new TestOptions { Host = "localhost", User = "test", Credentials = "test" });
+            var factory = ServiceProvider.GetRequiredService<IMessageFactory>();
             var pub = factory.CreatePublisher("blah");
             var sub = factory.CreateSubscriber<LucentMessage>("blah", 0, "goodbye");
             var received = false;
@@ -42,7 +42,7 @@ namespace Lucent.Common.Messaging.Test
         [TestMethod]
         public void TestPubSub()
         {
-            IMessageFactory factory = new RabbitFactory(new TestOptions { Host = "localhost", User = "test", Credentials = "test" });
+            var factory = ServiceProvider.GetRequiredService<IMessageFactory>();
             var pub = factory.CreatePublisher("blah");
             var sub = factory.CreateSubscriber<LucentMessage>("blah", 0);
             var received = false;
@@ -67,7 +67,7 @@ namespace Lucent.Common.Messaging.Test
         [TestMethod]
         public void TestPubSubBothMixAndMatch()
         {
-            IMessageFactory factory = new RabbitFactory(new TestOptions { Host = "localhost", User = "test", Credentials = "test" });
+            var factory = ServiceProvider.GetRequiredService<IMessageFactory>();
             var pub = factory.CreatePublisher("blah");
             var sub = factory.CreateSubscriber<LucentMessage>("blah", 0, "goodbye.*");
             var received = false;
@@ -93,6 +93,11 @@ namespace Lucent.Common.Messaging.Test
 
             Assert.IsTrue(received, "Failed to retrieve message");
             Assert.AreEqual(1, count, "Should have only gotten one message");
+        }
+
+        protected override void InitializeDI(IServiceCollection services)
+        {
+            services.AddMessaging(Configuration);
         }
     }
 }

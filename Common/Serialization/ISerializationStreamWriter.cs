@@ -11,6 +11,17 @@ namespace Lucent.Common.Serialization
     public interface ISerializationStreamWriter : IDisposable
     {
         /// <summary>
+        /// Flushes the stream
+        /// </summary>
+        void Flush();
+
+        /// <summary>
+        /// Flushes the stream asynchronously
+        /// </summary>
+        /// <returns></returns>
+        Task FlushAsync();
+
+        /// <summary>
         /// Writes the value to the stream
         /// </summary>
         /// <param name="value"></param>

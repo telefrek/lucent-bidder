@@ -29,6 +29,10 @@ namespace Lucent.Common.Serialization.Protobuf
             _registry = registry;
             _log = log;
         }
+        
+        public void Flush() => _protoWriter.Flush();
+
+        public async Task FlushAsync() => await _protoWriter.FlushAsync();
 
         /// <summary>
         /// 

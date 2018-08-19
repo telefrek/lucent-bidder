@@ -86,6 +86,9 @@ namespace Lucent.Common.Serialization
                 if ((_streamFormat & SerializationFormat.JSON) == SerializationFormat.JSON)
                 {
                     var jsonWriter = new JsonTextWriter(new StreamWriter(target, Encoding.UTF8, 4096, _leaveOpen));
+                    if(_leaveOpen)
+                        jsonWriter.CloseOutput = false;
+                        
                     return _serviceProvider.CreateInstance<JsonSerializationStreamWriter>(jsonWriter);
 
                 }
