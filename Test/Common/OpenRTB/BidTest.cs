@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Lucent.Common.Messaging;
 using Lucent.Common.Serialization;
@@ -88,7 +91,7 @@ namespace Lucent.Common.OpenRTB.Test
 
             var factory = ServiceProvider.GetRequiredService<IMessageFactory>();
             var message = new LucentMessage { Body = "Hello World", CorrelationId = "unittesting", Route = "event.update" };
-            using(var pub = factory.CreatePublisher("campaigns"))
+            using (var pub = factory.CreatePublisher("campaigns"))
             {
                 Assert.IsTrue(pub.TryPublish(message), "Failed to send message");
             }
@@ -128,6 +131,49 @@ namespace Lucent.Common.OpenRTB.Test
             Assert.IsNotNull(bidResponse, "BidResponse should not be null");
         }
 
+        [TestMethod]
+        public async Task TestThrottling()
+        {
+            var bid = new BidRequest
+            {
+                Id = Guid.NewGuid().ToString(),
+                App = new App
+                {
+                    Id = "12345",
+                    Name = "some app",
+                    Domain = "www.google.com",
+                    Publisher = new Publisher
+                    {
+                        Id = "google",
+                        Name = "google",
+                        Domain = "www.google.com"
+                    },
+                },
+                User = new User
+                {
+                    Gender = Gender.Female,
+                    Geo = new Geo
+                    {
+                        Country = "USA",
+                    }
+                }
+            };
+
+            var tasks = new List<Task<HttpResponseMessage>>();
+            var numThreads = 100;
+
+            var maxConcurrent = new SemaphoreSlim(numThreads);
+
+            for (var i = 0; i < 5000; ++i)
+            {
+                await maxConcurrent.WaitAsync();
+                MakeBid(bid).ContinueWith(r => r.Dispose()).ContinueWith(t => maxConcurrent.Release());
+            }
+
+            while (maxConcurrent.CurrentCount < numThreads)
+                await Task.Delay(100);
+        }
+
         async Task<HttpResponseMessage> MakeBid(BidRequest bid)
         {
             HttpContent content;
@@ -155,9 +201,9 @@ namespace Lucent.Common.OpenRTB.Test
         {
             var serializer = (await response.Content.ReadAsStreamAsync()).WrapSerializer(ServiceProvider, SerializationFormat.JSON, false);
 
-            using(var reader = serializer.Reader)
+            using (var reader = serializer.Reader)
             {
-                if(await reader.HasNextAsync())
+                if (await reader.HasNextAsync())
                 {
                     return await reader.ReadAsAsync<BidResponse>();
                 }

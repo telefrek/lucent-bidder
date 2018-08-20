@@ -7,9 +7,10 @@
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="2.1.1" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="2.1.1" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="2.1.1" />
+    <PackageReference Include="Microsoft.AspNetCore.App" Version="2.*" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="2.*" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="2.*" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="2.*" />
     <PackageReference Include="CassandraCSharpDriver" Version="3.6.0"/>
     <PackageReference Include="RabbitMQ.Client" Version="5.1.0" />
   </ItemGroup>

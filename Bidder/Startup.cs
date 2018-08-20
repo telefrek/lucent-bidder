@@ -41,6 +41,7 @@ namespace Bidder
 
 
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+            services.ConfigureLoadShedding(Configuration);
 
             services.AddMessaging(Configuration);
             services.AddSingleton<ISerializationRegistry, SerializationRegistry>();
@@ -61,6 +62,7 @@ namespace Bidder
             }
 
             //app.UseHttpsRedirection(); turn this off for now
+            app.UseLoadShedding();
             app.UseStaticFiles();
             app.UseCookiePolicy();
 
@@ -103,7 +105,6 @@ namespace Bidder
         public async Task HandleAsync(HttpContext context)
         {
             var sstream = context.Request.Body.WrapSerializer(context.RequestServices, SerializationFormat.JSON, false);
-            _log.LogInformation("Starting new request");
 
             using (var reader = sstream.Reader)
             {
@@ -126,6 +127,8 @@ namespace Bidder
                         }
                         else
                             context.Response.StatusCode = 204;
+
+                        await Task.Delay(50);
                         return;
                     }
                 }
