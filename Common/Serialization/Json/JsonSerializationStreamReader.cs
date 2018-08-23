@@ -769,6 +769,83 @@ namespace Lucent.Common.Serialization.Json
         /// 
         /// </summary>
         /// <returns></returns>
+        public DateTime ReadDateTime()
+        {
+            try
+            {
+                _token.Guard(SerializationToken.Value);
+                _jsonReader.TokenType.Guard(JsonToken.String);
+
+                return DateTime.Parse(_jsonReader.ReadAsString());
+            }
+            finally
+            {
+                updateToken();
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public async Task<DateTime> ReadDateTimeAsync()
+        {
+            try
+            {
+                _token.Guard(SerializationToken.Value);
+                _jsonReader.TokenType.Guard(JsonToken.String);
+
+                return DateTime.Parse(await _jsonReader.ReadAsStringAsync());
+            }
+            finally
+            {
+                await updateTokenAsync();
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public Guid ReadGuid()
+        {
+            try
+            {
+                _token.Guard(SerializationToken.Value);
+                _jsonReader.TokenType.Guard(JsonToken.String);
+
+                return Guid.Parse(_jsonReader.ReadAsString());
+            }
+            finally
+            {
+                updateToken();
+            }
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public async Task<Guid> ReadGuidAsync()
+        {
+            try
+            {
+                _token.Guard(SerializationToken.Value);
+                _jsonReader.TokenType.Guard(JsonToken.String);
+
+                return Guid.Parse(await _jsonReader.ReadAsStringAsync());
+            }
+            finally
+            {
+                updateToken();
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
         public string[] ReadStringArray()
         {
             try

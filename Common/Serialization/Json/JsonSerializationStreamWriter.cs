@@ -191,6 +191,34 @@ namespace Lucent.Common.Serialization.Json
         /// 
         /// </summary>
         /// <param name="value"></param>
+        public void Write(DateTime value)
+        {
+            if(value == null)
+                _jsonWriter.WriteNull();
+            else
+            {
+                _jsonWriter.WriteValue(value.ToUniversalTime().ToString("o"));
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="value"></param>
+        public void Write(Guid value)
+        {
+            if(value == null)
+                _jsonWriter.WriteNull();
+            else
+            {
+                _jsonWriter.WriteValue(value.ToString());
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="value"></param>
         /// <returns></returns>
         public async Task WriteAsync(ExpandoObject value)
         {
@@ -354,6 +382,33 @@ namespace Lucent.Common.Serialization.Json
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="value"></param>
+        public async Task WriteAsync(DateTime value)
+        {
+            if(value == null)
+                await _jsonWriter.WriteNullAsync();
+            else
+            {
+                await _jsonWriter.WriteValueAsync(value.ToUniversalTime().ToString("o"));
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="value"></param>
+        public async Task WriteAsync(Guid value)
+        {
+            if(value == null)
+                await _jsonWriter.WriteNullAsync();
+            else
+            {
+                await _jsonWriter.WriteValueAsync(value.ToString());
+            }
+        }
 
         #region IDisposable
         bool _disposed = false;

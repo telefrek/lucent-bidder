@@ -89,6 +89,10 @@ namespace Lucent.Common.Middleware
             _log = log;
         }
 
+        /// <summary>
+        /// Tries to asynchronously acquire a lock
+        /// </summary>
+        /// <returns>A task that will complete when the lock is available, or rejected</returns>
         public Task<bool> TryAcquire()
         {
             var tcs = new TaskCompletionSource<bool>();

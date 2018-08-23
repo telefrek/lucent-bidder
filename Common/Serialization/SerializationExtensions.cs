@@ -50,7 +50,7 @@ namespace Lucent.Common
             return false;
         }
 
-        public static ISerializationStream WrapSerializer(this Stream target, IServiceProvider provider, SerializationFormat format, bool leaveOpen) =>  new SerializationStream(target, format, provider, leaveOpen);
+        public static ISerializationStream WrapSerializer(this Stream target, IServiceProvider provider, SerializationFormat format, bool leaveOpen) => new SerializationStream(target, format, provider, leaveOpen);
 
         public static object UnwrapValue<T>(this T instance)
         {
@@ -70,6 +70,14 @@ namespace Lucent.Common
                         info.SetValue(target, val);
                         return;
                     }
+            }
+            else if (info.PropertyType.Equals(typeof(Guid)))
+            {
+                info.SetValue(target, Guid.Parse(value as string));
+            }
+            else if (info.PropertyType.Equals(typeof(DateTime)))
+            {
+                info.SetValue(target, DateTime.Parse(value as string));
             }
             else
                 info.SetValue(target, Convert.ChangeType(value, info.PropertyType));

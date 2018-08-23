@@ -202,5 +202,11 @@ namespace Lucent.Common.Serialization
         /// </summary>
         /// <returns>An array of 0 or more strings</returns>
         Task<string[]> ReadStringArrayAsync();
+
+        DateTime ReadDateTime();
+        Task<DateTime> ReadDateTimeAsync();
+
+        Guid ReadGuid();
+        Task<Guid> ReadGuidAsync();
     }
 }

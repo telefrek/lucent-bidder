@@ -316,6 +316,47 @@ namespace Lucent.Common.Serialization.Protobuf
         /// 
         /// </summary>
         /// <returns></returns>
+        public DateTime ReadDateTime()
+        {
+            _token.Guard(SerializationToken.Value);
+            return DateTime.FromFileTimeUtc(_protoReader.ReadInt64());
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public async Task<DateTime> ReadDateTimeAsync()
+        {
+            _token.Guard(SerializationToken.Value);
+            return DateTime.FromFileTimeUtc(await _protoReader.ReadInt64Async());
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public Guid ReadGuid()
+        {
+            _token.Guard(SerializationToken.Value);
+            return Guid.Parse(_protoReader.ReadString());
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public async Task<Guid> ReadGuidAsync()
+        {
+            _token.Guard(SerializationToken.Value);
+            return Guid.Parse(await _protoReader.ReadStringAsync());
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
         public float ReadSingle()
         {
             _token.Guard(SerializationToken.Value);

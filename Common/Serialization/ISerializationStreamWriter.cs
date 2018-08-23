@@ -99,6 +99,17 @@ namespace Lucent.Common.Serialization
         /// <param name="value"></param>
         void Write(string[] value);
 
+        /// <summary>
+        /// Writes the value to the stream
+        /// </summary>
+        /// <param name="value"></param>
+        void Write(DateTime value);
+
+        /// <summary>
+        /// Writes the value to the stream
+        /// </summary>
+        /// <param name="value"></param>
+        void Write(Guid value);
 
         /// <summary>
         /// Writes the value to the stream asynchronously
@@ -177,5 +188,18 @@ namespace Lucent.Common.Serialization
         /// </summary>
         /// <param name="value"></param>
         Task WriteAsync(string[] value);
+
+        /// <summary>
+        /// Writes the value to the stream asynchronously
+        /// </summary>
+        /// <param name="value"></param>
+        Task WriteAsync(DateTime value);
+
+        /// <summary>
+        /// Writes the value to the stream asynchronously
+        /// </summary>
+        /// <param name="value"></param>
+        Task WriteAsync(Guid value);
+
     }
 }

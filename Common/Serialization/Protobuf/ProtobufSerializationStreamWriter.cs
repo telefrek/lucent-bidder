@@ -175,6 +175,10 @@ namespace Lucent.Common.Serialization.Protobuf
             }
         }
 
+        public void Write(DateTime value) => _protoWriter.Write(value.ToFileTimeUtc());
+
+        public void Write(Guid value) => _protoWriter.Write(value.ToString());
+
         /// <summary>
         /// 
         /// </summary>
@@ -328,6 +332,10 @@ namespace Lucent.Common.Serialization.Protobuf
                 }
             }
         }
+    
+        public async Task WriteAsync(DateTime value) => await _protoWriter.WriteAsync(value.ToFileTimeUtc());
+    
+        public async Task WriteAsync(Guid value) => await _protoWriter.WriteAsync(value.ToString());
 
         #region IDisposable
         bool _disposed = false;
