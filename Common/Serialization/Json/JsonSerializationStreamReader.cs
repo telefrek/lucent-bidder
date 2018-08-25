@@ -449,7 +449,10 @@ namespace Lucent.Common.Serialization.Json
                     }
                 }
 
-                return instance;
+                if ((instance as IDictionary<string, object>).Count > 0)
+                    return instance;
+
+                return null;
             }
             finally
             {

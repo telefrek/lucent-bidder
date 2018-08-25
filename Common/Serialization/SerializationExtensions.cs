@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using Lucent.Common.Serialization;
@@ -32,16 +33,20 @@ namespace Lucent.Common
         /// <returns></returns>
         public static bool IsNullOrDefault<T>(this T instance)
         {
-            // deal with normal scenarios
             if (instance == null) return true;
             if (object.Equals(instance, default(T))) return true;
 
-            // deal with non-null nullables
             Type methodType = typeof(T);
             if (Nullable.GetUnderlyingType(methodType) != null) return false;
 
-            // deal with boxed value types
             Type instanceType = instance.GetType();
+            if (typeof(ICollection).IsAssignableFrom(instanceType))
+            {
+                var col = instance as ICollection;
+                if (col == null || col.Count == 0)
+                    return true;
+            }
+
             if (instanceType.IsValueType && instanceType != methodType)
             {
                 object obj = Activator.CreateInstance(instance.GetType());
@@ -58,6 +63,7 @@ namespace Lucent.Common
             Type instanceType = instance.GetType();
             if (instanceType.IsEnum)
                 return Convert.ToInt32(instance);
+
             return instance;
         }
 
@@ -80,10 +86,8 @@ namespace Lucent.Common
             {
                 info.SetValue(target, DateTime.Parse(value as string));
             }
-            else if (typeof(IConvertible).IsAssignableFrom(value.GetType()))
+            else if (typeof(IConvertible).IsAssignableFrom(info.PropertyType))
                 info.SetValue(target, Convert.ChangeType(value, info.PropertyType));
-            else if (typeof(ICollection).IsAssignableFrom(info.PropertyType))
-                return;
             else
                 info.SetValue(target, value);
         }

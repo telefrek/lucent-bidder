@@ -10,6 +10,7 @@ using Lucent.Common.Serialization.Json;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using Microsoft.Extensions.DependencyInjection;
+using System.Linq;
 
 namespace Lucent.Common.Storage
 {

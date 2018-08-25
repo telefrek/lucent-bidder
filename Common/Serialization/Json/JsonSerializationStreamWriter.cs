@@ -1,6 +1,8 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -53,7 +55,10 @@ namespace Lucent.Common.Serialization.Json
                     {
                         _jsonWriter.WritePropertyName(prop);
                         var val = properties[prop];
-                        var method = typeof(JsonSerializationStreamWriter).GetMethod("Write", new Type[] { val.GetType() });
+                        var valType = val.GetType();
+
+                        var method = typeof(JsonSerializationStreamWriter).GetMethod("Write", new Type[] { valType });
+
                         if (method != null)
                             method.Invoke(this, new object[] { val });
                         else

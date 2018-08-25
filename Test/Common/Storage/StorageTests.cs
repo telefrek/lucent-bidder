@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Cassandra;
 using Lucent.Common.Test;
@@ -11,7 +12,8 @@ namespace Lucent.Common.Storage.Test
     public class StorageTests : BaseTestClass
     {
         [TestInitialize]
-        public override void TestInitialize() {
+        public override void TestInitialize()
+        {
             base.TestInitialize();
 
             var manager = ServiceProvider.GetRequiredService<IStorageManager>();
@@ -20,9 +22,9 @@ namespace Lucent.Common.Storage.Test
             var testRepo = manager.GetRepository<CTest, Guid>();
             Assert.IsNotNull(testRepo, "Failed to create repo");
 
-            foreach(var entry in testRepo.Get().Result)
-                Assert.IsTrue(testRepo.TryRemove(entry, (e)=>e.Id).Result);
-        } 
+            foreach (var entry in testRepo.Get().Result)
+                Assert.IsTrue(testRepo.TryRemove(entry, (e) => e.Id).Result);
+        }
 
         protected override void InitializeDI(IServiceCollection services)
         {
@@ -34,6 +36,12 @@ namespace Lucent.Common.Storage.Test
             public Guid Id { get; set; }
             public string Name { get; set; }
             public DateTime LastUpdated { get; set; } = DateTime.Now;
+            public CSubTest[] SubItems { get; set; }
+        }
+
+        public class CSubTest
+        {
+            public string Name { get; set; }
         }
 
         [TestMethod]
@@ -55,8 +63,11 @@ namespace Lucent.Common.Storage.Test
             res = await testRepo.Get(tObj.Id);
             Assert.IsNotNull(res);
             Assert.AreEqual(tObj.Id, res.Id, "mismatch id");
+            Assert.IsNull(res.SubItems);
 
             tObj.Name = "Updated";
+            tObj.SubItems = new CSubTest[] { new CSubTest { Name = "Hello" } };
+
 
             success = await testRepo.TryUpdate(tObj, (o) => o.Id);
             Assert.IsTrue(success, "Failed to update");
@@ -65,6 +76,7 @@ namespace Lucent.Common.Storage.Test
             Assert.IsNotNull(res);
             Assert.AreEqual(tObj.Id, res.Id, "mismatch id");
             Assert.AreEqual("Updated", res.Name, true, "Failed to update name");
+            Assert.AreEqual(1, res.SubItems.Length);
 
             success = await testRepo.TryRemove(tObj, (o) => o.Id);
             Assert.IsTrue(success, "Failed to remove");
