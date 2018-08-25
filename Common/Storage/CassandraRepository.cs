@@ -7,7 +7,9 @@ using System.Threading.Tasks;
 using Cassandra;
 using Lucent.Common.Serialization;
 using Lucent.Common.Serialization.Json;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Lucent.Common.Storage
 {
@@ -27,6 +29,7 @@ namespace Lucent.Common.Storage
         PreparedStatement _updateStatement;
         PreparedStatement _deleteStatement;
         IServiceProvider _provider;
+        ILogger _log;
 
         // Need to get table name mapping
         public CassandraRepository(ISession session, IServiceProvider provider)
@@ -34,13 +37,12 @@ namespace Lucent.Common.Storage
             _session = session;
             _provider = provider;
             _tableName = typeof(T).Name.ToLowerInvariant();
+            _log = provider.GetService<ILoggerFactory>().CreateLogger<CassandraRepository<T, K>>();
 
             var keyType = "text";
             var kt = typeof(K);
             if (kt.Equals(typeof(Guid)))
                 keyType = "uuid";
-
-            _session.Execute("DROP TABLE IF EXISTS {0}".FormatWith(_tableName));
 
             _getAllStatement = new SimpleStatement("SELECT * FROM {0}".FormatWith(_tableName));
 
@@ -113,9 +115,9 @@ namespace Lucent.Common.Storage
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
-
+                _log.LogError(ex, "Failed to Get");
             }
 
             return res;
@@ -174,9 +176,9 @@ namespace Lucent.Common.Storage
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
-
+                _log.LogError(ex, "Failed to Get {0}", key);
             }
 
             return default(T);
@@ -184,6 +186,7 @@ namespace Lucent.Common.Storage
 
         public async Task<bool> TryInsert(T obj, Func<T, K> keyMap)
         {
+            _log.LogInformation("Inserting new item");
             try
             {
                 var contents = string.Empty;
@@ -203,9 +206,9 @@ namespace Lucent.Common.Storage
 
                 return rowSet != null;
             }
-            catch
+            catch (Exception ex)
             {
-
+                _log.LogError(ex, "Failed to Insert {0}", keyMap.Invoke(obj));
             }
 
             return false;
@@ -219,9 +222,9 @@ namespace Lucent.Common.Storage
 
                 return rowSet != null;
             }
-            catch
+            catch (Exception ex)
             {
-
+                _log.LogError(ex, "Failed to Remove {0}", keyMap.Invoke(obj));
             }
 
             return false;
@@ -243,9 +246,9 @@ namespace Lucent.Common.Storage
 
                 return rowSet != null;
             }
-            catch
+            catch (Exception ex)
             {
-
+                _log.LogError(ex, "Failed to Update {0}", keyMap.Invoke(obj));
             }
 
             return false;

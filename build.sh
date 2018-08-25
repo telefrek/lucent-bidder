@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 IMAGE_TAG=$(date +%s)
+docker pull microsoft/dotnet
+docker pull microsoft/dotnet:aspnetcore-runtime
 
 echo 'Building portal'
 docker build -t telefrek/lucent-portal:$IMAGE_TAG -f Dockerfile.portal .

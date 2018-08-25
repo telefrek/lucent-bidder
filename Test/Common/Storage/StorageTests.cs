@@ -11,7 +11,18 @@ namespace Lucent.Common.Storage.Test
     public class StorageTests : BaseTestClass
     {
         [TestInitialize]
-        public override void TestInitialize() => base.TestInitialize();
+        public override void TestInitialize() {
+            base.TestInitialize();
+
+            var manager = ServiceProvider.GetRequiredService<IStorageManager>();
+            Assert.IsNotNull(manager, "Failed to create manager");
+
+            var testRepo = manager.GetRepository<CTest, Guid>();
+            Assert.IsNotNull(testRepo, "Failed to create repo");
+
+            foreach(var entry in testRepo.Get().Result)
+                Assert.IsTrue(testRepo.TryRemove(entry, (e)=>e.Id).Result);
+        } 
 
         protected override void InitializeDI(IServiceCollection services)
         {
@@ -45,13 +56,20 @@ namespace Lucent.Common.Storage.Test
             Assert.IsNotNull(res);
             Assert.AreEqual(tObj.Id, res.Id, "mismatch id");
 
+            tObj.Name = "Updated";
+
             success = await testRepo.TryUpdate(tObj, (o) => o.Id);
             Assert.IsTrue(success, "Failed to update");
+
+            res = await testRepo.Get(tObj.Id);
+            Assert.IsNotNull(res);
+            Assert.AreEqual(tObj.Id, res.Id, "mismatch id");
+            Assert.AreEqual("Updated", res.Name, true, "Failed to update name");
 
             success = await testRepo.TryRemove(tObj, (o) => o.Id);
             Assert.IsTrue(success, "Failed to remove");
 
-            res = await testRepo.Get(Guid.NewGuid());
+            res = await testRepo.Get(tObj.Id);
             Assert.IsNull(res, "No object should be returned");
         }
     }

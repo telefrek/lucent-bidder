@@ -30,17 +30,16 @@ namespace Lucent.Portal.Models
 
         public async Task<IActionResult> OnGetAsync(Guid id)
         {
-            _log.LogInformation("Geting campaign {id}");
+            _log.LogInformation("Geting campaign {id}", id);
             var c = await _db.Get(id);
 
-            if (Campaign == null)
+            if (c != null)
             {
                 Campaign = c;
-                Campaign.Creatives.Add(new Creative { Name = "Colleen", Id = Guid.NewGuid() });
-                return RedirectToPage("./Index");
+                return Page();
             }
 
-            return Page();
+            return RedirectToPage("./Index");
         }
 
         public async Task<IActionResult> OnPostAsync()
@@ -55,7 +54,6 @@ namespace Lucent.Portal.Models
             if (c != null)
             {
                 c.Name = Campaign.Name;
-
 
                 try
                 {

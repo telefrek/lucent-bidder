@@ -63,6 +63,7 @@ namespace Lucent.Common.Serialization
             }
 
             serializationStreamWriter.Write(dObj);
+            serializationStreamWriter.Flush();
         }
 
         public async Task WriteAsync(ISerializationStreamWriter serializationStreamWriter, T instance, CancellationToken token)
@@ -80,6 +81,7 @@ namespace Lucent.Common.Serialization
             }
 
             await serializationStreamWriter.WriteAsync(dObj);
+            await serializationStreamWriter.FlushAsync();
         }
     }
 }

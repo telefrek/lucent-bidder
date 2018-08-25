@@ -25,6 +25,7 @@ namespace Lucent.Portal.Models
 
         public async Task<IActionResult> OnPostAsync()
         {
+            _log.LogInformation("Trying post campaign");
             if (!ModelState.IsValid)
             {
                 return Page();
@@ -33,8 +34,12 @@ namespace Lucent.Portal.Models
             // Set the Id
             Campaign.Id = Guid.NewGuid();
 
-            await _db.TryInsert(Campaign, (o) => o.Id);
-            return RedirectToPage("./Index");
+            if (await _db.TryInsert(Campaign, (o) => o.Id))
+                return RedirectToPage("./Index");
+
+            _log.LogError("Failed to insert record");
+
+            return Page();
         }
     }
 }

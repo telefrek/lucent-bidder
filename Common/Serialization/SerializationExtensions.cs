@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.IO;
 using System.Reflection;
 using Lucent.Common.Serialization;
@@ -79,8 +80,12 @@ namespace Lucent.Common
             {
                 info.SetValue(target, DateTime.Parse(value as string));
             }
-            else
+            else if (typeof(IConvertible).IsAssignableFrom(value.GetType()))
                 info.SetValue(target, Convert.ChangeType(value, info.PropertyType));
+            else if (typeof(ICollection).IsAssignableFrom(info.PropertyType))
+                return;
+            else
+                info.SetValue(target, value);
         }
     }
 }

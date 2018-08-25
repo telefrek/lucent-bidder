@@ -89,7 +89,7 @@ namespace Lucent.Common.Serialization.Json
         /// <typeparam name="T"></typeparam>
         public void Write<T>(T value) where T : new()
         {
-            if (value == null)
+            if (value.IsNullOrDefault())
                 _jsonWriter.WriteNull();
             else
             {
@@ -193,7 +193,7 @@ namespace Lucent.Common.Serialization.Json
         /// <param name="value"></param>
         public void Write(DateTime value)
         {
-            if(value == null)
+            if (value == null)
                 _jsonWriter.WriteNull();
             else
             {
@@ -207,7 +207,7 @@ namespace Lucent.Common.Serialization.Json
         /// <param name="value"></param>
         public void Write(Guid value)
         {
-            if(value == null)
+            if (value == null)
                 _jsonWriter.WriteNull();
             else
             {
@@ -273,7 +273,7 @@ namespace Lucent.Common.Serialization.Json
         /// <returns></returns>
         public async Task WriteAsync<T>(T value) where T : new()
         {
-            if (value == null)
+            if (value.IsNullOrDefault())
                 await _jsonWriter.WriteNullAsync();
             else
             {
@@ -388,7 +388,7 @@ namespace Lucent.Common.Serialization.Json
         /// <param name="value"></param>
         public async Task WriteAsync(DateTime value)
         {
-            if(value == null)
+            if (value == null)
                 await _jsonWriter.WriteNullAsync();
             else
             {
@@ -402,7 +402,7 @@ namespace Lucent.Common.Serialization.Json
         /// <param name="value"></param>
         public async Task WriteAsync(Guid value)
         {
-            if(value == null)
+            if (value == null)
                 await _jsonWriter.WriteNullAsync();
             else
             {

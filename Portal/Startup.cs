@@ -59,6 +59,7 @@ namespace Portal
             services.AddMessaging(Configuration);
             services.AddSignalR();
             services.AddRouting();
+            services.AddSerialization(Configuration);
             services.AddStorage(Configuration);
         }
 
