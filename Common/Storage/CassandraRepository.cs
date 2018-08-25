@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -19,6 +20,8 @@ namespace Lucent.Common.Storage
     {
         ISession _session;
         string _tableName;
+
+        Statement _getAllStatement;
         PreparedStatement _getStatement;
         PreparedStatement _insertStatement;
         PreparedStatement _updateStatement;
@@ -39,6 +42,8 @@ namespace Lucent.Common.Storage
 
             _session.Execute("DROP TABLE IF EXISTS {0}".FormatWith(_tableName));
 
+            _getAllStatement = new SimpleStatement("SELECT * FROM {0}".FormatWith(_tableName));
+
             // optimize this to happen once later
             _session.Execute("CREATE TABLE IF NOT EXISTS {0} (id {1} PRIMARY KEY, contents text, etag timestamp );".FormatWith(_tableName, keyType));
 
@@ -50,6 +55,70 @@ namespace Lucent.Common.Storage
 
             // Check etag
             _deleteStatement = _session.Prepare("DELETE FROM {0} WHERE id=? IF EXISTS".FormatWith(_tableName));
+        }
+
+        public async Task<ICollection<T>> Get()
+        {
+            var res = new List<T>();
+            try
+            {
+                using (var rowSet = await _session.ExecuteAsync(_getAllStatement))
+                {
+                    var numRows = 0;
+                    using (var rowEnum = rowSet.GetEnumerator())
+                    {
+                        while (!rowSet.IsFullyFetched)
+                        {
+                            if ((numRows = rowSet.GetAvailableWithoutFetching()) > 0)
+                            {
+                                for (var i = 0; i < numRows && rowEnum.MoveNext(); ++i)
+                                {
+                                    var row = rowEnum.Current;
+                                    var id = row.GetValue<K>("id");
+
+                                    var contents = row.GetValue<string>("contents");
+
+                                    using (var ms = new MemoryStream(Encoding.UTF8.GetBytes(contents)))
+                                    {
+                                        using (var reader = ms.WrapSerializer(_provider, SerializationFormat.JSON, true).Reader)
+                                        {
+                                            while (reader.HasNext())
+                                            {
+                                                res.Add(new EntitySerializer<T>().Read(reader));
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                                await rowSet.FetchMoreResultsAsync();
+                        }
+
+                        while (rowEnum.MoveNext())
+                        {
+                            var row = rowEnum.Current;
+                            var id = row.GetValue<K>("id");
+
+                            var contents = row.GetValue<string>("contents");
+
+                            using (var ms = new MemoryStream(Encoding.UTF8.GetBytes(contents)))
+                            {
+                                using (var reader = ms.WrapSerializer(_provider, SerializationFormat.JSON, true).Reader)
+                                {
+                                    if (reader.HasNext())
+                                        res.Add(new EntitySerializer<T>().Read(reader));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch
+            {
+
+            }
+
+            return res;
         }
 
         public async Task<T> Get(K key)

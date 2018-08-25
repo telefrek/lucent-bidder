@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Lucent.Common.Storage;
 using Lucent.Portal.Data;
 using Lucent.Portal.Entities;
 using Lucent.Portal.Hubs;
@@ -13,14 +14,14 @@ namespace Lucent.Portal.Models
 {
     public class EditCampaignModel : PageModel
     {
-        private readonly PortalDbContext _db;
-        private readonly ILogger<EditCampaignModel> _log;
+        private readonly ILucentRepository<Campaign, Guid> _db;
+        private readonly ILogger _log;
         private readonly ICampaignUpdateContext _context;
 
-        public EditCampaignModel(PortalDbContext db, ILogger<EditCampaignModel> logger, ICampaignUpdateContext context)
+        public EditCampaignModel(IStorageManager db, ILogger<CreateCampaignModel> log, ICampaignUpdateContext context)
         {
-            _db = db;
-            _log = logger;
+            _db = db.GetRepository<Campaign, Guid>();
+            _log = log;
             _context = context;
         }
 
@@ -30,12 +31,12 @@ namespace Lucent.Portal.Models
         public async Task<IActionResult> OnGetAsync(Guid id)
         {
             _log.LogInformation("Geting campaign {id}");
-            Campaign = await _db.Campaigns.FindAsync(id);
-
-            Campaign.Creatives.Add(new Creative { Name = "Colleen", Id = Guid.NewGuid() });
+            var c = await _db.Get(id);
 
             if (Campaign == null)
             {
+                Campaign = c;
+                Campaign.Creatives.Add(new Creative { Name = "Colleen", Id = Guid.NewGuid() });
                 return RedirectToPage("./Index");
             }
 
@@ -45,21 +46,21 @@ namespace Lucent.Portal.Models
         public async Task<IActionResult> OnPostAsync()
         {
             _log.LogInformation("Validating post");
-            if (!ModelState.IsValid)
+            if (!ModelState.IsValid || Campaign == null)
             {
                 return Page();
             }
 
-            var c = (Campaign)await _db.FindAsync(typeof(Campaign), Campaign.Id);
-            if(c != null)
+            var c = await _db.Get(Campaign.Id);
+            if (c != null)
             {
                 c.Name = Campaign.Name;
-                _db.Attach(c).State = EntityState.Modified;
+
 
                 try
                 {
-                    await _db.SaveChangesAsync();
-                    await _context.UpdateCampaignAsync(c, CancellationToken.None);
+                    if (await _db.TryUpdate(c, (o) => c.Id))
+                        await _context.UpdateCampaignAsync(c, CancellationToken.None);
                 }
                 catch (DbUpdateConcurrencyException)
                 {

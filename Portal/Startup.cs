@@ -59,6 +59,7 @@ namespace Portal
             services.AddMessaging(Configuration);
             services.AddSignalR();
             services.AddRouting();
+            services.AddStorage(Configuration);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
