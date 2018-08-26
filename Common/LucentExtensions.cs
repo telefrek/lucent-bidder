@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography;
 using Lucent.Common;
 
 /// <summary>
@@ -10,6 +11,28 @@ using Lucent.Common;
 /// </summary>
 public static partial class LucentExtensions
 {
+    static MD5 _md5 = System.Security.Cryptography.MD5.Create();
+
+    public static string CalculateETag(this byte[] buffer) => _md5.ComputeHash(buffer).ToHex();
+
+    public static string ToHex(this byte[] bytes)
+    {
+        char[] c = new char[bytes.Length * 2];
+
+        byte b;
+
+        for (int bx = 0, cx = 0; bx < bytes.Length; ++bx, ++cx)
+        {
+            b = ((byte)(bytes[bx] >> 4));
+            c[cx] = (char)(b > 9 ? b + 0x37 + 0x20 : b + 0x30);
+
+            b = ((byte)(bytes[bx] & 0x0F));
+            c[++cx] = (char)(b > 9 ? b + 0x37 + 0x20 : b + 0x30);
+        }
+
+        return new string(c);
+    }
+
     /// <summary>
     /// Format a string in place
     /// </summary>
@@ -68,7 +91,7 @@ public static partial class LucentExtensions
                         pMap[i] = provider.GetService(pArr[i].ParameterType);
 
                 // Finish any remaining injections
-                for(; i < pArr.Length; ++i)
+                for (; i < pArr.Length; ++i)
                     pMap[i] = provider.GetService(pArr[i].ParameterType);
 
                 // Hope for the best

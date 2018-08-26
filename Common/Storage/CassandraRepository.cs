@@ -84,9 +84,13 @@ namespace Lucent.Common.Storage
                                     {
                                         using (var reader = ms.WrapSerializer(_provider, _format, true).Reader)
                                         {
-                                            while (reader.HasNext())
+                                            if (reader.HasNext())
                                             {
-                                                res.Add(_serializer.Read(reader));
+                                                var o = _serializer.Read(reader);
+                                                o.ETag = row.GetValue<string>("etag");
+                                                o.Updated = row.GetValue<DateTime>("updated");
+                                                o.Version = row.GetValue<int>("version");
+                                                res.Add(o);
                                             }
                                         }
                                     }
@@ -108,7 +112,13 @@ namespace Lucent.Common.Storage
                                 using (var reader = ms.WrapSerializer(_provider, _format, true).Reader)
                                 {
                                     if (reader.HasNext())
-                                        res.Add(_serializer.Read(reader));
+                                    {
+                                        var o = _serializer.Read(reader);
+                                        o.ETag = row.GetValue<string>("etag");
+                                        o.Updated = row.GetValue<DateTime>("updated");
+                                        o.Version = row.GetValue<int>("version");
+                                        res.Add(o);
+                                    }
                                 }
                             }
                         }
@@ -148,7 +158,13 @@ namespace Lucent.Common.Storage
                                         using (var reader = ms.WrapSerializer(_provider, _format, true).Reader)
                                         {
                                             if (reader.HasNext())
-                                                return _serializer.Read(reader);
+                                            {
+                                                var o = _serializer.Read(reader);
+                                                o.ETag = row.GetValue<string>("etag");
+                                                o.Updated = row.GetValue<DateTime>("updated");
+                                                o.Version = row.GetValue<int>("version");
+                                                return o;
+                                            }
                                         }
                                     }
                                 }
@@ -169,7 +185,13 @@ namespace Lucent.Common.Storage
                                 using (var reader = ms.WrapSerializer(_provider, _format, true).Reader)
                                 {
                                     if (reader.HasNext())
-                                        return _serializer.Read(reader);
+                                    {
+                                        var o = _serializer.Read(reader);
+                                        o.ETag = row.GetValue<string>("etag");
+                                        o.Updated = row.GetValue<DateTime>("updated");
+                                        o.Version = row.GetValue<int>("version");
+                                        return o;
+                                    }
                                 }
                             }
                         }
@@ -201,10 +223,13 @@ namespace Lucent.Common.Storage
                     ms.Seek(0, SeekOrigin.Begin);
                     contents = ms.ToArray();
                 }
-                var cstr = Encoding.UTF8.GetString(contents);
-                var rowSet = await _session.ExecuteAsync(_insertStatement.Bind(obj.Id, "tag", 1, DateTime.UtcNow, contents));
 
-                return rowSet != null && !string.IsNullOrEmpty(cstr);
+                if (string.IsNullOrEmpty(obj.ETag))
+                    obj.ETag = contents.CalculateETag();
+
+                var rowSet = await _session.ExecuteAsync(_insertStatement.Bind(obj.Id, obj.ETag, _format, DateTime.UtcNow, contents));
+
+                return rowSet != null;
             }
             catch (Exception ex)
             {
@@ -242,7 +267,10 @@ namespace Lucent.Common.Storage
                     contents = ms.ToArray();
                 }
 
-                var rowSet = await _session.ExecuteAsync(_updateStatement.Bind("tag", DateTime.UtcNow, contents, obj.Id));
+                if (string.IsNullOrEmpty(obj.ETag))
+                    obj.ETag = contents.CalculateETag();
+
+                var rowSet = await _session.ExecuteAsync(_updateStatement.Bind(obj.ETag, DateTime.UtcNow, contents, obj.Id));
 
                 return rowSet != null;
             }
