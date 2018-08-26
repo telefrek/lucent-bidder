@@ -18,7 +18,7 @@ namespace Lucent.Common.Serialization
         /// Gets the current value at this position
         /// </summary>
         /// <returns>An object representing the current value at the position</returns>
-        object Value { get; }
+        PropertyId Id { get; }
 
         /// <summary>
         /// Attempts to read the next token from the stream
@@ -43,17 +43,8 @@ namespace Lucent.Common.Serialization
         /// <returns>True if there are more tokens available in the stream</returns>
         Task<bool> HasNextAsync();
 
-        /// <summary>
-        /// Reads the next token as a dynamic object
-        /// </summary>
-        /// <returns>A dynamic object</returns>
-        dynamic ReadDynamic();
-
-        /// <summary>
-        /// Reads the next token as a dynamic object asynchronously
-        /// </summary>
-        /// <returns>A dynamic object</returns>
-        Task<dynamic> ReadDynamicAsync();
+        bool HasMoreProperties();
+        Task<bool> HasMorePropertiesAsync();
 
         /// <summary>
         /// Reads the next token as the given type
@@ -68,18 +59,6 @@ namespace Lucent.Common.Serialization
         /// <typeparam name="T">The type of object to read</typeparam>
         /// <returns>An object of the given type</returns>
         Task<T> ReadAsAsync<T>() where T : new();
-
-        /// <summary>
-        /// Reads the next token as an array of dynamic objects
-        /// </summary>
-        /// <returns>An array of 0 or more dynamic objects</returns>
-        dynamic[] ReadDynamicArray();
-
-        /// <summary>
-        /// Reads the next token as an array of dynamic objects asynchronously
-        /// </summary>
-        /// <returns>An array of 0 or more dynamic objects</returns>
-        Task<dynamic[]> ReadDynamicArrayAsync();
 
         /// <summary>
         /// Reads the next token as an array of the given type

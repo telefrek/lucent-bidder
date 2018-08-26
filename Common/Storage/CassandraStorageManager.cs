@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using Cassandra;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Lucent.Common.Storage
@@ -13,10 +16,14 @@ namespace Lucent.Common.Storage
         ISession _session;
         IServiceProvider _provider;
         CassandraConfiguration _config;
+        ILogger _log;
+        ConcurrentDictionary<Type, object> _registry;
 
-        public CassandraStorageManager(IServiceProvider provider, IOptions<CassandraConfiguration> options)
+        public CassandraStorageManager(IServiceProvider provider, IOptions<CassandraConfiguration> options, ILogger<CassandraStorageManager> log)
         {
             _provider = provider;
+            _log = log;
+            _registry = new ConcurrentDictionary<Type, object>();
             _config = options.Value;
             _cluster = new CassandraConnectionStringBuilder
             {
@@ -30,6 +37,6 @@ namespace Lucent.Common.Storage
             _session.ChangeKeyspace(_config.Keyspace);
         }
 
-        public ILucentRepository<T,K> GetRepository<T,K>() where T : new() => new CassandraRepository<T,K>(_session, _provider);
+        public ILucentRepository<T> GetRepository<T>() where T : IStorageEntity, new() => new CassandraRepository<T>(_session, _provider);
     }
 }

@@ -29,7 +29,7 @@ namespace Lucent.Common.Serialization.Protobuf
             _registry = registry;
             _log = log;
         }
-        
+
         public void Flush() => _protoWriter.Flush();
 
         public async Task FlushAsync() => await _protoWriter.FlushAsync();
@@ -38,27 +38,10 @@ namespace Lucent.Common.Serialization.Protobuf
         /// 
         /// </summary>
         /// <param name="value"></param>
-        public void Write(ExpandoObject value) => throw new SerializationException("Cannot format protobuf object without mapping");
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="value"></param>
-        public void Write(ExpandoObject[] value) => throw new SerializationException("Cannot format protobuf object without mapping");
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="value"></param>
         /// <typeparam name="T"></typeparam>
         public void Write<T>(T value) where T : new()
         {
-            if (typeof(T).IsAssignableFrom(typeof(ProtobufProperty)))
-            {
-                var prop = value as ProtobufProperty;
-                _protoWriter.WriteField(prop.PropertyIndex, prop.Type);
-            }
-            else if (value == null)
+            if (value == null)
                 throw new SerializationException("Cannot serialize a null object");
             else
             {
@@ -184,14 +167,14 @@ namespace Lucent.Common.Serialization.Protobuf
         /// </summary>
         /// <param name="value"></param>
         /// <returns></returns>
-        public Task WriteAsync(ExpandoObject value) => throw new SerializationException("Cannot format protobuf object without mapping");
+        public async Task WriteAsync(ExpandoObject value) => throw new SerializationException("Cannot format protobuf object without mapping");
 
         /// <summary>
         /// 
         /// </summary>
         /// <param name="value"></param>
         /// <returns></returns>
-        public Task WriteAsync(ExpandoObject[] value) => throw new SerializationException("Cannot format protobuf object without mapping");
+        public async Task WriteAsync(ExpandoObject[] value) => throw new SerializationException("Cannot format protobuf object without mapping");
 
         /// <summary>
         /// 
@@ -201,12 +184,7 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public async Task WriteAsync<T>(T value) where T : new()
         {
-            if (typeof(T).IsAssignableFrom(typeof(ProtobufProperty)))
-            {
-                var prop = value as ProtobufProperty;
-                await _protoWriter.WriteFieldAsync(prop.PropertyIndex, prop.Type);
-            }
-            else if (value == null)
+            if (value == null)
                 throw new SerializationException("Cannot serialize a null object");
             else
             {
@@ -332,9 +310,9 @@ namespace Lucent.Common.Serialization.Protobuf
                 }
             }
         }
-    
+
         public async Task WriteAsync(DateTime value) => await _protoWriter.WriteAsync(value.ToFileTimeUtc());
-    
+
         public async Task WriteAsync(Guid value) => await _protoWriter.WriteAsync(value.ToString());
 
         #region IDisposable
@@ -375,5 +353,164 @@ namespace Lucent.Common.Serialization.Protobuf
             GC.SuppressFinalize(this);
         }
         #endregion
+
+        public void Write<T>(PropertyId id, T value) where T : new()
+        {
+            _protoWriter.WriteField(id.Id, WireType.LEN_ENCODED);
+            Write(value);
+        }
+
+        public void Write<T>(PropertyId id, T[] value) where T : new()
+        {
+            _protoWriter.WriteField(id.Id, WireType.LEN_ENCODED);
+            Write(value);
+        }
+
+        public void Write(PropertyId id, bool value)
+        {
+            _protoWriter.WriteField(id.Id, WireType.VARINT);
+            Write(value);
+        }
+
+        public void Write(PropertyId id, double value)
+        {
+            _protoWriter.WriteField(id.Id, WireType.FIXED_64);
+            Write(value);
+        }
+
+        public void Write(PropertyId id, float value)
+        {
+            _protoWriter.WriteField(id.Id, WireType.FIXED_32);
+            Write(value);
+        }
+
+        public void Write(PropertyId id, int value)
+        {
+            _protoWriter.WriteField(id.Id, WireType.VARINT);
+            Write(value);
+        }
+
+        public void Write(PropertyId id, uint value)
+        {
+            _protoWriter.WriteField(id.Id, WireType.VARINT);
+            Write(value);
+        }
+
+        public void Write(PropertyId id, long value)
+        {
+            _protoWriter.WriteField(id.Id, WireType.VARINT);
+            Write(value);
+        }
+
+        public void Write(PropertyId id, ulong value)
+        {
+            _protoWriter.WriteField(id.Id, WireType.VARINT);
+            Write(value);
+        }
+
+        public void Write(PropertyId id, string value)
+        {
+            _protoWriter.WriteField(id.Id, WireType.LEN_ENCODED);
+            Write(value);
+        }
+
+        public void Write(PropertyId id, string[] value)
+        {
+            _protoWriter.WriteField(id.Id, WireType.LEN_ENCODED);
+            Write(value);
+        }
+
+        public void Write(PropertyId id, DateTime value)
+        {
+            _protoWriter.WriteField(id.Id, WireType.LEN_ENCODED);
+            Write(value);
+        }
+
+        public void Write(PropertyId id, Guid value)
+        {
+            _protoWriter.WriteField(id.Id, WireType.LEN_ENCODED);
+            Write(value);
+        }
+
+        public async Task WriteAsync<T>(PropertyId id, T value) where T : new()
+        {
+            await _protoWriter.WriteFieldAsync(id.Id, WireType.LEN_ENCODED);
+            await WriteAsync(value);
+        }
+
+        public async Task WriteAsync<T>(PropertyId id, T[] value) where T : new()
+        {
+            await _protoWriter.WriteFieldAsync(id.Id, WireType.LEN_ENCODED);
+            await WriteAsync(value);
+        }
+
+        public async Task WriteAsync(PropertyId id, bool value)
+        {
+            await _protoWriter.WriteFieldAsync(id.Id, WireType.VARINT);
+            await WriteAsync(value);
+        }
+
+        public async Task WriteAsync(PropertyId id, double value)
+        {
+            await _protoWriter.WriteFieldAsync(id.Id, WireType.FIXED_64);
+            await WriteAsync(value);
+        }
+
+        public async Task WriteAsync(PropertyId id, float value)
+        {
+            await _protoWriter.WriteFieldAsync(id.Id, WireType.FIXED_32);
+            await WriteAsync(value);
+        }
+
+        public async Task WriteAsync(PropertyId id, int value)
+        {
+            await _protoWriter.WriteFieldAsync(id.Id, WireType.VARINT);
+            await WriteAsync(value);
+        }
+
+        public async Task WriteAsync(PropertyId id, uint value)
+        {
+            await _protoWriter.WriteFieldAsync(id.Id, WireType.VARINT);
+            await WriteAsync(value);
+        }
+
+        public async Task WriteAsync(PropertyId id, long value)
+        {
+            await _protoWriter.WriteFieldAsync(id.Id, WireType.VARINT);
+            await WriteAsync(value);
+        }
+
+        public async Task WriteAsync(PropertyId id, ulong value)
+        {
+            await _protoWriter.WriteFieldAsync(id.Id, WireType.VARINT);
+            await WriteAsync(value);
+        }
+
+        public async Task WriteAsync(PropertyId id, string value)
+        {
+            await _protoWriter.WriteFieldAsync(id.Id, WireType.LEN_ENCODED);
+            await WriteAsync(value);
+        }
+
+        public async Task WriteAsync(PropertyId id, string[] value)
+        {
+            await _protoWriter.WriteFieldAsync(id.Id, WireType.LEN_ENCODED);
+            await WriteAsync(value);
+        }
+
+        public async Task WriteAsync(PropertyId id, DateTime value)
+        {
+            await _protoWriter.WriteFieldAsync(id.Id, WireType.LEN_ENCODED);
+            await WriteAsync(value);
+        }
+
+        public async Task WriteAsync(PropertyId id, Guid value)
+        {
+            await _protoWriter.WriteFieldAsync(id.Id, WireType.LEN_ENCODED);
+            await WriteAsync(value);
+        }
+        public void StartObject() { }
+
+        public void EndObject() { }
     }
 }

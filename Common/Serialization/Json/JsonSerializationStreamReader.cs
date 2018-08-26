@@ -42,7 +42,7 @@ namespace Lucent.Common.Serialization.Json
         /// <summary>
         /// 
         /// </summary>
-        public object Value => _jsonReader.Value;
+        public PropertyId Id => new PropertyId { Name = _jsonReader.Value as string };
 
         /// <summary>
         /// 
@@ -230,6 +230,7 @@ namespace Lucent.Common.Serialization.Json
         {
             try
             {
+                
                 _token.Guard(SerializationToken.Array);
 
                 // Get the serializer and a place to store the values
@@ -273,6 +274,7 @@ namespace Lucent.Common.Serialization.Json
         {
             try
             {
+                
                 _token.Guard(SerializationToken.Array);
 
                 // Get the serializer and a place to store the values
@@ -315,9 +317,6 @@ namespace Lucent.Common.Serialization.Json
         {
             try
             {
-                _token.Guard(SerializationToken.Value);
-                _jsonReader.TokenType.Guard(JsonToken.Boolean);
-
                 return _jsonReader.ReadAsBoolean().GetValueOrDefault();
             }
             finally
@@ -334,9 +333,6 @@ namespace Lucent.Common.Serialization.Json
         {
             try
             {
-                _token.Guard(SerializationToken.Value);
-                _jsonReader.TokenType.Guard(JsonToken.Boolean);
-
                 return (await _jsonReader.ReadAsBooleanAsync()).GetValueOrDefault();
             }
             finally
@@ -353,9 +349,6 @@ namespace Lucent.Common.Serialization.Json
         {
             try
             {
-                _token.Guard(SerializationToken.Value);
-                _jsonReader.TokenType.Guard(JsonToken.Float);
-
                 return _jsonReader.ReadAsDouble().GetValueOrDefault();
             }
             finally
@@ -372,243 +365,7 @@ namespace Lucent.Common.Serialization.Json
         {
             try
             {
-                _token.Guard(SerializationToken.Value);
-                _jsonReader.TokenType.Guard(JsonToken.Float);
-
                 return (await _jsonReader.ReadAsDoubleAsync()).GetValueOrDefault();
-            }
-            finally
-            {
-                await updateTokenAsync();
-            }
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <returns></returns>
-        public dynamic ReadDynamic()
-        {
-            try
-            {
-                _token.Guard(SerializationToken.Object);
-
-                // Check for a null value
-                if (_jsonReader.TokenType == JsonToken.Null)
-                    return null;
-
-                _jsonReader.TokenType.Guard(JsonToken.StartObject);
-                var instance = new ExpandoObject();
-
-                // Keep reading the properties until we're done
-                while (_jsonReader.Read())
-                {
-                    // Check for the end of the object
-                    if (_jsonReader.TokenType == JsonToken.EndObject)
-                        break;
-
-                    // Expect properties, anything else is garbage
-                    else if (_jsonReader.TokenType != JsonToken.PropertyName)
-                        _jsonReader.Skip();
-
-                    else
-                    {
-                        // Read the property name
-                        var propertyName = _jsonReader.Value.ToString();
-
-                        // We can't peek, so we just have to move ahead
-                        if (!_jsonReader.Read())
-                            throw new SerializationException("Corrupted stream!");
-
-                        // Figure out how to add the property to the instance
-                        switch (_jsonReader.TokenType)
-                        {
-                            case JsonToken.String:
-                            case JsonToken.Float:
-                            case JsonToken.Boolean:
-                            case JsonToken.Integer:
-                                // Easy, add value
-                                instance.TryAdd(propertyName, _jsonReader.Value);
-                                break;
-                            case JsonToken.Bytes:
-                                instance.TryAdd(propertyName, _jsonReader.ReadAsBytes());
-                                break;
-                            case JsonToken.Null:
-                                instance.TryAdd(propertyName, null);
-                                break;
-                            case JsonToken.StartObject:
-                                instance.TryAdd(propertyName, (ExpandoObject)ReadDynamic());
-                                break;
-                            case JsonToken.StartArray:
-                                instance.TryAdd(propertyName, (ExpandoObject[])ReadDynamicArray());
-                                break;
-                            default:
-                                // Just ignore
-                                break;
-                        }
-                    }
-                }
-
-                if ((instance as IDictionary<string, object>).Count > 0)
-                    return instance;
-
-                return null;
-            }
-            finally
-            {
-                updateToken();
-            }
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <returns></returns>
-        public async Task<dynamic> ReadDynamicAsync()
-        {
-            try
-            {
-                _token.Guard(SerializationToken.Object);
-
-                // Check for a null value
-                if (_jsonReader.TokenType == JsonToken.Null)
-                    return null;
-
-                _jsonReader.TokenType.Guard(JsonToken.StartObject);
-                var instance = new ExpandoObject();
-
-                // Keep reading the properties until we're done
-                while (await _jsonReader.ReadAsync())
-                {
-                    // Check for the end of the object
-                    if (_jsonReader.TokenType == JsonToken.EndObject)
-                        break;
-
-                    // Expect properties, anything else is garbage
-                    else if (_jsonReader.TokenType != JsonToken.PropertyName)
-                        await _jsonReader.SkipAsync();
-
-                    else
-                    {
-                        // Read the property name
-                        var propertyName = _jsonReader.Value.ToString();
-
-                        // We can't peek, so we just have to move ahead
-                        if (!await _jsonReader.ReadAsync())
-                            throw new SerializationException("Corrupted stream!");
-
-                        // Figure out how to add the property to the instance
-                        switch (_jsonReader.TokenType)
-                        {
-                            case JsonToken.String:
-                            case JsonToken.Float:
-                            case JsonToken.Boolean:
-                            case JsonToken.Integer:
-                                // Easy, add value
-                                instance.TryAdd(propertyName, _jsonReader.Value);
-                                break;
-                            case JsonToken.Bytes:
-                                instance.TryAdd(propertyName, _jsonReader.ReadAsBytes());
-                                break;
-                            case JsonToken.Null:
-                                instance.TryAdd(propertyName, null);
-                                break;
-                            case JsonToken.StartObject:
-                                instance.TryAdd(propertyName, (ExpandoObject)await ReadDynamicAsync());
-                                break;
-                            case JsonToken.StartArray:
-                                instance.TryAdd(propertyName, (ExpandoObject[])await ReadDynamicArrayAsync());
-                                break;
-                            default:
-                                // Just ignore
-                                break;
-                        }
-                    }
-                }
-
-                return instance;
-            }
-            finally
-            {
-                await updateTokenAsync();
-            }
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <returns></returns>
-        public dynamic[] ReadDynamicArray()
-        {
-            try
-            {
-                _token.Guard(SerializationToken.Array);
-
-                // Create the temp storage for the array
-                var array = new List<dynamic>();
-
-                // Check if we are at the start of an array
-                if (_jsonReader.TokenType == JsonToken.StartArray)
-                    _jsonReader.Read();
-
-                do
-                {
-                    // Only deserialize started objects
-                    if (_jsonReader.TokenType == JsonToken.StartObject)
-                        array.Add(ReadDynamic());
-
-                    // Get out of the loop
-                    else if (_jsonReader.TokenType == JsonToken.EndArray)
-                        break;
-
-                    // Might even want to toss an exception here...
-                    else
-                        _jsonReader.Skip();
-
-                } while (_jsonReader.Read());
-
-                return array.ToArray();
-            }
-            finally
-            {
-                updateToken();
-            }
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <returns></returns>
-        public async Task<dynamic[]> ReadDynamicArrayAsync()
-        {
-            try
-            {
-                _token.Guard(SerializationToken.Array);
-
-                // Create the temp storage for the array
-                var array = new List<dynamic>();
-
-                // Check if we are at the start of an array
-                if (_jsonReader.TokenType == JsonToken.StartArray)
-                    await _jsonReader.ReadAsync();
-
-                do
-                {
-                    // Only deserialize started objects
-                    if (_jsonReader.TokenType == JsonToken.StartObject)
-                        array.Add(await ReadDynamicAsync());
-
-                    // Get out of the loop
-                    else if (_jsonReader.TokenType == JsonToken.EndArray)
-                        break;
-
-                    // Might even want to toss an exception here...
-                    else
-                        await _jsonReader.SkipAsync();
-
-                } while (await _jsonReader.ReadAsync());
-
-                return array.ToArray();
             }
             finally
             {
@@ -624,9 +381,6 @@ namespace Lucent.Common.Serialization.Json
         {
             try
             {
-                _token.Guard(SerializationToken.Value);
-                _jsonReader.TokenType.Guard(JsonToken.Integer);
-
                 return _jsonReader.ReadAsInt32().GetValueOrDefault();
             }
             finally
@@ -643,9 +397,6 @@ namespace Lucent.Common.Serialization.Json
         {
             try
             {
-                _token.Guard(SerializationToken.Value);
-                _jsonReader.TokenType.Guard(JsonToken.Integer);
-
                 return (await _jsonReader.ReadAsInt32Async()).GetValueOrDefault();
             }
             finally
@@ -662,9 +413,6 @@ namespace Lucent.Common.Serialization.Json
         {
             try
             {
-                _token.Guard(SerializationToken.Value);
-                _jsonReader.TokenType.Guard(JsonToken.Integer);
-
                 return _jsonReader.ReadAsInt32().GetValueOrDefault();
             }
             finally
@@ -681,9 +429,6 @@ namespace Lucent.Common.Serialization.Json
         {
             try
             {
-                _token.Guard(SerializationToken.Value);
-                _jsonReader.TokenType.Guard(JsonToken.Integer);
-
                 return (await _jsonReader.ReadAsInt32Async()).GetValueOrDefault();
             }
             finally
@@ -700,9 +445,6 @@ namespace Lucent.Common.Serialization.Json
         {
             try
             {
-                _token.Guard(SerializationToken.Value);
-                _jsonReader.TokenType.Guard(JsonToken.Float);
-
                 return (float)_jsonReader.ReadAsDouble().GetValueOrDefault();
             }
             finally
@@ -719,9 +461,6 @@ namespace Lucent.Common.Serialization.Json
         {
             try
             {
-                _token.Guard(SerializationToken.Value);
-                _jsonReader.TokenType.Guard(JsonToken.Float);
-
                 return (float)(await _jsonReader.ReadAsDoubleAsync()).GetValueOrDefault();
             }
             finally
@@ -738,9 +477,6 @@ namespace Lucent.Common.Serialization.Json
         {
             try
             {
-                _token.Guard(SerializationToken.Value);
-                _jsonReader.TokenType.Guard(JsonToken.String);
-
                 return _jsonReader.ReadAsString();
             }
             finally
@@ -757,9 +493,6 @@ namespace Lucent.Common.Serialization.Json
         {
             try
             {
-                _token.Guard(SerializationToken.Value);
-                _jsonReader.TokenType.Guard(JsonToken.String);
-
                 return await _jsonReader.ReadAsStringAsync();
             }
             finally
@@ -776,9 +509,6 @@ namespace Lucent.Common.Serialization.Json
         {
             try
             {
-                _token.Guard(SerializationToken.Value);
-                _jsonReader.TokenType.Guard(JsonToken.String);
-
                 return DateTime.Parse(_jsonReader.ReadAsString());
             }
             finally
@@ -795,9 +525,6 @@ namespace Lucent.Common.Serialization.Json
         {
             try
             {
-                _token.Guard(SerializationToken.Value);
-                _jsonReader.TokenType.Guard(JsonToken.String);
-
                 return DateTime.Parse(await _jsonReader.ReadAsStringAsync());
             }
             finally
@@ -814,9 +541,6 @@ namespace Lucent.Common.Serialization.Json
         {
             try
             {
-                _token.Guard(SerializationToken.Value);
-                _jsonReader.TokenType.Guard(JsonToken.String);
-
                 return Guid.Parse(_jsonReader.ReadAsString());
             }
             finally
@@ -834,9 +558,6 @@ namespace Lucent.Common.Serialization.Json
         {
             try
             {
-                _token.Guard(SerializationToken.Value);
-                _jsonReader.TokenType.Guard(JsonToken.String);
-
                 return Guid.Parse(await _jsonReader.ReadAsStringAsync());
             }
             finally
@@ -853,6 +574,7 @@ namespace Lucent.Common.Serialization.Json
         {
             try
             {
+                
                 _token.Guard(SerializationToken.Array);
 
                 // Create the temp storage for the array
@@ -935,9 +657,6 @@ namespace Lucent.Common.Serialization.Json
         {
             try
             {
-                _token.Guard(SerializationToken.Value);
-                _jsonReader.TokenType.Guard(JsonToken.Integer);
-
                 return (uint)_jsonReader.ReadAsInt32().GetValueOrDefault();
             }
             finally
@@ -954,9 +673,6 @@ namespace Lucent.Common.Serialization.Json
         {
             try
             {
-                _token.Guard(SerializationToken.Value);
-                _jsonReader.TokenType.Guard(JsonToken.Integer);
-
                 return (uint)(await _jsonReader.ReadAsInt32Async()).GetValueOrDefault();
             }
             finally
@@ -973,9 +689,6 @@ namespace Lucent.Common.Serialization.Json
         {
             try
             {
-                _token.Guard(SerializationToken.Value);
-                _jsonReader.TokenType.Guard(JsonToken.Integer);
-
                 return (ulong)_jsonReader.ReadAsInt32().GetValueOrDefault();
             }
             finally
@@ -992,15 +705,48 @@ namespace Lucent.Common.Serialization.Json
         {
             try
             {
-                _token.Guard(SerializationToken.Value);
-                _jsonReader.TokenType.Guard(JsonToken.Integer);
-
                 return (ulong)(await _jsonReader.ReadAsInt32Async()).GetValueOrDefault();
             }
             finally
             {
                 await updateTokenAsync();
             }
+        }
+
+        public bool HasMoreProperties()
+        {
+            if (_jsonReader.TokenType == JsonToken.StartObject)
+            {
+                if (!HasNext())
+                    return false;
+                else return _jsonReader.TokenType == JsonToken.PropertyName;
+            }
+
+            if (_jsonReader.TokenType == JsonToken.EndObject)
+                return false;
+
+            if(_jsonReader.TokenType != JsonToken.PropertyName)
+                _jsonReader.Read();
+
+            return _jsonReader.TokenType == JsonToken.PropertyName;
+        }
+
+        public async Task<bool> HasMorePropertiesAsync()
+        {
+            if (_jsonReader.TokenType == JsonToken.StartObject)
+                if (!await HasNextAsync())
+                    return false;
+
+            if (_jsonReader.TokenType == JsonToken.EndObject)
+                return false;
+
+            if (_jsonReader.TokenType == JsonToken.PropertyName)
+                return await HasNextAsync();
+
+            if(_jsonReader.TokenType != JsonToken.PropertyName)
+                await _jsonReader.ReadAsync();
+
+            return _jsonReader.TokenType == JsonToken.PropertyName;
         }
 
         #region IDisposable

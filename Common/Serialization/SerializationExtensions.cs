@@ -23,7 +23,7 @@ namespace Lucent.Common
         /// <returns></returns>
         public static IServiceCollection AddSerialization(this IServiceCollection services, IConfiguration configuration) =>
             // Each request should get it's own seriailzation registry, depending on context
-            services.AddScoped<ISerializationRegistry, SerializationRegistry>();
+            services.AddSingleton<ISerializationRegistry, SerializationRegistry>();
 
         /// <summary>
         /// Validates if an object is the default for it's type

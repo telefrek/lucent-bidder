@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Cassandra;
+using Lucent.Common.Entities;
+using Lucent.Common.Serialization;
 using Lucent.Common.Test;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -15,33 +17,22 @@ namespace Lucent.Common.Storage.Test
         public override void TestInitialize()
         {
             base.TestInitialize();
+            ServiceProvider.AddEntitySerializers();
 
             var manager = ServiceProvider.GetRequiredService<IStorageManager>();
             Assert.IsNotNull(manager, "Failed to create manager");
 
-            var testRepo = manager.GetRepository<CTest, Guid>();
+            var testRepo = manager.GetRepository<Campaign>();
             Assert.IsNotNull(testRepo, "Failed to create repo");
 
             foreach (var entry in testRepo.Get().Result)
-                Assert.IsTrue(testRepo.TryRemove(entry, (e) => e.Id).Result);
+                Assert.IsTrue(testRepo.TryRemove(entry).Result);
         }
 
         protected override void InitializeDI(IServiceCollection services)
         {
+            services.AddSerialization(Configuration);
             services.AddStorage(Configuration);
-        }
-
-        public class CTest
-        {
-            public Guid Id { get; set; }
-            public string Name { get; set; }
-            public DateTime LastUpdated { get; set; } = DateTime.Now;
-            public CSubTest[] SubItems { get; set; }
-        }
-
-        public class CSubTest
-        {
-            public string Name { get; set; }
         }
 
         [TestMethod]
@@ -50,35 +41,31 @@ namespace Lucent.Common.Storage.Test
             var manager = ServiceProvider.GetRequiredService<IStorageManager>();
             Assert.IsNotNull(manager, "Failed to create manager");
 
-            var testRepo = manager.GetRepository<CTest, Guid>();
+            var testRepo = manager.GetRepository<Campaign>();
             Assert.IsNotNull(testRepo, "Failed to create repo");
 
-            var res = await testRepo.Get(Guid.NewGuid());
+            var res = await testRepo.Get(Guid.NewGuid().ToString());
             Assert.IsNull(res, "No object should be returned");
-            var tObj = new CTest { Id = Guid.NewGuid(), Name = "item", LastUpdated = DateTime.UtcNow };
+            var tObj = new Campaign { Id = Guid.NewGuid().ToString(), Name = "item", Spend = 1.0 };
 
-            var success = await testRepo.TryInsert(tObj, (o) => o.Id);
+            var success = await testRepo.TryInsert(tObj);
             Assert.IsTrue(success);
 
             res = await testRepo.Get(tObj.Id);
             Assert.IsNotNull(res);
             Assert.AreEqual(tObj.Id, res.Id, "mismatch id");
-            Assert.IsNull(res.SubItems);
 
             tObj.Name = "Updated";
-            tObj.SubItems = new CSubTest[] { new CSubTest { Name = "Hello" } };
 
-
-            success = await testRepo.TryUpdate(tObj, (o) => o.Id);
+            success = await testRepo.TryUpdate(tObj);
             Assert.IsTrue(success, "Failed to update");
 
             res = await testRepo.Get(tObj.Id);
             Assert.IsNotNull(res);
             Assert.AreEqual(tObj.Id, res.Id, "mismatch id");
             Assert.AreEqual("Updated", res.Name, true, "Failed to update name");
-            Assert.AreEqual(1, res.SubItems.Length);
 
-            success = await testRepo.TryRemove(tObj, (o) => o.Id);
+            success = await testRepo.TryRemove(tObj);
             Assert.IsTrue(success, "Failed to remove");
 
             res = await testRepo.Get(tObj.Id);

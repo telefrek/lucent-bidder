@@ -28,7 +28,7 @@ namespace Lucent.Common.Serialization
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public IEntitySerializer<T> GetSerializer<T>() where T : new() => (IEntitySerializer<T>)_registry.GetValueOrDefault(typeof(T), new EntitySerializer<T>());
+        public IEntitySerializer<T> GetSerializer<T>() where T : new() => (IEntitySerializer<T>)_registry.GetValueOrDefault(typeof(T), null);
 
         /// <summary>
         /// 

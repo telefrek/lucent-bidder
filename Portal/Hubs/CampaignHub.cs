@@ -2,7 +2,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Lucent.Portal.Entities;
+using Lucent.Common.Entities;
 using Microsoft.AspNetCore.SignalR;
 using Newtonsoft.Json;
 using Lucent.Common.Serialization.Json;

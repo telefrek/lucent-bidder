@@ -18,11 +18,12 @@ namespace Lucent.Common.Storage
     /// Internal Cassandra storage repository
     /// </summary>
     /// <typeparam name="T">The type of object to store in cassandra</typeparam>
-    internal class CassandraRepository<T, K> : ILucentRepository<T, K>
-        where T : new()
+    internal class CassandraRepository<T> : ILucentRepository<T>
+        where T : IStorageEntity, new()
     {
         ISession _session;
         string _tableName;
+        IEntitySerializer<T> _serializer;
 
         Statement _getAllStatement;
         PreparedStatement _getStatement;
@@ -38,23 +39,20 @@ namespace Lucent.Common.Storage
             _session = session;
             _provider = provider;
             _tableName = typeof(T).Name.ToLowerInvariant();
-            _log = provider.GetService<ILoggerFactory>().CreateLogger<CassandraRepository<T, K>>();
+            _log = provider.GetService<ILoggerFactory>().CreateLogger<CassandraRepository<T>>();
+            _serializer = provider.GetService<ISerializationRegistry>().GetSerializer<T>();
 
-            var keyType = "text";
-            var kt = typeof(K);
-            if (kt.Equals(typeof(Guid)))
-                keyType = "uuid";
-
+            session.Execute("DROP TABLE IF EXISTS {0}".FormatWith(_tableName));
             _getAllStatement = new SimpleStatement("SELECT * FROM {0}".FormatWith(_tableName));
 
             // optimize this to happen once later
-            _session.Execute("CREATE TABLE IF NOT EXISTS {0} (id {1} PRIMARY KEY, contents text, etag timestamp );".FormatWith(_tableName, keyType));
+            _session.Execute("CREATE TABLE IF NOT EXISTS {0} (id text PRIMARY KEY, etag text, version int, updated timestamp, contents blob );".FormatWith(_tableName));
 
             _getStatement = _session.Prepare("SELECT * FROM {0} WHERE id=?".FormatWith(_tableName));
-            _insertStatement = _session.Prepare("INSERT INTO {0} (id, contents, etag) VALUES (?, ?, ?) IF NOT EXISTS".FormatWith(_tableName));
+            _insertStatement = _session.Prepare("INSERT INTO {0} (id, etag, version, updated, contents) VALUES (?, ?, ?, ?, ?) IF NOT EXISTS".FormatWith(_tableName));
 
             // Check etag
-            _updateStatement = _session.Prepare("UPDATE {0} SET contents=?, etag=? WHERE id=? IF EXISTS".FormatWith(_tableName));
+            _updateStatement = _session.Prepare("UPDATE {0} SET etag=?, updated=?, contents=? WHERE id=? IF EXISTS".FormatWith(_tableName));
 
             // Check etag
             _deleteStatement = _session.Prepare("DELETE FROM {0} WHERE id=? IF EXISTS".FormatWith(_tableName));
@@ -77,17 +75,17 @@ namespace Lucent.Common.Storage
                                 for (var i = 0; i < numRows && rowEnum.MoveNext(); ++i)
                                 {
                                     var row = rowEnum.Current;
-                                    var id = row.GetValue<K>("id");
+                                    var id = row.GetValue<string>("id");
 
-                                    var contents = row.GetValue<string>("contents");
+                                    var contents = row.GetValue<byte[]>("contents");
 
-                                    using (var ms = new MemoryStream(Encoding.UTF8.GetBytes(contents)))
+                                    using (var ms = new MemoryStream(contents))
                                     {
                                         using (var reader = ms.WrapSerializer(_provider, SerializationFormat.JSON, true).Reader)
                                         {
                                             while (reader.HasNext())
                                             {
-                                                res.Add(new EntitySerializer<T>().Read(reader));
+                                                res.Add(_serializer.Read(reader));
                                             }
                                         }
                                     }
@@ -100,16 +98,16 @@ namespace Lucent.Common.Storage
                         while (rowEnum.MoveNext())
                         {
                             var row = rowEnum.Current;
-                            var id = row.GetValue<K>("id");
+                            var id = row.GetValue<string>("id");
 
-                            var contents = row.GetValue<string>("contents");
+                            var contents = row.GetValue<byte[]>("contents");
 
-                            using (var ms = new MemoryStream(Encoding.UTF8.GetBytes(contents)))
+                            using (var ms = new MemoryStream(contents))
                             {
                                 using (var reader = ms.WrapSerializer(_provider, SerializationFormat.JSON, true).Reader)
                                 {
                                     if (reader.HasNext())
-                                        res.Add(new EntitySerializer<T>().Read(reader));
+                                        res.Add(_serializer.Read(reader));
                                 }
                             }
                         }
@@ -124,7 +122,7 @@ namespace Lucent.Common.Storage
             return res;
         }
 
-        public async Task<T> Get(K key)
+        public async Task<T> Get(string key)
         {
             try
             {
@@ -140,16 +138,16 @@ namespace Lucent.Common.Storage
                                 for (var i = 0; i < numRows && rowEnum.MoveNext(); ++i)
                                 {
                                     var row = rowEnum.Current;
-                                    var id = row.GetValue<K>("id");
+                                    var id = row.GetValue<string>("id");
 
-                                    var contents = row.GetValue<string>("contents");
+                                    var contents = row.GetValue<byte[]>("contents");
 
-                                    using (var ms = new MemoryStream(Encoding.UTF8.GetBytes(contents)))
+                                    using (var ms = new MemoryStream(contents))
                                     {
                                         using (var reader = ms.WrapSerializer(_provider, SerializationFormat.JSON, true).Reader)
                                         {
                                             if (reader.HasNext())
-                                                return new EntitySerializer<T>().Read(reader);
+                                                return _serializer.Read(reader);
                                         }
                                     }
                                 }
@@ -161,16 +159,16 @@ namespace Lucent.Common.Storage
                         while (rowEnum.MoveNext())
                         {
                             var row = rowEnum.Current;
-                            var id = row.GetValue<K>("id");
+                            var id = row.GetValue<string>("id");
 
-                            var contents = row.GetValue<string>("contents");
+                            var contents = row.GetValue<byte[]>("contents");
 
-                            using (var ms = new MemoryStream(Encoding.UTF8.GetBytes(contents)))
+                            using (var ms = new MemoryStream(contents))
                             {
                                 using (var reader = ms.WrapSerializer(_provider, SerializationFormat.JSON, true).Reader)
                                 {
                                     if (reader.HasNext())
-                                        return new EntitySerializer<T>().Read(reader);
+                                        return _serializer.Read(reader);
                                 }
                             }
                         }
@@ -185,71 +183,71 @@ namespace Lucent.Common.Storage
             return default(T);
         }
 
-        public async Task<bool> TryInsert(T obj, Func<T, K> keyMap)
+        public async Task<bool> TryInsert(T obj)
         {
             _log.LogInformation("Inserting new item");
             try
             {
-                var contents = string.Empty;
+                var contents = new byte[0];
                 using (var ms = new MemoryStream())
                 {
                     using (var writer = ms.WrapSerializer(_provider, SerializationFormat.JSON, true).Writer)
                     {
-                        new EntitySerializer<T>().Write(writer, obj);
+                        _serializer.Write(writer, obj);
                         writer.Flush();
                     }
 
                     ms.Seek(0, SeekOrigin.Begin);
-                    contents = Encoding.UTF8.GetString(ms.ToArray());
+                    contents = ms.ToArray();
                 }
+                var cstr = Encoding.UTF8.GetString(contents);
+                var rowSet = await _session.ExecuteAsync(_insertStatement.Bind(obj.Id, "tag", 1, DateTime.UtcNow, contents));
 
-                var rowSet = await _session.ExecuteAsync(_insertStatement.Bind(keyMap.Invoke(obj), contents, DateTime.UtcNow));
-
-                return rowSet != null;
+                return rowSet != null && !string.IsNullOrEmpty(cstr);
             }
             catch (Exception ex)
             {
-                _log.LogError(ex, "Failed to Insert {0}", keyMap.Invoke(obj));
+                _log.LogError(ex, "Failed to Insert {0}", obj.Id);
             }
 
             return false;
         }
 
-        public async Task<bool> TryRemove(T obj, Func<T, K> keyMap)
+        public async Task<bool> TryRemove(T obj)
         {
             try
             {
-                var rowSet = await _session.ExecuteAsync(_deleteStatement.Bind(keyMap.Invoke(obj)));
+                var rowSet = await _session.ExecuteAsync(_deleteStatement.Bind(obj.Id));
 
                 return rowSet != null;
             }
             catch (Exception ex)
             {
-                _log.LogError(ex, "Failed to Remove {0}", keyMap.Invoke(obj));
+                _log.LogError(ex, "Failed to Remove {0}", obj.Id);
             }
 
             return false;
         }
 
-        public async Task<bool> TryUpdate(T obj, Func<T, K> keyMap)
+        public async Task<bool> TryUpdate(T obj)
         {
             try
             {
-                var contents = string.Empty;
+                var contents = new byte[0];
                 using (var ms = new MemoryStream())
                 {
-                    new EntitySerializer<T>().Write(ms.WrapSerializer(_provider, SerializationFormat.JSON, true).Writer, obj);
+                    _serializer.Write(ms.WrapSerializer(_provider, SerializationFormat.JSON, true).Writer, obj);
                     ms.Seek(0, SeekOrigin.Begin);
-                    contents = Encoding.UTF8.GetString(ms.ToArray());
+                    contents = ms.ToArray();
                 }
 
-                var rowSet = await _session.ExecuteAsync(_updateStatement.Bind(contents, DateTime.UtcNow, keyMap.Invoke(obj)));
+                var rowSet = await _session.ExecuteAsync(_updateStatement.Bind("tag", DateTime.UtcNow, contents, obj.Id));
 
                 return rowSet != null;
             }
             catch (Exception ex)
             {
-                _log.LogError(ex, "Failed to Update {0}", keyMap.Invoke(obj));
+                _log.LogError(ex, "Failed to Update {0}", obj.Id);
             }
 
             return false;

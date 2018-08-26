@@ -39,7 +39,7 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <summary>
         /// 
         /// </summary>
-        public object Value => (_protoReader.FieldNumber << 3) & ((ulong)_protoReader.FieldType);
+        public PropertyId Id => new PropertyId { Id = ((ulong)_protoReader.FieldType) };
 
 
         /// <summary>
@@ -132,10 +132,6 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public T ReadAs<T>() where T : new()
         {
-            // Hate the double casting =\
-            if (typeof(ProtobufProperty).IsAssignableFrom(typeof(T)))
-                return (T)(object)new ProtobufProperty { PropertyIndex = _protoReader.FieldNumber, Type = _protoReader.FieldType };
-
             _registry.Guard<T>();
 
             var protoReader = _protoReader.GetNextMessageReader();
@@ -199,10 +195,6 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public async Task<T> ReadAsAsync<T>() where T : new()
         {
-            // Hate the double casting =\
-            if (typeof(ProtobufProperty).IsAssignableFrom(typeof(T)))
-                return (T)(object)new ProtobufProperty { PropertyIndex = _protoReader.FieldNumber, Type = _protoReader.FieldType };
-
             _registry.Guard<T>();
 
             return await _registry.GetSerializer<T>().ReadAsync(this, CancellationToken.None);
@@ -487,6 +479,16 @@ namespace Lucent.Common.Serialization.Protobuf
         public async Task SkipAsync()
         {
             await _protoReader.SkipAsync();
+        }
+
+        public bool HasMoreProperties()
+        {
+            return !_protoReader.IsEmpty();
+        }
+
+        public Task<bool> HasMorePropertiesAsync()
+        {
+            return Task.FromResult(!_protoReader.IsEmpty());
         }
 
         #region IDisposable

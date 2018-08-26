@@ -453,5 +453,201 @@ namespace Lucent.Common.Serialization.Json
             GC.SuppressFinalize(this);
         }
         #endregion
+
+        public void Write<T>(PropertyId id, T value) where T : new()
+        {
+            if(value.IsNullOrDefault())
+                return;
+
+            _jsonWriter.WritePropertyName(id.Name);
+            Write(value);
+        }
+
+        public void Write<T>(PropertyId id, T[] value) where T : new()
+        {
+            if(value.IsNullOrDefault())
+                return;
+                
+            _jsonWriter.WritePropertyName(id.Name);
+            Write(value);
+        }
+
+        public void Write(PropertyId id, bool value)
+        {
+            _jsonWriter.WritePropertyName(id.Name);
+            Write(value);
+        }
+
+        public void Write(PropertyId id, double value)
+        {
+            _jsonWriter.WritePropertyName(id.Name);
+            Write(value);
+        }
+
+        public void Write(PropertyId id, float value)
+        {
+            _jsonWriter.WritePropertyName(id.Name);
+            Write(value);
+        }
+
+        public void Write(PropertyId id, int value)
+        {
+            _jsonWriter.WritePropertyName(id.Name);
+            Write(value);
+        }
+
+        public void Write(PropertyId id, uint value)
+        {
+            _jsonWriter.WritePropertyName(id.Name);
+            Write(value);
+        }
+
+        public void Write(PropertyId id, long value)
+        {
+            _jsonWriter.WritePropertyName(id.Name);
+            Write(value);
+        }
+
+        public void Write(PropertyId id, ulong value)
+        {
+            _jsonWriter.WritePropertyName(id.Name);
+            Write(value);
+        }
+
+        public void Write(PropertyId id, string value)
+        {
+            if(value.IsNullOrDefault())
+                return;
+                
+            _jsonWriter.WritePropertyName(id.Name);
+            Write(value);
+        }
+
+        public void Write(PropertyId id, string[] value)
+        {
+            if(value.IsNullOrDefault())
+                return;
+                
+            _jsonWriter.WritePropertyName(id.Name);
+            Write(value);
+        }
+
+        public void Write(PropertyId id, DateTime value)
+        {
+            if(value.IsNullOrDefault())
+                return;
+                
+            _jsonWriter.WritePropertyName(id.Name);
+            Write(value);
+        }
+
+        public void Write(PropertyId id, Guid value)
+        {
+            if(value.IsNullOrDefault())
+                return;
+                
+            _jsonWriter.WritePropertyName(id.Name);
+            Write(value);
+        }
+
+        public async Task WriteAsync<T>(PropertyId id, T value) where T : new()
+        {
+            if(value.IsNullOrDefault())
+                return;
+                
+            await _jsonWriter.WritePropertyNameAsync(id.Name);
+            await WriteAsync(value);
+        }
+
+        public async Task WriteAsync<T>(PropertyId id, T[] value) where T : new()
+        {
+            if(value.IsNullOrDefault())
+                return;
+                
+            await _jsonWriter.WritePropertyNameAsync(id.Name);
+            await WriteAsync(value);
+        }
+
+        public async Task WriteAsync(PropertyId id, bool value)
+        {
+            await _jsonWriter.WritePropertyNameAsync(id.Name);
+            await WriteAsync(value);
+        }
+
+        public async Task WriteAsync(PropertyId id, double value)
+        {
+            await _jsonWriter.WritePropertyNameAsync(id.Name);
+            await WriteAsync(value);
+        }
+
+        public async Task WriteAsync(PropertyId id, float value)
+        {
+            await _jsonWriter.WritePropertyNameAsync(id.Name);
+            await WriteAsync(value);
+        }
+
+        public async Task WriteAsync(PropertyId id, int value)
+        {
+            await _jsonWriter.WritePropertyNameAsync(id.Name);
+            await WriteAsync(value);
+        }
+
+        public async Task WriteAsync(PropertyId id, uint value)
+        {
+            await _jsonWriter.WritePropertyNameAsync(id.Name);
+            await WriteAsync(value);
+        }
+
+        public async Task WriteAsync(PropertyId id, long value)
+        {
+            await _jsonWriter.WritePropertyNameAsync(id.Name);
+            await WriteAsync(value);
+        }
+
+        public async Task WriteAsync(PropertyId id, ulong value)
+        {
+            await _jsonWriter.WritePropertyNameAsync(id.Name);
+            await WriteAsync(value);
+        }
+
+        public async Task WriteAsync(PropertyId id, string value)
+        {
+            if(value.IsNullOrDefault())
+                return;
+                
+            await _jsonWriter.WritePropertyNameAsync(id.Name);
+            await WriteAsync(value);
+        }
+
+        public async Task WriteAsync(PropertyId id, string[] value)
+        {
+            if(value.IsNullOrDefault())
+                return;
+                
+            await _jsonWriter.WritePropertyNameAsync(id.Name);
+            await WriteAsync(value);
+        }
+
+        public async Task WriteAsync(PropertyId id, DateTime value)
+        {
+            if(value.IsNullOrDefault())
+                return;
+                
+            await _jsonWriter.WritePropertyNameAsync(id.Name);
+            await WriteAsync(value);
+        }
+
+        public async Task WriteAsync(PropertyId id, Guid value)
+        {
+            if(value.IsNullOrDefault())
+                return;
+                
+            await _jsonWriter.WritePropertyNameAsync(id.Name);
+            await WriteAsync(value);
+        }
+
+        public void StartObject() => _jsonWriter.WriteStartObject();
+
+        public void EndObject() => _jsonWriter.WriteEndObject();
     }
 }
