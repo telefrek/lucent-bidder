@@ -15,6 +15,7 @@ namespace Lucent.Common.Serialization.Protobuf
         ProtobufReader _protoReader;
         ISerializationRegistry _registry;
         ILogger<ProtobufSerializationStreamReader> _log;
+        volatile int _firstFlag;
 
         volatile SerializationToken _token;
 
@@ -29,6 +30,7 @@ namespace Lucent.Common.Serialization.Protobuf
             _protoReader = protoReader;
             _registry = registry;
             _log = log;
+            _firstFlag = 0;
         }
 
         /// <summary>
@@ -39,7 +41,7 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <summary>
         /// 
         /// </summary>
-        public PropertyId Id => new PropertyId { Id = ((ulong)_protoReader.FieldType) };
+        public PropertyId Id => new PropertyId { Id = ((ulong)_protoReader.FieldNumber) };
 
 
         /// <summary>
@@ -239,30 +241,6 @@ namespace Lucent.Common.Serialization.Protobuf
             _token.Guard(SerializationToken.Value);
             return await _protoReader.ReadDoubleAsync();
         }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <returns></returns>
-        public dynamic ReadDynamic() => throw new SerializationException("Cannot read dynamic objects as protobuf");
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <returns></returns>
-        public dynamic[] ReadDynamicArray() => throw new SerializationException("Cannot read dynamic objects as protobuf");
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <returns></returns>
-        public Task<dynamic[]> ReadDynamicArrayAsync() => throw new SerializationException("Cannot read dynamic objects as protobuf");
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <returns></returns>
-        public Task<dynamic> ReadDynamicAsync() => throw new SerializationException("Cannot read dynamic objects as protobuf");
 
         /// <summary>
         /// 
@@ -483,12 +461,12 @@ namespace Lucent.Common.Serialization.Protobuf
 
         public bool HasMoreProperties()
         {
-            return !_protoReader.IsEmpty();
+            return Interlocked.Exchange(ref _firstFlag, 1) == 0 || HasNext();
         }
 
-        public Task<bool> HasMorePropertiesAsync()
+        public async Task<bool> HasMorePropertiesAsync()
         {
-            return Task.FromResult(!_protoReader.IsEmpty());
+            return Interlocked.Exchange(ref _firstFlag, 1) == 0 || await HasNextAsync();
         }
 
         #region IDisposable

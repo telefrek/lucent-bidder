@@ -17,7 +17,6 @@ namespace Lucent.Common.Storage.Test
         public override void TestInitialize()
         {
             base.TestInitialize();
-            ServiceProvider.AddEntitySerializers();
 
             var manager = ServiceProvider.GetRequiredService<IStorageManager>();
             Assert.IsNotNull(manager, "Failed to create manager");

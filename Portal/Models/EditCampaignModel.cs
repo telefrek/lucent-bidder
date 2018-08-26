@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Lucent.Common.Storage;
 using Lucent.Portal.Data;
-using Lucent.Portal.Entities;
+using Lucent.Common.Entities;
 using Lucent.Portal.Hubs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -14,13 +14,13 @@ namespace Lucent.Portal.Models
 {
     public class EditCampaignModel : PageModel
     {
-        private readonly ILucentRepository<Campaign, Guid> _db;
+        private readonly ILucentRepository<Campaign> _db;
         private readonly ILogger _log;
         private readonly ICampaignUpdateContext _context;
 
         public EditCampaignModel(IStorageManager db, ILogger<CreateCampaignModel> log, ICampaignUpdateContext context)
         {
-            _db = db.GetRepository<Campaign, Guid>();
+            _db = db.GetRepository<Campaign>();
             _log = log;
             _context = context;
         }
@@ -28,7 +28,7 @@ namespace Lucent.Portal.Models
         [BindProperty]
         public Campaign Campaign { get; set; }
 
-        public async Task<IActionResult> OnGetAsync(Guid id)
+        public async Task<IActionResult> OnGetAsync(string id)
         {
             _log.LogInformation("Geting campaign {id}", id);
             var c = await _db.Get(id);
@@ -57,7 +57,7 @@ namespace Lucent.Portal.Models
 
                 try
                 {
-                    if (await _db.TryUpdate(c, (o) => c.Id))
+                    if (await _db.TryUpdate(c))
                         await _context.UpdateCampaignAsync(c, CancellationToken.None);
                 }
                 catch (DbUpdateConcurrencyException)

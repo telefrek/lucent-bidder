@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Lucent.Portal.Data;
-using Lucent.Portal.Entities;
+using Lucent.Common.Entities;
 using System;
 using Microsoft.Extensions.Logging;
 using Lucent.Common.Storage;
@@ -14,12 +14,12 @@ namespace Lucent.Portal.Models
 {
     public class CampaignsModel : PageModel
     {
-        private readonly ILucentRepository<Campaign, Guid> _db;
+        private readonly ILucentRepository<Campaign> _db;
         private readonly ILogger<CampaignsModel> _log;
 
         public CampaignsModel(IStorageManager db, ILogger<CampaignsModel> logger)
         {
-            _db = db.GetRepository<Campaign, Guid>();
+            _db = db.GetRepository<Campaign>();
             _log = logger;
         }
 
@@ -31,13 +31,13 @@ namespace Lucent.Portal.Models
             Campaigns = (await _db.Get()).ToList();
         }
 
-        public async Task<IActionResult> OnPostDeleteAsync(Guid id)
+        public async Task<IActionResult> OnPostDeleteAsync(string id)
         {
             var contact = await _db.Get(id);
 
             if (contact != null)
             {
-                await _db.TryRemove(contact, (o) => o.Id);
+                await _db.TryRemove(contact);
             }
 
             return RedirectToPage();

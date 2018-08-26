@@ -1,8 +1,8 @@
 using System;
 using System.Threading.Tasks;
+using Lucent.Common.Entities;
 using Lucent.Common.Storage;
 using Lucent.Portal.Data;
-using Lucent.Portal.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
@@ -11,12 +11,12 @@ namespace Lucent.Portal.Models
 {
     public class CreateCampaignModel : PageModel
     {
-        private readonly ILucentRepository<Campaign, Guid> _db;
+        private readonly ILucentRepository<Campaign> _db;
         private readonly ILogger _log;
 
         public CreateCampaignModel(IStorageManager db, ILogger<CreateCampaignModel> log)
         {
-            _db = db.GetRepository<Campaign, Guid>();
+            _db = db.GetRepository<Campaign>();
             _log = log;
         }
 
@@ -32,9 +32,9 @@ namespace Lucent.Portal.Models
             }
 
             // Set the Id
-            Campaign.Id = Guid.NewGuid();
+            Campaign.Id = Guid.NewGuid().ToString();
 
-            if (await _db.TryInsert(Campaign, (o) => o.Id))
+            if (await _db.TryInsert(Campaign))
                 return RedirectToPage("./Index");
 
             _log.LogError("Failed to insert record");

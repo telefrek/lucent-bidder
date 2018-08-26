@@ -1,4 +1,4 @@
-using Lucent.Portal.Entities;
+using Lucent.Common.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lucent.Portal.Data

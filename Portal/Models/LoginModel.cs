@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using Lucent.Portal.Entities;
+using Lucent.Common.Entities;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Telefrek.LDAP.Managers;

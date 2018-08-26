@@ -8,12 +8,12 @@ namespace Lucent.Common
 {
     public static partial class LucentExtensions
     {
-        public static void AddEntitySerializers(this IServiceProvider provider)
+        public static IServiceCollection AddEntitySerializers(this IServiceCollection provider)
         {
-            var registry = provider.GetRequiredService<ISerializationRegistry>();
-            
-            if(!registry.IsSerializerRegisterred<Campaign>())
+            var registry = provider.BuildServiceProvider().GetRequiredService<ISerializationRegistry>();
+            if (!registry.IsSerializerRegisterred<Campaign>())
                 registry.Register<Campaign>(new CampaignSerializer());
+            return provider;
         }
     }
 }
