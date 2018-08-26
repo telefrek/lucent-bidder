@@ -42,7 +42,6 @@ namespace Lucent.Common.Storage
             _log = provider.GetService<ILoggerFactory>().CreateLogger<CassandraRepository<T>>();
             _serializer = provider.GetService<ISerializationRegistry>().GetSerializer<T>();
 
-            session.Execute("DROP TABLE IF EXISTS {0}".FormatWith(_tableName));
             _getAllStatement = new SimpleStatement("SELECT * FROM {0}".FormatWith(_tableName));
 
             // optimize this to happen once later
