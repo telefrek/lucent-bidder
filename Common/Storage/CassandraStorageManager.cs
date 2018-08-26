@@ -37,6 +37,6 @@ namespace Lucent.Common.Storage
             _session.ChangeKeyspace(_config.Keyspace);
         }
 
-        public ILucentRepository<T> GetRepository<T>() where T : IStorageEntity, new() => new CassandraRepository<T>(_session, _provider);
+        public ILucentRepository<T> GetRepository<T>() where T : IStorageEntity, new() => new CassandraRepository<T>(_session, _provider, _config.Format);
     }
 }

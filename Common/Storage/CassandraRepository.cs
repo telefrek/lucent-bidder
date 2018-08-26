@@ -32,15 +32,17 @@ namespace Lucent.Common.Storage
         PreparedStatement _deleteStatement;
         IServiceProvider _provider;
         ILogger _log;
+        SerializationFormat _format;
 
         // Need to get table name mapping
-        public CassandraRepository(ISession session, IServiceProvider provider)
+        public CassandraRepository(ISession session, IServiceProvider provider, SerializationFormat format)
         {
             _session = session;
             _provider = provider;
             _tableName = typeof(T).Name.ToLowerInvariant();
             _log = provider.GetService<ILoggerFactory>().CreateLogger<CassandraRepository<T>>();
             _serializer = provider.GetService<ISerializationRegistry>().GetSerializer<T>();
+            _format = format;
 
             _getAllStatement = new SimpleStatement("SELECT * FROM {0}".FormatWith(_tableName));
 
@@ -80,7 +82,7 @@ namespace Lucent.Common.Storage
 
                                     using (var ms = new MemoryStream(contents))
                                     {
-                                        using (var reader = ms.WrapSerializer(_provider, SerializationFormat.PROTOBUF, true).Reader)
+                                        using (var reader = ms.WrapSerializer(_provider, _format, true).Reader)
                                         {
                                             while (reader.HasNext())
                                             {
@@ -103,7 +105,7 @@ namespace Lucent.Common.Storage
 
                             using (var ms = new MemoryStream(contents))
                             {
-                                using (var reader = ms.WrapSerializer(_provider, SerializationFormat.PROTOBUF, true).Reader)
+                                using (var reader = ms.WrapSerializer(_provider, _format, true).Reader)
                                 {
                                     if (reader.HasNext())
                                         res.Add(_serializer.Read(reader));
@@ -143,7 +145,7 @@ namespace Lucent.Common.Storage
 
                                     using (var ms = new MemoryStream(contents))
                                     {
-                                        using (var reader = ms.WrapSerializer(_provider, SerializationFormat.PROTOBUF, true).Reader)
+                                        using (var reader = ms.WrapSerializer(_provider, _format, true).Reader)
                                         {
                                             if (reader.HasNext())
                                                 return _serializer.Read(reader);
@@ -164,7 +166,7 @@ namespace Lucent.Common.Storage
 
                             using (var ms = new MemoryStream(contents))
                             {
-                                using (var reader = ms.WrapSerializer(_provider, SerializationFormat.PROTOBUF, true).Reader)
+                                using (var reader = ms.WrapSerializer(_provider, _format, true).Reader)
                                 {
                                     if (reader.HasNext())
                                         return _serializer.Read(reader);
@@ -190,7 +192,7 @@ namespace Lucent.Common.Storage
                 var contents = new byte[0];
                 using (var ms = new MemoryStream())
                 {
-                    using (var writer = ms.WrapSerializer(_provider, SerializationFormat.PROTOBUF, true).Writer)
+                    using (var writer = ms.WrapSerializer(_provider, _format, true).Writer)
                     {
                         _serializer.Write(writer, obj);
                         writer.Flush();
@@ -235,7 +237,7 @@ namespace Lucent.Common.Storage
                 var contents = new byte[0];
                 using (var ms = new MemoryStream())
                 {
-                    _serializer.Write(ms.WrapSerializer(_provider, SerializationFormat.PROTOBUF, true).Writer, obj);
+                    _serializer.Write(ms.WrapSerializer(_provider, _format, true).Writer, obj);
                     ms.Seek(0, SeekOrigin.Begin);
                     contents = ms.ToArray();
                 }

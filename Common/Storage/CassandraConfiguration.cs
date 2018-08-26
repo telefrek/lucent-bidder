@@ -1,3 +1,5 @@
+using Lucent.Common.Serialization;
+
 namespace Lucent.Common.Storage
 {
     public class CassandraConfiguration
@@ -6,5 +8,6 @@ namespace Lucent.Common.Storage
         public string Keyspace { get; set; } = "test";
         public string User { get; set; } = "test";
         public string Credentials { get; set; } = "test";
+        public SerializationFormat Format { get; set; } = SerializationFormat.PROTOBUF;
     }
 }
