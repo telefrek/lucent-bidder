@@ -208,7 +208,6 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public bool ReadBoolean()
         {
-            _token.Guard(SerializationToken.Value);
             return _protoReader.ReadBool();
         }
 
@@ -218,7 +217,6 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public async Task<bool> ReadBooleanAsync()
         {
-            _token.Guard(SerializationToken.Value);
             return await _protoReader.ReadBoolAsync();
         }
 
@@ -228,7 +226,6 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public double ReadDouble()
         {
-            _token.Guard(SerializationToken.Value);
             return _protoReader.ReadDouble();
         }
 
@@ -238,7 +235,6 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public async Task<double> ReadDoubleAsync()
         {
-            _token.Guard(SerializationToken.Value);
             return await _protoReader.ReadDoubleAsync();
         }
 
@@ -248,7 +244,6 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public int ReadInt()
         {
-            _token.Guard(SerializationToken.Value);
             return _protoReader.ReadInt32();
         }
 
@@ -258,7 +253,6 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public async Task<int> ReadIntAsync()
         {
-            _token.Guard(SerializationToken.Value);
             return await _protoReader.ReadInt32Async();
         }
 
@@ -268,7 +262,6 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public long ReadLong()
         {
-            _token.Guard(SerializationToken.Value);
             return _protoReader.ReadInt64();
         }
 
@@ -278,7 +271,6 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public async Task<long> ReadLongAsync()
         {
-            _token.Guard(SerializationToken.Value);
             return await _protoReader.ReadInt64Async();
         }
 
@@ -288,8 +280,7 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public DateTime ReadDateTime()
         {
-            _token.Guard(SerializationToken.Value);
-            return DateTime.FromFileTimeUtc(_protoReader.ReadInt64());
+            return DateTime.FromFileTimeUtc(_protoReader.ReadInt64()).ToLocalTime();
         }
 
         /// <summary>
@@ -298,8 +289,7 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public async Task<DateTime> ReadDateTimeAsync()
         {
-            _token.Guard(SerializationToken.Value);
-            return DateTime.FromFileTimeUtc(await _protoReader.ReadInt64Async());
+            return DateTime.FromFileTimeUtc(await _protoReader.ReadInt64Async()).ToLocalTime();
         }
 
 
@@ -309,7 +299,6 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public Guid ReadGuid()
         {
-            _token.Guard(SerializationToken.Object);
             return Guid.Parse(_protoReader.ReadString());
         }
 
@@ -319,7 +308,6 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public async Task<Guid> ReadGuidAsync()
         {
-            _token.Guard(SerializationToken.Value);
             return Guid.Parse(await _protoReader.ReadStringAsync());
         }
 
@@ -329,7 +317,6 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public float ReadSingle()
         {
-            _token.Guard(SerializationToken.Value);
             return _protoReader.ReadFloat();
         }
 
@@ -339,7 +326,6 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public async Task<float> ReadSingleAsync()
         {
-            _token.Guard(SerializationToken.Value);
             return await _protoReader.ReadFloatAsync();
         }
 
@@ -349,7 +335,6 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public string ReadString()
         {
-            _token.Guard(SerializationToken.Object);
             return _protoReader.ReadString();
         }
 
@@ -408,7 +393,6 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public uint ReadUInt()
         {
-            _token.Guard(SerializationToken.Value);
             return _protoReader.ReadUInt32();
         }
 
@@ -418,7 +402,6 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public async Task<uint> ReadUIntAsync()
         {
-            _token.Guard(SerializationToken.Value);
             return await _protoReader.ReadUInt32Async();
         }
 
@@ -428,7 +411,6 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public ulong ReadULong()
         {
-            _token.Guard(SerializationToken.Value);
             return _protoReader.ReadUInt64();
         }
 
@@ -438,7 +420,6 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public async Task<ulong> ReadULongAsync()
         {
-            _token.Guard(SerializationToken.Value);
             return await _protoReader.ReadUInt64Async();
         }
 

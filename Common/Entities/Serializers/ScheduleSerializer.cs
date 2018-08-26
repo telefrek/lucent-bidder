@@ -25,10 +25,10 @@ namespace Lucent.Common.Entities.Serializers
                             switch (propId.Id)
                             {
                                 case 0:
-                                    instance.StartDate = serializationStreamReader.ReadDateTime().ToLocalTime();
+                                    instance.StartDate = serializationStreamReader.ReadDateTime();
                                     break;
                                 case 1:
-                                    instance.EndDate = serializationStreamReader.ReadDateTime().ToLocalTime();
+                                    instance.EndDate = serializationStreamReader.ReadDateTime();
                                     break;
                                 default:
                                     serializationStreamReader.Skip();
@@ -36,10 +36,10 @@ namespace Lucent.Common.Entities.Serializers
                             }
                             break;
                         case "start":
-                            instance.StartDate = serializationStreamReader.ReadDateTime().ToLocalTime();
+                            instance.StartDate = serializationStreamReader.ReadDateTime();
                             break;
                         case "end":
-                            instance.EndDate = serializationStreamReader.ReadDateTime().ToLocalTime();
+                            instance.EndDate = serializationStreamReader.ReadDateTime();
                             break;
                         default:
                             serializationStreamReader.Skip();
@@ -53,7 +53,7 @@ namespace Lucent.Common.Entities.Serializers
             {
 
             }
-            
+
             return null;
         }
 
@@ -74,10 +74,10 @@ namespace Lucent.Common.Entities.Serializers
                         switch (propId.Id)
                         {
                             case 0:
-                                instance.StartDate = (await serializationStreamReader.ReadDateTimeAsync()).ToLocalTime();
+                                instance.StartDate = (await serializationStreamReader.ReadDateTimeAsync());
                                 break;
                             case 1:
-                                instance.EndDate = (await serializationStreamReader.ReadDateTimeAsync()).ToLocalTime();
+                                instance.EndDate = (await serializationStreamReader.ReadDateTimeAsync());
                                 break;
                             default:
                                 await serializationStreamReader.SkipAsync();
@@ -85,10 +85,10 @@ namespace Lucent.Common.Entities.Serializers
                         }
                         break;
                     case "start":
-                        instance.StartDate = (await serializationStreamReader.ReadDateTimeAsync()).ToLocalTime();
+                        instance.StartDate = (await serializationStreamReader.ReadDateTimeAsync());
                         break;
                     case "end":
-                        instance.EndDate = (await serializationStreamReader.ReadDateTimeAsync()).ToLocalTime();
+                        instance.EndDate = (await serializationStreamReader.ReadDateTimeAsync());
                         break;
                     default:
                         await serializationStreamReader.SkipAsync();

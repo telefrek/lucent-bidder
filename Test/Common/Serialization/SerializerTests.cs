@@ -29,13 +29,12 @@ namespace Lucent.Common.Storage.Test
         public async Task TestProtoSerializer()
         {
             var dt = DateTime.Now;
-            var val = dt.ToFileTimeUtc();
 
             using(var ms = new MemoryStream())
             {
                 using(var writer = ms.WrapSerializer(ServiceProvider, SerializationFormat.PROTOBUF, true).Writer)
                 {
-                    await writer.WriteAsync(0, val);
+                    await writer.WriteAsync(dt);
                     await writer.FlushAsync();
                 }
 
@@ -43,9 +42,25 @@ namespace Lucent.Common.Storage.Test
 
                 using(var reader = ms.WrapSerializer(ServiceProvider, SerializationFormat.PROTOBUF, true).Reader)
                 {
-                    Assert.IsTrue(reader.HasNext(), "missing data");
-                    var v1 = reader.ReadLong();
-                    Assert.AreEqual(val, v1, "date mismatch");
+                    var v1 = reader.ReadDateTime();
+                    Assert.AreEqual(dt, v1, "date mismatch");
+                }
+            }
+
+            using(var ms = new MemoryStream())
+            {
+                using(var writer = ms.WrapSerializer(ServiceProvider, SerializationFormat.JSON, true).Writer)
+                {
+                    await writer.WriteAsync(dt);
+                    await writer.FlushAsync();
+                }
+
+                ms.Seek(0, SeekOrigin.Begin);
+
+                using(var reader = ms.WrapSerializer(ServiceProvider, SerializationFormat.JSON, true).Reader)
+                {
+                    var v1 = reader.ReadDateTime();
+                    Assert.AreEqual(dt, v1, "date mismatch");
                 }
             }
         }

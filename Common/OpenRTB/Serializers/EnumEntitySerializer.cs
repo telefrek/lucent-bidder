@@ -18,10 +18,6 @@ namespace Lucent.Common.OpenRTB.Serializers
         /// <returns>The next enum value from the stream</returns>
         public T Read(ISerializationStreamReader serializationStreamReader)
         {
-            // Validate the token type between JSON and protobuf
-            if (serializationStreamReader.Token != SerializationToken.Value)
-                serializationStreamReader.Token.Guard(SerializationToken.Property);
-
             // Parse the enum
             return (T)Enum.Parse(typeof(T), serializationStreamReader.ReadInt().ToString(), true);
         }
@@ -33,10 +29,6 @@ namespace Lucent.Common.OpenRTB.Serializers
         /// <returns>The next enum value from the stream</returns>
         public async Task<T> ReadAsync(ISerializationStreamReader serializationStreamReader, CancellationToken token)
         {
-            // Validate the token type between JSON and protobuf
-            if (serializationStreamReader.Token != SerializationToken.Value)
-                serializationStreamReader.Token.Guard(SerializationToken.Property);
-
             // Parse the enum
             return (T)Enum.Parse(typeof(T), (await serializationStreamReader.ReadIntAsync()).ToString(), true);
         }

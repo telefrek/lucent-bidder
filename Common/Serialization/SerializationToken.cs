@@ -34,21 +34,4 @@ namespace Lucent.Common.Serialization
         /// </value>
         Null = 6,
     }
-
-    /// <summary>
-    /// Class to manage serialization token extension methods
-    /// </summary>
-    public static class SerializationTokenExtensions
-    {
-        /// <summary>
-        /// Guards to ensure the token is of the expected type
-        /// </summary>
-        /// <param name="token">The token to validate</param>
-        /// <param name="expected">The expected type that must match</param>
-        public static void Guard(this SerializationToken token, SerializationToken expected)
-        {
-            if (token != expected)
-                throw new SerializationException("Invalid SerializationToken: {0}, expected {1}".FormatWith(token, expected));
-        }
-    }
 }

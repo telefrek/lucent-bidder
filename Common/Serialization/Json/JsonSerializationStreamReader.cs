@@ -192,8 +192,6 @@ namespace Lucent.Common.Serialization.Json
         {
             try
             {
-                _token.Guard(SerializationToken.Object);
-
                 return _registry.GetSerializer<T>().Read(this);
             }
             finally
@@ -211,8 +209,6 @@ namespace Lucent.Common.Serialization.Json
         {
             try
             {
-                _token.Guard(SerializationToken.Object);
-
                 return await _registry.GetSerializer<T>().ReadAsync(this, CancellationToken.None);
             }
             finally
@@ -230,9 +226,6 @@ namespace Lucent.Common.Serialization.Json
         {
             try
             {
-                
-                _token.Guard(SerializationToken.Array);
-
                 // Get the serializer and a place to store the values
                 var serializer = _registry.GetSerializer<T>();
                 var array = new List<T>();
@@ -274,9 +267,6 @@ namespace Lucent.Common.Serialization.Json
         {
             try
             {
-                
-                _token.Guard(SerializationToken.Array);
-
                 // Get the serializer and a place to store the values
                 var serializer = _registry.GetSerializer<T>();
                 var array = new List<T>();
@@ -574,9 +564,6 @@ namespace Lucent.Common.Serialization.Json
         {
             try
             {
-                
-                _token.Guard(SerializationToken.Array);
-
                 // Create the temp storage for the array
                 var array = new List<string>();
 
@@ -616,8 +603,6 @@ namespace Lucent.Common.Serialization.Json
         {
             try
             {
-                _token.Guard(SerializationToken.Array);
-
                 // Create the temp storage for the array
                 var array = new List<string>();
 
