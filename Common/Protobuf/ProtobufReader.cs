@@ -226,7 +226,7 @@ namespace Lucent.Common.Protobuf
             var v = 0UL;
 
             // Read the next N bytes off the stream
-            for (var i = 0; i < 8; ++i)
+            for (var i = 0; i < 10; ++i)
             {
                 var b = (byte)_raw.ReadByte();
                 v |= (ulong)(b & 0x7F) << (i * 7);
@@ -411,7 +411,8 @@ namespace Lucent.Common.Protobuf
             var v = 0UL;
 
             // Read the next N bytes off the stream
-            for (var i = 0; i < 8; ++i)
+            // 64 bits max / 7 bits = 9.xxx, round up to 10
+            for (var i = 0; i < 10; ++i)
             {
                 var b = (byte)_raw.ReadByte();
                 v |= (ulong)(b & 0x7F) << (i * 7);

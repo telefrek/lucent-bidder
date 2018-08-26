@@ -227,7 +227,7 @@ namespace Lucent.Common.Storage
                 if (string.IsNullOrEmpty(obj.ETag))
                     obj.ETag = contents.CalculateETag();
 
-                var rowSet = await _session.ExecuteAsync(_insertStatement.Bind(obj.Id, obj.ETag, _format, DateTime.UtcNow, contents));
+                var rowSet = await _session.ExecuteAsync(_insertStatement.Bind(obj.Id, obj.ETag, 1, DateTime.UtcNow, contents));
 
                 return rowSet != null;
             }

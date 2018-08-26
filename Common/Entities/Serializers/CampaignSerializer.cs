@@ -31,6 +31,9 @@ namespace Lucent.Common.Entities.Serializers
                             case 2:
                                 instance.Spend = serializationStreamReader.ReadDouble();
                                 break;
+                            case 3:
+                                instance.Schedule = serializationStreamReader.ReadAs<Schedule>();
+                                break;
                             default:
                                 serializationStreamReader.Skip();
                                 break;
@@ -44,6 +47,9 @@ namespace Lucent.Common.Entities.Serializers
                         break;
                     case "spend":
                         instance.Spend = serializationStreamReader.ReadDouble();
+                        break;
+                    case "schedule":
+                        instance.Schedule = serializationStreamReader.ReadAs<Schedule>();
                         break;
                     default:
                         serializationStreamReader.Skip();
@@ -79,6 +85,9 @@ namespace Lucent.Common.Entities.Serializers
                             case 2:
                                 instance.Spend = await serializationStreamReader.ReadDoubleAsync();
                                 break;
+                            case 3:
+                                instance.Schedule = await serializationStreamReader.ReadAsAsync<Schedule>();
+                                break;
                             default:
                                 await serializationStreamReader.SkipAsync();
                                 break;
@@ -92,6 +101,9 @@ namespace Lucent.Common.Entities.Serializers
                         break;
                     case "spend":
                         instance.Spend = await serializationStreamReader.ReadDoubleAsync();
+                        break;
+                    case "schedule":
+                        instance.Schedule = await serializationStreamReader.ReadAsAsync<Schedule>();
                         break;
                     default:
                         await serializationStreamReader.SkipAsync();
@@ -110,6 +122,7 @@ namespace Lucent.Common.Entities.Serializers
                 serializationStreamWriter.Write(new PropertyId { Id = 0, Name = "id" }, instance.Id);
                 serializationStreamWriter.Write(new PropertyId { Id = 1, Name = "name" }, instance.Name);
                 serializationStreamWriter.Write(new PropertyId { Id = 2, Name = "spend" }, instance.Spend);
+                serializationStreamWriter.Write(new PropertyId { Id = 3, Name = "schedule" }, instance.Schedule);
                 serializationStreamWriter.EndObject();
                 serializationStreamWriter.Flush();
             }
@@ -123,6 +136,7 @@ namespace Lucent.Common.Entities.Serializers
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 0, Name = "id" }, instance.Id);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 1, Name = "name" }, instance.Name);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 2, Name = "spend" }, instance.Spend);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 3, Name = "schedule" }, instance.Schedule);
                 serializationStreamWriter.EndObject();
                 await serializationStreamWriter.FlushAsync();
             }

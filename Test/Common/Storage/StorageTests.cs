@@ -53,6 +53,8 @@ namespace Lucent.Common.Storage.Test
             res = await testRepo.Get(tObj.Id);
             Assert.IsNotNull(res);
             Assert.AreEqual(tObj.Id, res.Id, "mismatch id");
+            Assert.AreEqual(tObj.Schedule.StartDate, res.Schedule.StartDate, "startdate mismatch");
+            Assert.AreEqual(tObj.Schedule.EndDate, res.Schedule.EndDate, "invalid end date");
 
             tObj.Name = "Updated";
 

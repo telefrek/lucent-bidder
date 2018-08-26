@@ -13,6 +13,8 @@
                 <th>ID</th>
                 <th>Name</th>
                 <th>Spend</th>
+                <th>Start</th>
+                <th>End</th>
             </tr>
         </thead>
         <tbody>
@@ -22,6 +24,8 @@
                     <td id="@campaign.Id-id">@campaign.Id</td>
                     <td id="@campaign.Id-name">@campaign.Name</td>
                     <td id="@campaign.Id-spend">@campaign.Spend</td>
+                    <td id="@campaign.Id-start">@campaign.Schedule.StartDate</td>
+                    <td id="@campaign.Id-end">@campaign.Schedule.EndDate</td>
                     <td>
                         <a asp-page="./Edit" asp-route-id="@campaign.Id">edit</a>
                         <button type="submit" asp-page-handler="delete" 

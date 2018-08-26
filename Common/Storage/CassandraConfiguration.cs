@@ -9,5 +9,6 @@ namespace Lucent.Common.Storage
         public string User { get; set; } = "test";
         public string Credentials { get; set; } = "test";
         public SerializationFormat Format { get; set; } = SerializationFormat.PROTOBUF;
+        public int Version { get; set; }
     }
 }

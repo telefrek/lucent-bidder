@@ -12,7 +12,10 @@ namespace Lucent.Common
         {
             var registry = provider.BuildServiceProvider().GetRequiredService<ISerializationRegistry>();
             if (!registry.IsSerializerRegisterred<Campaign>())
+            {
                 registry.Register<Campaign>(new CampaignSerializer());
+                registry.Register<Schedule>(new ScheduleSerializer());
+            }
             return provider;
         }
     }

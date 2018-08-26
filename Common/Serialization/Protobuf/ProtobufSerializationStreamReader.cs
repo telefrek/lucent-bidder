@@ -309,7 +309,7 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public Guid ReadGuid()
         {
-            _token.Guard(SerializationToken.Value);
+            _token.Guard(SerializationToken.Object);
             return Guid.Parse(_protoReader.ReadString());
         }
 

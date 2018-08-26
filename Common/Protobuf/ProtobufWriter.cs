@@ -290,9 +290,11 @@ namespace Lucent.Common.Protobuf
         /// <param name="val">The value to encode</param>
         private Task WriteVarintAsync(ulong val)
         {
+            var cnt = 0;
             // Write chunks until the value is < 128
             while (val > 0x7F)
             {
+                cnt++;
                 // Write the last 7 bits
                 _raw.WriteByte((byte)((val & 0x7F) | 0x80));
                 val >>= 7;
@@ -300,6 +302,7 @@ namespace Lucent.Common.Protobuf
 
             // Write the remaining bits
             _raw.WriteByte((byte)(val & 0x7F));
+            cnt++;
 
             return Task.CompletedTask;
         }

@@ -166,20 +166,6 @@ namespace Lucent.Common.Serialization.Protobuf
         /// 
         /// </summary>
         /// <param name="value"></param>
-        /// <returns></returns>
-        public async Task WriteAsync(ExpandoObject value) => throw new SerializationException("Cannot format protobuf object without mapping");
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="value"></param>
-        /// <returns></returns>
-        public async Task WriteAsync(ExpandoObject[] value) => throw new SerializationException("Cannot format protobuf object without mapping");
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="value"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
         public async Task WriteAsync<T>(T value) where T : new()
@@ -422,7 +408,7 @@ namespace Lucent.Common.Serialization.Protobuf
 
         public void Write(PropertyId id, DateTime value)
         {
-            _protoWriter.WriteField(id.Id, WireType.LEN_ENCODED);
+            _protoWriter.WriteField(id.Id, WireType.VARINT);
             Write(value);
         }
 
@@ -500,7 +486,7 @@ namespace Lucent.Common.Serialization.Protobuf
 
         public async Task WriteAsync(PropertyId id, DateTime value)
         {
-            await _protoWriter.WriteFieldAsync(id.Id, WireType.LEN_ENCODED);
+            await _protoWriter.WriteFieldAsync(id.Id, WireType.VARINT);
             await WriteAsync(value);
         }
 

@@ -18,6 +18,7 @@ namespace Lucent.Portal.Models
         {
             _db = db.GetRepository<Campaign>();
             _log = log;
+            Campaign = new Campaign { Schedule = new Schedule() };
         }
 
         [BindProperty]

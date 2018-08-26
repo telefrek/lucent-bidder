@@ -1,0 +1,15 @@
+@model Lucent.Common.Entities.Schedule        
+    <div class="form-group">
+        <label asp-for="Schedule.StartDate" class="col-md-2 control-label"></label>
+            <div class="col-md-10"> 
+                @Html.EditorFor(model => model.StartDate)
+                @Html.ValidationMessageFor(model => model.StartDate)
+            </div>
+    </div>
+    <div class="form-group">
+        <label asp-for="Schedule.EndDate" class="col-md-2 control-label"></label>
+            <div class="col-md-10"> 
+                @Html.EditorFor(model => model.EndDate)
+                @Html.ValidationMessageFor(model => model.EndDate)
+            </div>
+    </div>
