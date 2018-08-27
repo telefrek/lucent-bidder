@@ -7,28 +7,31 @@
 
 <h1>Campaigns</h1>
 <form method="post">
-    <table class="table">
-        <thead>
+    <table class="table table-hover">
+        <thead class="thead-light">
             <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Spend</th>
-                <th>Start</th>
-                <th>End</th>
+                <th scope="col">ID</th>
+                <th scope="col">Name</th>
+                <th scope="col">Spend</th>
+                <th scope="col">Start</th>
+                <th scope="col">End</th>
+                <th scope="col">Actions</th>
             </tr>
         </thead>
         <tbody>
             @foreach (var campaign in Model.Campaigns)
             {
                 <tr id="@campaign.Id">
-                    <td id="@campaign.Id-id">@campaign.Id</td>
+                    <th scope="row" id="@campaign.Id-id">
+                        <a asp-page="./Summary" class="btn btn-link" asp-route-id="@campaign.Id">@campaign.Id</a>
+                    </th>
                     <td id="@campaign.Id-name">@campaign.Name</td>
                     <td id="@campaign.Id-spend">@campaign.Spend</td>
                     <td id="@campaign.Id-start">@campaign.Schedule.StartDate</td>
                     <td id="@campaign.Id-end">@campaign.Schedule.EndDate</td>
                     <td>
-                        <a asp-page="./Edit" asp-route-id="@campaign.Id">edit</a>
-                        <button type="submit" asp-page-handler="delete" 
+                        <a asp-page="./Edit" class="btn btn-link" asp-route-id="@campaign.Id">edit</a>
+                        <button type="submit" class="btn btn-link" asp-page-handler="delete" 
                                 asp-route-id="@campaign.Id">delete</button>
                     </td>
                 </tr>
@@ -36,7 +39,7 @@
         </tbody>
     </table>
 
-    <a asp-page="./Create">Create</a>
+    <a class="btn btn-secondary" asp-page="./Create">Create</a>
 </form>  
 <script src="~/lib/signalr/signalr.min.js"></script>
 <script src="~/js/campaigns.js"></script>

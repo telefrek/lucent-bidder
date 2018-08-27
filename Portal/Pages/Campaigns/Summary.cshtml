@@ -1,0 +1,21 @@
+@page
+@using Lucent.Common.Entities
+@model Lucent.Portal.Models.SummaryCampaignModel
+@{
+    Layout = "~/Pages/Shared/_Layout.cshtml";
+}
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+<html>
+<body>
+    <h2>Campaign Info</h2>
+    <div class="col-md-10"> 
+        @Html.LabelFor(model => model.Campaign.Name, new { @class= "col-md-1 control-label" })
+        <label class="col-md-1" >@Model.Campaign.Name</label>
+        @Html.LabelFor(model => model.Campaign.Status, new { @class="col-md-1 control-label"})
+        <label class="col-md-1">@Model.Campaign.Status</label>
+    </div>
+    <br/>
+    <h2>Performance</h2>
+</body>
+</html>
