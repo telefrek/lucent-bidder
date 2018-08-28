@@ -39,6 +39,28 @@ namespace Lucent.Common.Storage.Test
             public FilterType FilterType { get; set; }
         }
 
+        Func<T, bool> CreateFilter<T>(Filter<T> filter)
+        {
+            var fType = filter.GetType().GetGenericArguments()[0];
+            var param1 = Expression.Parameter(fType, "p1");
+            var prop1 = Expression.Property(param1, filter.Property);
+
+            Expression exp = null;
+            switch (filter.FilterType)
+            {
+                case FilterType.NEQ:
+                    exp = Expression.NotEqual(prop1, Expression.Constant(filter.Value));
+                    break;
+                default:
+                    exp = Expression.Equal(prop1, Expression.Constant(filter.Value));
+                    break;
+            }
+
+            var ftype = typeof(Func<,>).MakeGenericType(fType, typeof(bool));
+            var comp = makeLambda.MakeGenericMethod(ftype).Invoke(null, new object[] { exp, new ParameterExpression[] { param1 } });
+            return (Func<T, bool>)comp.GetType().GetMethod("Compile", Type.EmptyTypes).Invoke(comp, new object[] { });
+        }
+
         enum FilterType
         {
             EQ = 0,
@@ -51,7 +73,7 @@ namespace Lucent.Common.Storage.Test
             NOTIN = 7,
         }
 
-        MethodInfo m = typeof(Expression).GetMethods().Where(m =>
+        MethodInfo makeLambda = typeof(Expression).GetMethods().Where(m =>
                 m.Name == "Lambda" && m.IsGenericMethod && m.GetGenericArguments().Length == 1
                 ).First();
 
@@ -133,17 +155,6 @@ namespace Lucent.Common.Storage.Test
                     await serializationStreamWriter.FlushAsync();
                 }
             }
-        }
-
-        Func<T, bool> CreateFilter<T>(Filter<T> filter)
-        {
-            var fType = filter.GetType().GetGenericArguments()[0];
-            var param1 = Expression.Parameter(fType, "p1");
-            var prop1 = Expression.Property(param1, filter.Property);
-            var eFilter = Expression.Equal(prop1, Expression.Constant(filter.Value));
-            var ftype = typeof(Func<,>).MakeGenericType(fType, typeof(bool));
-            var comp = m.MakeGenericMethod(ftype).Invoke(null, new object[] { eFilter, new ParameterExpression[] { param1 } });
-            return (Func<T, bool>)comp.GetType().GetMethod("Compile", Type.EmptyTypes).Invoke(comp, new object[] { });
         }
 
         [TestMethod]
