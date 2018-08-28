@@ -7,58 +7,7 @@ namespace Lucent.Common.Entities.Serializers
 {
     internal class CampaignSerializer : IEntitySerializer<Campaign>
     {
-        public Campaign Read(ISerializationStreamReader serializationStreamReader)
-        {
-            if (serializationStreamReader.Token == SerializationToken.Unknown)
-                if (!serializationStreamReader.HasNext())
-                    return null;
-
-            var instance = new Campaign();
-            while (serializationStreamReader.HasMoreProperties())
-            {
-                var propId = serializationStreamReader.Id;
-                switch (propId.Name)
-                {
-                    case "":
-                        switch (propId.Id)
-                        {
-                            case 0:
-                                instance.Id = serializationStreamReader.ReadString();
-                                break;
-                            case 1:
-                                instance.Name = serializationStreamReader.ReadString();
-                                break;
-                            case 2:
-                                instance.Spend = serializationStreamReader.ReadDouble();
-                                break;
-                            case 3:
-                                instance.Schedule = serializationStreamReader.ReadAs<Schedule>();
-                                break;
-                            default:
-                                serializationStreamReader.Skip();
-                                break;
-                        }
-                        break;
-                    case "id":
-                        instance.Id = serializationStreamReader.ReadString();
-                        break;
-                    case "name":
-                        instance.Name = serializationStreamReader.ReadString();
-                        break;
-                    case "spend":
-                        instance.Spend = serializationStreamReader.ReadDouble();
-                        break;
-                    case "schedule":
-                        instance.Schedule = serializationStreamReader.ReadAs<Schedule>();
-                        break;
-                    default:
-                        serializationStreamReader.Skip();
-                        break;
-
-                }
-            }
-            return instance;
-        }
+        public Campaign Read(ISerializationStreamReader serializationStreamReader) => ReadAsync(serializationStreamReader, CancellationToken.None).Result;
 
         public async Task<Campaign> ReadAsync(ISerializationStreamReader serializationStreamReader, CancellationToken token)
         {
@@ -114,19 +63,7 @@ namespace Lucent.Common.Entities.Serializers
             return instance;
         }
 
-        public void Write(ISerializationStreamWriter serializationStreamWriter, Campaign instance)
-        {
-            if (instance != null)
-            {
-                serializationStreamWriter.StartObject();
-                serializationStreamWriter.Write(new PropertyId { Id = 0, Name = "id" }, instance.Id);
-                serializationStreamWriter.Write(new PropertyId { Id = 1, Name = "name" }, instance.Name);
-                serializationStreamWriter.Write(new PropertyId { Id = 2, Name = "spend" }, instance.Spend);
-                serializationStreamWriter.Write(new PropertyId { Id = 3, Name = "schedule" }, instance.Schedule);
-                serializationStreamWriter.EndObject();
-                serializationStreamWriter.Flush();
-            }
-        }
+        public void Write(ISerializationStreamWriter serializationStreamWriter, Campaign instance) => WriteAsync(serializationStreamWriter, instance, CancellationToken.None).Wait();
 
         public async Task WriteAsync(ISerializationStreamWriter serializationStreamWriter, Campaign instance, CancellationToken token)
         {

@@ -726,11 +726,9 @@ namespace Lucent.Common.Serialization.Json
                 return false;
 
             if (_jsonReader.TokenType == JsonToken.PropertyName)
-                return await HasNextAsync();
+                return true;
 
-            if(_jsonReader.TokenType != JsonToken.PropertyName)
-                await _jsonReader.ReadAsync();
-
+            await _jsonReader.ReadAsync();
             return _jsonReader.TokenType == JsonToken.PropertyName;
         }
 
