@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -31,6 +32,100 @@ namespace Lucent.Common.Storage.Test
             services.AddSerialization(Configuration);
         }
 
+        class BidFilter
+        {
+            public Filter<Geo>[] GeoFilters { get; set; }
+            public Filter<Impression>[] ImpressionFilters { get; set; }
+            public Filter<User>[] UserFilters { get; set; }
+            public Filter<Device>[] DeviceFilters { get; set; }
+            public Filter<Site>[] SiteFilters { get; set; }
+            public Filter<App>[] AppFilters { get; set; }
+        }
+        public static Expression ForEach(Expression collection, ParameterExpression loopVar, Expression loopContent)
+        {
+            var elementType = loopVar.Type;
+            var enumerableType = typeof(IEnumerable<>).MakeGenericType(elementType);
+            var enumeratorType = typeof(IEnumerator<>).MakeGenericType(elementType);
+
+            var enumeratorVar = Expression.Variable(enumeratorType, "e");
+            var getEnumeratorCall = Expression.Call(collection, enumerableType.GetMethod("GetEnumerator"));
+            var enumeratorAssign = Expression.Assign(enumeratorVar, getEnumeratorCall);
+
+            var moveNextCall = Expression.Call(enumeratorVar, typeof(IEnumerator).GetMethod("MoveNext"));
+
+            var breakLabel = Expression.Label("lbrk");
+
+            var loop = Expression.Block(new[] { enumeratorVar },
+                enumeratorAssign,
+                Expression.Loop(
+                    Expression.IfThenElse(
+                        Expression.Equal(moveNextCall, Expression.Constant(true)),
+                        Expression.Block(new[] { loopVar },
+                            Expression.Assign(loopVar, Expression.Property(enumeratorVar, "Current")),
+                            loopContent
+                        ),
+                        Expression.Break(breakLabel)
+                    ),
+                breakLabel)
+            );
+
+            return loop;
+        }
+
+        bool Scaffold(BidRequest bid)
+        {
+            if (bid.Impressions != null)
+            {
+                foreach (var imp in bid.Impressions)
+                {
+                    if (imp.BidCurrency == "USD")
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        Func<BidRequest, bool> CreateBidFilter(BidFilter bidFilter)
+        {
+            // Need our input parameter :)
+            var bidParam = Expression.Parameter(typeof(BidRequest), "bid");
+
+            // Need a variable to track the complex filtering
+            var fValue = Expression.Variable(typeof(bool), "isFiltered");
+
+            // Keep track of all the expressions in this chain
+            var expList = new List<Expression> { };
+            //expList.Add(Expression.Assign(fValue, Expression.Constant(false)));
+
+            // Need a sentinal value for breaking in loops
+            var loopBreak = Expression.Label();
+            var ret = Expression.Label(typeof(bool)); // We're going to return a bool
+
+            // Process the impressions filters
+            if (bidFilter.ImpressionFilters != null)
+            {
+                var impProp = Expression.Property(bidParam, "Impressions");
+                var impType = typeof(Impression);
+
+                var impParam = Expression.Parameter(impType, "imp");
+                var impTest = CombineFilters(bidFilter.ImpressionFilters, impParam);
+
+                var forLoop = Expression.IfThen(Expression.NotEqual(impProp, Expression.Constant(null)),
+                    ForEach(impProp, impParam, Expression.IfThen(impTest, Expression.Return(ret, Expression.Constant(true)))));
+
+                expList.Add(forLoop);
+            }
+
+            expList.Add(Expression.Label(ret, Expression.Constant(false)));
+
+            var final = Expression.Block(expList);
+
+            var ftype = typeof(Func<,>).MakeGenericType(typeof(BidRequest), typeof(bool));
+            var comp = makeLambda.MakeGenericMethod(ftype).Invoke(null, new object[] { final, new ParameterExpression[] { bidParam } });
+            return (Func<BidRequest, bool>)comp.GetType().GetMethod("Compile", Type.EmptyTypes).Invoke(comp, new object[] { });
+        }
+
         class Filter<T>
         {
             public string Property { get; set; }
@@ -39,27 +134,53 @@ namespace Lucent.Common.Storage.Test
             public FilterType FilterType { get; set; }
         }
 
-        Func<T, bool> CreateFilter<T>(Filter<T> filter)
+        Expression CreateExpression<T>(Filter<T> filter, Expression p)
         {
-            var fType = filter.GetType().GetGenericArguments()[0];
-            var param1 = Expression.Parameter(fType, "p1");
-            var prop1 = Expression.Property(param1, filter.Property);
+            var prop = Expression.Property(p, filter.Property);
 
             Expression exp = null;
             switch (filter.FilterType)
             {
                 case FilterType.NEQ:
-                    exp = Expression.NotEqual(prop1, Expression.Constant(filter.Value));
+                    exp = Expression.NotEqual(prop, Expression.Constant(filter.Value));
                     break;
                 default:
-                    exp = Expression.Equal(prop1, Expression.Constant(filter.Value));
+                    exp = Expression.Equal(prop, Expression.Constant(filter.Value));
                     break;
             }
 
+            return exp;
+        }
+
+        Expression CombineFilters<T>(ICollection<Filter<T>> filters, Expression target)
+        {
+            Expression exp = null;
+
+            foreach (var filter in filters)
+            {
+                var e = CreateExpression(filter, target);
+
+                if (exp == null)
+                    exp = e;
+                else
+                    exp = Expression.OrElse(exp, e);
+            }
+
+            return exp;
+        }
+
+        Func<T, bool> CreateFilter<T>(ICollection<Filter<T>> filters)
+        {
+            var fType = typeof(T);
+            var p = Expression.Parameter(fType, "p1");
+
+            Expression exp = CombineFilters(filters, p);
+
             var ftype = typeof(Func<,>).MakeGenericType(fType, typeof(bool));
-            var comp = makeLambda.MakeGenericMethod(ftype).Invoke(null, new object[] { exp, new ParameterExpression[] { param1 } });
+            var comp = makeLambda.MakeGenericMethod(ftype).Invoke(null, new object[] { exp, new ParameterExpression[] { p } });
             return (Func<T, bool>)comp.GetType().GetMethod("Compile", Type.EmptyTypes).Invoke(comp, new object[] { });
         }
+
 
         enum FilterType
         {
@@ -158,6 +279,27 @@ namespace Lucent.Common.Storage.Test
         }
 
         [TestMethod]
+        public void TestBidFilter()
+        {
+            var req = new BidRequest
+            {
+                Impressions = new Impression[] { new Impression { ImpressionId = "test" } }
+            };
+
+            var bFilter = new BidFilter
+            {
+                ImpressionFilters = new[] { new Filter<Impression> { Property = "BidCurrency", Value = "USD" } }
+            };
+
+
+            var f = CreateBidFilter(bFilter);
+
+            Assert.IsTrue(f.Invoke(req), "Filter should have matched");
+
+            Assert.IsTrue(Scaffold(req), "Scaffolding sucks");
+        }
+
+        [TestMethod]
         public void FilterSandbox()
         {
             var testGeo = new Geo { Country = "USA", Region = "East Coast", City = "Seattle", GeoType = GeoType.GPS, ISP = ISP.ip2location, UtcOffset = -7 };
@@ -171,70 +313,14 @@ namespace Lucent.Common.Storage.Test
             var deviceOsFilter = new Filter<Device> { Property = "OS", Value = "ios" };
             var deviceTypeFilter = new Filter<Device> { Property = "DeviceType", Value = DeviceType.Phone };
 
-            Assert.IsTrue(CreateFilter(countryFilter).Invoke(testGeo));
-            Assert.IsTrue(CreateFilter(utcFilter).Invoke(testGeo));
-            Assert.IsFalse(CreateFilter(ispFilter).Invoke(testGeo));
 
-            Assert.IsTrue(CreateFilter(utcFilter).Invoke(testUser.Geo));
-            Assert.IsFalse(CreateFilter(ispFilter).Invoke(testDevice.Geography));
+            var geoFilter = CreateFilter(new[] { countryFilter, utcFilter, ispFilter });
 
-            Assert.IsFalse(CreateFilter(genderFilter).Invoke(testUser));
-            Assert.IsTrue(CreateFilter(deviceOsFilter).Invoke(testDevice));
-            Assert.IsTrue(CreateFilter(deviceTypeFilter).Invoke(testDevice));
+            Assert.IsTrue(CreateFilter(new[] { countryFilter, utcFilter }).Invoke(testGeo), "Filter should have passed");
+            Assert.IsFalse(geoFilter.Invoke(testGeo), "ISP filter should have failed");
 
-            var geoSerializer = new FilterSerializer<Geo>();
-            var userSerializer = new FilterSerializer<User>();
-            var deviceSerializer = new FilterSerializer<Device>();
-
-            foreach (var format in new[] { SerializationFormat.JSON, SerializationFormat.PROTOBUF })
-            {
-                using (var ms = new MemoryStream())
-                {
-                    geoSerializer.Write(ms.WrapSerializer(ServiceProvider, format, true).Writer, countryFilter);
-                    ms.Seek(0, SeekOrigin.Begin);
-
-                    var countryCopy = geoSerializer.Read(ms.WrapSerializer(ServiceProvider, format, false).Reader);
-
-                    Assert.IsNotNull(countryCopy, "Null countryCopy");
-                    Assert.IsTrue(CreateFilter(countryCopy).Invoke(testGeo));
-                }
-
-                using (var ms = new MemoryStream())
-                {
-                    geoSerializer.Write(ms.WrapSerializer(ServiceProvider, format, true).Writer, utcFilter);
-                    ms.Seek(0, SeekOrigin.Begin);
-
-                    var utcFilterCopy = geoSerializer.Read(ms.WrapSerializer(ServiceProvider, format, false).Reader);
-
-                    Assert.IsNotNull(utcFilterCopy, "Null utc");
-                    Assert.IsTrue(CreateFilter(utcFilterCopy).Invoke(testGeo));
-                    Assert.IsTrue(CreateFilter(utcFilterCopy).Invoke(testUser.Geo));
-                    Assert.IsTrue(CreateFilter(utcFilterCopy).Invoke(testDevice.Geography));
-                }
-
-                using (var ms = new MemoryStream())
-                {
-                    userSerializer.Write(ms.WrapSerializer(ServiceProvider, format, true).Writer, genderFilter);
-                    ms.Seek(0, SeekOrigin.Begin);
-                    var contents = Encoding.UTF8.GetString(ms.ToArray());
-
-                    var genderCopy = userSerializer.Read(ms.WrapSerializer(ServiceProvider, format, false).Reader);
-
-                    Assert.IsNotNull(genderCopy, "Null gender");
-                    Assert.IsFalse(CreateFilter(genderCopy).Invoke(testUser));
-                }
-
-                using (var ms = new MemoryStream())
-                {
-                    deviceSerializer.Write(ms.WrapSerializer(ServiceProvider, format, true).Writer, deviceTypeFilter);
-                    ms.Seek(0, SeekOrigin.Begin);
-
-                    var deviceTypeCopy = deviceSerializer.Read(ms.WrapSerializer(ServiceProvider, format, false).Reader);
-
-                    Assert.IsNotNull(deviceTypeCopy, "Null devicetype");
-                    Assert.IsTrue(CreateFilter(deviceTypeCopy).Invoke(testDevice));
-                }
-            }
+            testGeo.ISP = ISP.MaxMind;
+            Assert.IsTrue(geoFilter.Invoke(testGeo), "ISP filter should have passed");
         }
     }
 }
