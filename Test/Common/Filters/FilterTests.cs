@@ -105,16 +105,36 @@ namespace Lucent.Common.Storage.Test
             // Process the impressions filters
             if (bidFilter.ImpressionFilters != null)
             {
+                // Get the impressions
                 var impProp = Expression.Property(bidParam, "Impressions");
                 var impType = typeof(Impression);
 
+                // Create a loop parameter and the filter
                 var impParam = Expression.Parameter(impType, "imp");
                 var impTest = CombineFilters(bidFilter.ImpressionFilters, impParam);
 
-                var forLoop = Expression.IfThen(Expression.NotEqual(impProp, Expression.Constant(null)),
-                    ForEach(impProp, impParam, Expression.IfThen(impTest, Expression.Return(ret, Expression.Constant(true)))));
+                // Create the loop and add it to this block
+                expList.Add(Expression.IfThen(Expression.NotEqual(impProp, Expression.Constant(null)),
+                    ForEach(impProp, impParam, Expression.IfThen(impTest, Expression.Return(ret, Expression.Constant(true))))));
+            }
 
-                expList.Add(forLoop);
+            // Process the user filters
+            if (bidFilter.UserFilters != null)
+            {
+                // Get the user property and filters
+                var userProp = Expression.Property(bidParam, "User");
+                var userType = typeof(User);
+                var userFilter = CombineFilters(bidFilter.UserFilters, userProp);
+
+                // Get the geographical filter and property
+                var geoProp = Expression.Property(userProp, "Geo");
+                var geoFilter = (Expression)Expression.Constant(false);
+                if (bidFilter.GeoFilters != null)
+                    geoFilter = CombineFilters(bidFilter.GeoFilters, geoProp);
+
+                // Add the filter if(usr != null
+                expList.Add(Expression.IfThen(
+                    Expression.AndAlso(Expression.NotEqual(userProp, Expression.Constant(null)), Expression.OrElse(userFilter, Expression.AndAlso(Expression.NotEqual(geoProp, Expression.Constant(null)), geoFilter))), Expression.Return(ret, Expression.Constant(true))));
             }
 
             expList.Add(Expression.Label(ret, Expression.Constant(false)));
@@ -283,20 +303,25 @@ namespace Lucent.Common.Storage.Test
         {
             var req = new BidRequest
             {
-                Impressions = new Impression[] { new Impression { ImpressionId = "test" } }
+                Impressions = new Impression[] { new Impression { ImpressionId = "test" } },
+                User = new User { Gender = Gender.Male }
             };
 
             var bFilter = new BidFilter
             {
-                ImpressionFilters = new[] { new Filter<Impression> { Property = "BidCurrency", Value = "USD" } }
+                ImpressionFilters = new[] { new Filter<Impression> { Property = "BidCurrency", Value = "CAN" } },
+                UserFilters = new[] { new Filter<User> { Property = "Gender", Value = Gender.Unknown } },
+                GeoFilters = new[] { new Filter<Geo> { Property = "Country", Value = "CAN" } }
             };
 
 
             var f = CreateBidFilter(bFilter);
 
-            Assert.IsTrue(f.Invoke(req), "Filter should have matched");
+            Assert.IsFalse(f.Invoke(req), "Filter should not have matched");
 
-            Assert.IsTrue(Scaffold(req), "Scaffolding sucks");
+            req.User.Geo = new Geo { Country = "CAN" };
+
+            Assert.IsTrue(f.Invoke(req), "Filter should have matched");
         }
 
         [TestMethod]
