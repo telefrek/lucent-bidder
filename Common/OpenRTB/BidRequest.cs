@@ -23,38 +23,5 @@ namespace Lucent.Common.OpenRTB
         public string[] BlockedApplications { get; set; }
         public Source Source { get; set; }
         public Regulation Regulations { get; set; }
-        public BidResponse Response { get; set; }
-        public long Timestamp { get; set; }
-        public Geo Geography
-        {
-            get
-            {
-                Geo uGeo = User != null ? User.Geo : null;
-                Geo dGeo = Device != null ? Device.Geography : null;
-
-                return dGeo ?? uGeo;
-            }
-        }
-
-        public string[] Categories
-        {
-            get
-            {
-                if (App != null)
-                {
-                    return App.AppCategories ?? new string[0]
-                        .Concat(App.PageCategories ?? new string[0])
-                        .Concat(App.SectionCategories ?? new string[0]).ToArray();
-                }
-                else if (Site != null)
-                {
-                    return Site.SiteCategories ?? new string[0]
-                        .Concat(Site.SectionCategories ?? new string[0])
-                        .Concat(Site.PageCategories ?? new string[0]).ToArray();
-                }
-
-                return new string[0];
-            }
-        }
     }
 }

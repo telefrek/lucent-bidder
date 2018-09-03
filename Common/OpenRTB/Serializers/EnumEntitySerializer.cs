@@ -9,7 +9,7 @@ namespace Lucent.Common.OpenRTB.Serializers
     /// Default class for serializing OpenRTB enum objects
     /// </summary>
     /// <typeparam name="T">The type of enum to serialize</typeparam>
-    public sealed class EnumSerializer<T> : IEntitySerializer<T>
+    public sealed class EnumEntitySerializer<T> : IEntitySerializer<T>
     {
         /// <summary>
         /// Reads the next enum of type T from the stream

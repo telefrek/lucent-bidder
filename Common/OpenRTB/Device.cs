@@ -3,7 +3,7 @@ namespace Lucent.Common.OpenRTB
     public class Device
     {
         public string UserAgent { get; set; }
-        public Geo Geography { get; set; }
+        public Geo Geo { get; set; }
         public bool DoNotTrack { get; set; }
         public bool LimitedAdTracking { get; set; }
         public string Ipv4 { get; set; }

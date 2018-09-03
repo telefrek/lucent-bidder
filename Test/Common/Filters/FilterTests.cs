@@ -333,7 +333,7 @@ namespace Lucent.Common.Storage.Test
         {
             var testGeo = new Geo { Country = "USA", Region = "East Coast", City = "Seattle", GeoType = GeoType.GPS, ISP = ISP.ip2location, UtcOffset = -7 };
             var testUser = new User { Geo = testGeo, Gender = Gender.Female, YOB = 1985 };
-            var testDevice = new Device { Geography = testGeo, DeviceType = DeviceType.Phone, OS = "ios" };
+            var testDevice = new Device { Geo = testGeo, DeviceType = DeviceType.Phone, OS = "ios" };
 
             var countryFilter = new Filter<Geo> { Property = "Country", Value = "USA" };
             var utcFilter = new Filter<Geo> { Property = "UtcOffset", Value = -7 };
