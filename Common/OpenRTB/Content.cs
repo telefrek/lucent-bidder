@@ -22,7 +22,7 @@ namespace Lucent.Common.OpenRTB
         public string ContentRating { get; set; }
         public string UserRating { get; set; }
         public MediaRating MediaRating { get; set; }
-        public string[] Keywords { get; set; }
+        public string Keywords { get; set; }
         public bool IsLive { get; set; }
         public bool IsDirect { get; set; }
         public int Length { get; set; }

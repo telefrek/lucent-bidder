@@ -15,6 +15,6 @@ namespace Lucent.Common.OpenRTB
         public bool IsPaidVersion { get; set; }
         public Publisher Publisher { get; set; }
         public Content Content { get; set; }
-        public string[] Keywords { get; set; }
+        public string Keywords { get; set; }
     }
 }

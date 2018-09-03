@@ -78,10 +78,14 @@ namespace Lucent.Common.Storage.Test
             {
                 foreach (var imp in bid.Impressions)
                 {
-                    if (imp.BidCurrency == "USD")
+                    if (imp.BidCurrency == "CAN")
                         return true;
                 }
             }
+
+            if (bid.User != null && (bid.User.Gender == Gender.Unknown ||
+                (bid.User.Geo != null && bid.User.Geo.Country == "CAN")))
+                return true;
 
             return false;
         }
@@ -342,7 +346,7 @@ namespace Lucent.Common.Storage.Test
             var geoFilter = CreateFilter(new[] { countryFilter, utcFilter, ispFilter });
 
             Assert.IsTrue(CreateFilter(new[] { countryFilter, utcFilter }).Invoke(testGeo), "Filter should have passed");
-            Assert.IsFalse(geoFilter.Invoke(testGeo), "ISP filter should have failed");
+            Assert.IsFalse(CreateFilter(new[] { ispFilter }).Invoke(testGeo), "ISP filter should have failed");
 
             testGeo.ISP = ISP.MaxMind;
             Assert.IsTrue(geoFilter.Invoke(testGeo), "ISP filter should have passed");

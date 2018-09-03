@@ -7,7 +7,7 @@ namespace Lucent.Common.OpenRTB
         public int MaxDuration { get; set; }
         public VideoProtocol[] Protocols { get; set; }
         public StartDelay Delay { get; set; }
-        public int Sequence { get; set; }
+        public int Sequence { get; set; } = 1;
         public BlockedCreative[] BlockedAttributes { get; set; }
         public int MaxExtended { get; set; }
         public int MinBitrate { get; set; }
