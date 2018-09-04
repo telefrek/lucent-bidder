@@ -43,7 +43,16 @@ namespace Lucent.Common.Serialization
         /// <returns>True if there are more tokens available in the stream</returns>
         Task<bool> HasNextAsync();
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
         bool HasMoreProperties();
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
         Task<bool> HasMorePropertiesAsync();
 
         /// <summary>
@@ -182,10 +191,28 @@ namespace Lucent.Common.Serialization
         /// <returns>An array of 0 or more strings</returns>
         Task<string[]> ReadStringArrayAsync();
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
         DateTime ReadDateTime();
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
         Task<DateTime> ReadDateTimeAsync();
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
         Guid ReadGuid();
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
         Task<Guid> ReadGuidAsync();
     }
 }

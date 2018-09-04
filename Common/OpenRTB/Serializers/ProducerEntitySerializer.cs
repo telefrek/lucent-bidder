@@ -71,12 +71,12 @@ namespace Lucent.Common.OpenRTB.Serializers
         {
             if (instance != null)
             {
-                serializationStreamWriter.StartObject();
+                await serializationStreamWriter.StartObjectAsync();
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 1, Name = "id" }, instance.Id);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 2, Name = "name" }, instance.Name);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 3, Name = "cat" }, instance.Categories);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 4, Name = "domain" }, instance.Domain);
-                serializationStreamWriter.EndObject();
+                await serializationStreamWriter.EndObjectAsync();
                 await serializationStreamWriter.FlushAsync();
             }
         }

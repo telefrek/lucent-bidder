@@ -100,25 +100,16 @@ namespace Lucent.Common.Entities.Serializers
         }
 
         public void Write(ISerializationStreamWriter serializationStreamWriter, Schedule instance)
-        {
-            if (instance != null)
-            {
-                serializationStreamWriter.StartObject();
-                serializationStreamWriter.Write(new PropertyId { Id = 0, Name = "start" }, instance.StartDate);
-                serializationStreamWriter.Write(new PropertyId { Id = 1, Name = "end" }, instance.EndDate);
-                serializationStreamWriter.EndObject();
-                serializationStreamWriter.Flush();
-            }
-        }
+            => WriteAsync(serializationStreamWriter, instance, CancellationToken.None).Wait();
 
         public async Task WriteAsync(ISerializationStreamWriter serializationStreamWriter, Schedule instance, CancellationToken token)
         {
             if (instance != null)
             {
-                serializationStreamWriter.StartObject();
+                await serializationStreamWriter.StartObjectAsync();
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 0, Name = "start" }, instance.StartDate);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 1, Name = "end" }, instance.EndDate);
-                serializationStreamWriter.EndObject();
+                await serializationStreamWriter.EndObjectAsync();
                 await serializationStreamWriter.FlushAsync();
             }
         }

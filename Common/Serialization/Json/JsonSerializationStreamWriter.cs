@@ -646,8 +646,20 @@ namespace Lucent.Common.Serialization.Json
             await WriteAsync(value);
         }
 
+        public async Task StartObjectAsync() => await _jsonWriter.WriteStartObjectAsync();
+
+        public async Task EndObjectAsync() => await _jsonWriter.WriteEndObjectAsync();
+
+        public async Task StartArrayAsync() => await _jsonWriter.WriteStartArrayAsync();
+
+        public async Task EndArrayAsync() => await _jsonWriter.WriteEndArrayAsync();
+
         public void StartObject() => _jsonWriter.WriteStartObject();
 
         public void EndObject() => _jsonWriter.WriteEndObject();
+
+        public void StartArray() => _jsonWriter.WriteStartArray();
+
+        public void EndArray() => _jsonWriter.WriteEndArray();
     }
 }

@@ -209,7 +209,7 @@ namespace Lucent.Common.OpenRTB.Serializers
         {
             if (instance != null)
             {
-                serializationStreamWriter.StartObject();
+                await serializationStreamWriter.StartObjectAsync();
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 1, Name = "mimes" }, instance.MimeTypes);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 2, Name = "linearity" }, instance.Linearity);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 3, Name = "minduration" }, instance.MinDuration);
@@ -237,7 +237,7 @@ namespace Lucent.Common.OpenRTB.Serializers
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 25, Name = "skipafter" }, instance.SkipAfter);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 26, Name = "placement" }, instance.Placement);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 27, Name = "playbackend" }, instance.PlaybackEnd);
-                serializationStreamWriter.EndObject();
+                await serializationStreamWriter.EndObjectAsync();
                 await serializationStreamWriter.FlushAsync();
             }
         }

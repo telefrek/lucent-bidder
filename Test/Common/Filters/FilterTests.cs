@@ -292,11 +292,11 @@ namespace Lucent.Common.Storage.Test
             {
                 if (instance != null)
                 {
-                    serializationStreamWriter.StartObject();
+                    await serializationStreamWriter.StartObjectAsync();
                     await serializationStreamWriter.WriteAsync(new PropertyId { Id = 0, Name = "property" }, instance.Property);
                     await serializationStreamWriter.WriteAsync(new PropertyId { Id = 1, Name = "type" }, (int)instance.FilterType);
                     await serializationStreamWriter.WriteAsync(new PropertyId { Id = 2, Name = "value" }, instance.Value.ToString());
-                    serializationStreamWriter.EndObject();
+                    await serializationStreamWriter.EndObjectAsync();
                     await serializationStreamWriter.FlushAsync();
                 }
             }

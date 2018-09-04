@@ -151,7 +151,7 @@ namespace Lucent.Common.OpenRTB.Serializers
         {
             if (instance != null)
             {
-                serializationStreamWriter.StartObject();
+                await serializationStreamWriter.StartObjectAsync();
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 1, Name = "id" }, instance.ImpressionId);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 2, Name = "banner" }, instance.Banner);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 3, Name = "video" }, instance.Video);
@@ -168,7 +168,7 @@ namespace Lucent.Common.OpenRTB.Serializers
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 15, Name = "audio" }, instance.Audio);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 16, Name = "clickbrowser" }, instance.IsClickNative);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 17, Name = "metric" }, instance.Metrics);
-                serializationStreamWriter.EndObject();
+                await serializationStreamWriter.EndObjectAsync();
                 await serializationStreamWriter.FlushAsync();
             }
         }

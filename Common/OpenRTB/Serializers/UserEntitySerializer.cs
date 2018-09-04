@@ -95,7 +95,7 @@ namespace Lucent.Common.OpenRTB.Serializers
         {
             if (instance != null)
             {
-                serializationStreamWriter.StartObject();
+                await serializationStreamWriter.StartObjectAsync();
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 1, Name = "id" }, instance.Id);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 2, Name = "buyeruid" }, instance.BuyerId);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 3, Name = "yob" }, instance.YOB);
@@ -104,7 +104,7 @@ namespace Lucent.Common.OpenRTB.Serializers
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 6, Name = "customdata" }, instance.CustomB85);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 7, Name = "geo" }, instance.Geo);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 8, Name = "data" }, instance.Data);
-                serializationStreamWriter.EndObject();
+                await serializationStreamWriter.EndObjectAsync();
                 await serializationStreamWriter.FlushAsync();
             }
         }

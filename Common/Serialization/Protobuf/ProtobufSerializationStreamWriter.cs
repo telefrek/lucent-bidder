@@ -497,6 +497,17 @@ namespace Lucent.Common.Serialization.Protobuf
         }
         public void StartObject() { }
 
+        public Task StartObjectAsync() => Task.CompletedTask;
+
         public void EndObject() { }
+
+        public Task EndObjectAsync() => Task.CompletedTask;
+
+        public void StartArray() { }
+
+        public Task StartArrayAsync() => Task.CompletedTask;
+
+        public void EndArray() { }
+        public Task EndArrayAsync() => Task.CompletedTask;
     }
 }

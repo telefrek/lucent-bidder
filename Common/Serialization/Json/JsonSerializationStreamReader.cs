@@ -704,13 +704,13 @@ namespace Lucent.Common.Serialization.Json
             {
                 if (!HasNext())
                     return false;
-                else return _jsonReader.TokenType == JsonToken.PropertyName;
+                return _jsonReader.TokenType == JsonToken.PropertyName;
             }
 
             if (_jsonReader.TokenType == JsonToken.EndObject)
                 return false;
 
-            if(_jsonReader.TokenType != JsonToken.PropertyName)
+            if (_jsonReader.TokenType != JsonToken.PropertyName)
                 _jsonReader.Read();
 
             return _jsonReader.TokenType == JsonToken.PropertyName;
@@ -718,17 +718,20 @@ namespace Lucent.Common.Serialization.Json
 
         public async Task<bool> HasMorePropertiesAsync()
         {
+
             if (_jsonReader.TokenType == JsonToken.StartObject)
+            {
                 if (!await HasNextAsync())
                     return false;
+                return _jsonReader.TokenType == JsonToken.PropertyName;
+            }
 
             if (_jsonReader.TokenType == JsonToken.EndObject)
                 return false;
 
-            if (_jsonReader.TokenType == JsonToken.PropertyName)
-                return true;
+            if (_jsonReader.TokenType != JsonToken.PropertyName)
+                await _jsonReader.ReadAsync();
 
-            await _jsonReader.ReadAsync();
             return _jsonReader.TokenType == JsonToken.PropertyName;
         }
 

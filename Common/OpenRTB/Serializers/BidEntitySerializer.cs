@@ -203,7 +203,7 @@ namespace Lucent.Common.OpenRTB.Serializers
         {
             if (instance != null)
             {
-                serializationStreamWriter.StartObject();
+                await serializationStreamWriter.StartObjectAsync();
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 1, Name = "id" }, instance.Id);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 2, Name = "impid" }, instance.ImpressionId);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 3, Name = "price" }, instance.CPM);
@@ -230,7 +230,7 @@ namespace Lucent.Common.OpenRTB.Serializers
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 25, Name = "language" }, instance.Language);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 26, Name = "wratio" }, instance.WRatio);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 27, Name = "hratio" }, instance.HRatio);
-                serializationStreamWriter.EndObject();
+                await serializationStreamWriter.EndObjectAsync();
                 await serializationStreamWriter.FlushAsync();
             }
         }

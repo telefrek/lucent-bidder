@@ -177,8 +177,45 @@ namespace Lucent.Common.Serialization
         /// <param name="value"></param>
         Task WriteAsync(Guid value);
 
+        /// <summary>
+        /// 
+        /// </summary>
         void StartObject();
+
+        /// <summary>
+        /// 
+        /// </summary>
+        void StartArray();
+
+        /// <summary>
+        /// 
+        /// </summary>
+        Task StartObjectAsync();
+
+        /// <summary>
+        /// 
+        /// </summary>
+        Task StartArrayAsync();
+
+        /// <summary>
+        /// 
+        /// </summary>
         void EndObject();
+
+        /// <summary>
+        /// 
+        /// </summary>
+        void EndArray();
+
+        /// <summary>
+        /// 
+        /// </summary>
+        Task EndObjectAsync();
+
+        /// <summary>
+        /// 
+        /// </summary>
+        Task EndArrayAsync();
 
         /// <summary>
         /// Writes the value to the stream

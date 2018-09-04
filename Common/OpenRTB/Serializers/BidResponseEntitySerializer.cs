@@ -83,14 +83,14 @@ namespace Lucent.Common.OpenRTB.Serializers
         {
             if (instance != null)
             {
-                serializationStreamWriter.StartObject();
+                await serializationStreamWriter.StartObjectAsync();
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 1, Name = "id" }, instance.Id);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 2, Name = "seatbid" }, instance.Bids);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 3, Name = "bidid" }, instance.CorrelationId);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 4, Name = "cur" }, instance.Currency);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 5, Name = "customdata" }, instance.CustomData85);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 6, Name = "nbr" }, instance.NoBidReason);
-                serializationStreamWriter.EndObject();
+                await serializationStreamWriter.EndObjectAsync();
                 await serializationStreamWriter.FlushAsync();
             }
         }

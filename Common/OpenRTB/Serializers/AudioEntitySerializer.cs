@@ -155,7 +155,7 @@ namespace Lucent.Common.OpenRTB.Serializers
         {
             if (instance != null)
             {
-                serializationStreamWriter.StartObject();
+                await serializationStreamWriter.StartObjectAsync();
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 1, Name = "mimes" }, instance.MimeTypes);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 2, Name = "minduration" }, instance.MinDuration);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 3, Name = "maxduration" }, instance.MaxDuration);
@@ -174,7 +174,7 @@ namespace Lucent.Common.OpenRTB.Serializers
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 22, Name = "feed" }, instance.AudioFeedType);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 23, Name = "stitched" }, instance.IsStitched);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 24, Name = "nvol" }, instance.VolumeNormalization);
-                serializationStreamWriter.EndObject();
+                await serializationStreamWriter.EndObjectAsync();
                 await serializationStreamWriter.FlushAsync();
             }
         }

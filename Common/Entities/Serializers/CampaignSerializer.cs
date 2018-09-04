@@ -69,12 +69,12 @@ namespace Lucent.Common.Entities.Serializers
         {
             if (instance != null)
             {
-                serializationStreamWriter.StartObject();
+                await serializationStreamWriter.StartObjectAsync();
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 0, Name = "id" }, instance.Id);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 1, Name = "name" }, instance.Name);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 2, Name = "spend" }, instance.Spend);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 3, Name = "schedule" }, instance.Schedule);
-                serializationStreamWriter.EndObject();
+                await serializationStreamWriter.EndObjectAsync();
                 await serializationStreamWriter.FlushAsync();
             }
         }

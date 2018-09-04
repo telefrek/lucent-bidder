@@ -65,11 +65,11 @@ namespace Lucent.Common.OpenRTB.Serializers
         {
             if (instance != null)
             {
-                serializationStreamWriter.StartObject();
+                await serializationStreamWriter.StartObjectAsync();
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 1, Name = "type" }, instance.MetricType);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 2, Name = "value" }, instance.Value);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 3, Name = "vendor" }, instance.Vendor);
-                serializationStreamWriter.EndObject();
+                await serializationStreamWriter.EndObjectAsync();
                 await serializationStreamWriter.FlushAsync();
             }
         }

@@ -7,6 +7,11 @@ namespace Lucent.Common
 {
     public static partial class LucentExtensions
     {
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="provider"></param>
+        /// <returns></returns>
         public static IServiceCollection AddOpenRTBSerializers(this IServiceCollection provider)
         {
             var registry = provider.BuildServiceProvider().GetRequiredService<ISerializationRegistry>();

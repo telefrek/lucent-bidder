@@ -125,7 +125,7 @@ namespace Lucent.Common.OpenRTB.Serializers
         {
             if (instance != null)
             {
-                serializationStreamWriter.StartObject();
+                await serializationStreamWriter.StartObjectAsync();
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 1, Name = "lat" }, instance.Latitude);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 2, Name = "lon" }, instance.Longitude);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 3, Name = "country" }, instance.Country);
@@ -139,7 +139,7 @@ namespace Lucent.Common.OpenRTB.Serializers
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 11, Name = "accuracy" }, instance.Accuracy);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 12, Name = "lastfix" }, instance.LastFixed);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 13, Name = "ipservice" }, instance.ISP);
-                serializationStreamWriter.EndObject();
+                await serializationStreamWriter.EndObjectAsync();
                 await serializationStreamWriter.FlushAsync();
             }
         }

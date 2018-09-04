@@ -228,7 +228,7 @@ namespace Lucent.Common.OpenRTB.Serializers
         {
             if (instance != null)
             {
-                serializationStreamWriter.StartObject();
+                await serializationStreamWriter.StartObjectAsync();
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 1, Name = "dnt" }, instance.DoNotTrack);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 2, Name = "ua" }, instance.UserAgent);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 3, Name = "ip" }, instance.Ipv4);
@@ -259,7 +259,7 @@ namespace Lucent.Common.OpenRTB.Serializers
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 28, Name = "pxratio" }, instance.PixelRatio);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 29, Name = "geofetch" }, instance.SupportsGeoFetch);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 30, Name = "mccmnc" }, instance.MobileCarrierCode);
-                serializationStreamWriter.EndObject();
+                await serializationStreamWriter.EndObjectAsync();
                 await serializationStreamWriter.FlushAsync();
             }
         }
