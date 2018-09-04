@@ -48,7 +48,7 @@ namespace Lucent.Common
             registry.Register<Data>(new DataEntitySerializer());
             registry.Register<User>(new UserEntitySerializer());
             registry.Register<Device>(new DeviceEntitySerializer());
-            registry.Register<Producer>(new ProducerEntitySeriailzer());
+            registry.Register<Producer>(new ProducerEntitySerializer());
             registry.Register<Content>(new ContentEntitySerializer());
             registry.Register<Deal>(new DealEntitySerializer());
             registry.Register<PrivateMarketplace>(new PrivateMarketplaceEntitySerializer());

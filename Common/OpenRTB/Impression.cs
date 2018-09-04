@@ -14,7 +14,7 @@ namespace Lucent.Common.OpenRTB
         public string TagId { get; set; }
         public double BidFloor { get; set; }
         public string BidCurrency { get; set; } = "USD";
-        public bool IsClickEmbedded { get; set; }
+        public bool IsClickNative { get; set; }
         public bool IsHttpsRequired { get; set; }
         public string[] IFrameBusters { get; set; }
         public int ExpectedAuctionDelay { get; set; }

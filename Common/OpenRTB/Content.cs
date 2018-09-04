@@ -8,7 +8,7 @@ namespace Lucent.Common.OpenRTB
         public string Title { get; set; }
         public string Series { get; set; }
         public string Season { get; set; }
-        public string ArtistCredits { get; set; }
+        public string Artist { get; set; }
         public string Genre { get; set; }
         public string Album { get; set; }
         public string ISOCode { get; set; }
