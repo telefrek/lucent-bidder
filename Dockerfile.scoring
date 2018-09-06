@@ -1,0 +1,21 @@
+FROM microsoft/dotnet:latest AS build-env
+WORKDIR /
+ENV TARGET_DIRECTORY="/usr/local"
+RUN curl -L \
+   "https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow-cpu-linux-x86_64-1.9.0.tar.gz" | \
+   tar -C $TARGET_DIRECTORY -xz
+# Copy everything else and build
+COPY . ./
+WORKDIR /Scoring
+RUN dotnet restore
+RUN dotnet publish -c Release
+
+# Build runtime image
+FROM microsoft/dotnet:aspnetcore-runtime
+ENV TARGET_DIRECTORY="/usr/local"
+RUN curl -L \
+   "https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow-cpu-linux-x86_64-1.9.0.tar.gz" | \
+   tar -C $TARGET_DIRECTORY -xz && ldconfig
+WORKDIR /opt/lucent
+COPY --from=build-env /Scoring/bin/Release/netcoreapp2.1/publish .
+ENTRYPOINT ["dotnet", "Bidder.dll"]
