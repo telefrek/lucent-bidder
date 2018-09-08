@@ -167,7 +167,7 @@ namespace Lucent.Common.OpenRTB.Test
             for (var i = 0; i < 5000; ++i)
             {
                 await maxConcurrent.WaitAsync();
-                MakeBid(bid).ContinueWith(r => r.Dispose()).ContinueWith(t => maxConcurrent.Release());
+                _ = MakeBid(bid).ContinueWith(r => r.Dispose()).ContinueWith(t => maxConcurrent.Release());
             }
 
             while (maxConcurrent.CurrentCount < numThreads)
