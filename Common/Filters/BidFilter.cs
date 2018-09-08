@@ -1,6 +1,6 @@
 using Lucent.Common.OpenRTB;
 
-namespace Lucent.Common.Entities
+namespace Lucent.Common.Filters
 {
     public class BidFilter
     {

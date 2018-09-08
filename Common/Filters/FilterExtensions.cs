@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using Lucent.Common.Entities;
+using Lucent.Common.Filters;
 using Lucent.Common.OpenRTB;
 
 namespace Lucent.Common
