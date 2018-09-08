@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Lucent.Common.Serialization;
 
-namespace Lucent.Common.Entities.Serializers
+namespace Lucent.Common.Filters.Serializers
 {
     internal class FilterSerializer<T> : IEntitySerializer<Filter<T>>
     {

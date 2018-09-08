@@ -1,4 +1,4 @@
-namespace Lucent.Common.Entities
+namespace Lucent.Common.Filters
 {
     public class Filter<T>
     {
