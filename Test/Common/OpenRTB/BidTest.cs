@@ -183,8 +183,7 @@ namespace Lucent.Common.OpenRTB.Test
 
                 using (var writer = serializer.Writer)
                 {
-                    await writer.WriteAsync(bid);
-                    await writer.FlushAsync();
+                    await ServiceProvider.GetService<ISerializationRegistry>().GetSerializer<BidRequest>().WriteAsync(writer, bid, CancellationToken.None);
                 }
 
                 ms.Seek(0, SeekOrigin.Begin);
@@ -203,19 +202,16 @@ namespace Lucent.Common.OpenRTB.Test
 
             using (var reader = serializer.Reader)
             {
-                if (await reader.HasNextAsync())
-                {
-                    return await reader.ReadAsAsync<BidResponse>();
-                }
+                return await ServiceProvider.GetService<ISerializationRegistry>().GetSerializer<BidResponse>().ReadAsync(reader, CancellationToken.None);
             }
-
-            return null;
         }
 
         protected override void InitializeDI(IServiceCollection services)
         {
             services.AddTransient<ISerializationRegistry, SerializationRegistry>();
             services.AddMessaging(Configuration);
+            services.AddSerialization(Configuration);
+            services.AddOpenRTBSerializers();
         }
     }
 }

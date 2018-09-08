@@ -42,9 +42,9 @@ namespace Bidder
 
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
             services.ConfigureLoadShedding(Configuration);
-
             services.AddMessaging(Configuration);
-            services.AddSingleton<ISerializationRegistry, SerializationRegistry>();
+            services.AddSerialization(Configuration);
+            services.AddOpenRTBSerializers();
             services.AddSingleton<IBidHandler, BidHandler>();
         }
 
@@ -86,11 +86,13 @@ namespace Bidder
     {
         ILogger<BidHandler> _log;
         IMessageSubscriber<LucentMessage> _subscriber;
+        ISerializationRegistry _registry;
         int _next = 0;
 
-        public BidHandler(ILogger<BidHandler> log, IMessageFactory factory)
+        public BidHandler(ILogger<BidHandler> log, IMessageFactory factory, ISerializationRegistry registry)
         {
             _log = log;
+            _registry = registry;
             _subscriber = factory.CreateSubscriber<LucentMessage>("campaigns", 0);
             _subscriber.OnReceive = (m) =>
            {
@@ -105,36 +107,12 @@ namespace Bidder
         public async Task HandleAsync(HttpContext context)
         {
             var sstream = context.Request.Body.WrapSerializer(context.RequestServices, SerializationFormat.JSON, false);
+            var request = await _registry.GetSerializer<BidRequest>().ReadAsync(sstream.Reader, CancellationToken.None);
 
-            using (var reader = sstream.Reader)
-            {
-                if (await reader.HasNextAsync())
-                {
-                    var bidRequest = reader.ReadAsAsync<BidRequest>();
+            if (request != null)
+                _log.LogInformation("Got request {0}", request.Id);
 
-                    if (bidRequest != null)
-                    {
-                        if (Interlocked.Exchange(ref _next, 0) > 0)
-                        {
-                            context.Response.StatusCode = 200;
-                            context.Response.ContentType = "application/json";
-                            var resp = new BidResponse { Id = "hello", CorrelationId = "world" };
-                            using (var serial = context.Response.Body.WrapSerializer(context.RequestServices, SerializationFormat.JSON, false).Writer)
-                            {
-                                await serial.WriteAsync(resp);
-                                await serial.FlushAsync();
-                            }
-                        }
-                        else
-                            context.Response.StatusCode = 204;
-
-                        await Task.Delay(50);
-                        return;
-                    }
-                }
-            }
-
-            context.Response.StatusCode = 403;
+            context.Response.StatusCode = request == null ? 400 : 204;
         }
     }
 }
