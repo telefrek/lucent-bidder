@@ -53,7 +53,7 @@ namespace Lucent.Common.Storage
             _insertStatement = _session.Prepare("INSERT INTO {0} (id, etag, version, updated, contents) VALUES (?, ?, ?, ?, ?) IF NOT EXISTS".FormatWith(_tableName));
 
             // Check etag
-            _updateStatement = _session.Prepare("UPDATE {0} SET etag=?, updated=?, contents=? WHERE id=? IF EXISTS".FormatWith(_tableName));
+            _updateStatement = _session.Prepare("UPDATE {0} SET etag=?, updated=?, contents=? WHERE id=? IF EXISTS AND etag=?".FormatWith(_tableName));
 
             // Check etag
             _deleteStatement = _session.Prepare("DELETE FROM {0} WHERE id=? IF EXISTS".FormatWith(_tableName));
@@ -259,6 +259,7 @@ namespace Lucent.Common.Storage
         {
             try
             {
+                var oldEtag = obj.ETag;
                 var contents = new byte[0];
                 using (var ms = new MemoryStream())
                 {
@@ -266,11 +267,9 @@ namespace Lucent.Common.Storage
                     ms.Seek(0, SeekOrigin.Begin);
                     contents = ms.ToArray();
                 }
+                obj.ETag = contents.CalculateETag();
 
-                if (string.IsNullOrEmpty(obj.ETag))
-                    obj.ETag = contents.CalculateETag();
-
-                var rowSet = await _session.ExecuteAsync(_updateStatement.Bind(obj.ETag, DateTime.UtcNow, contents, obj.Id));
+                var rowSet = await _session.ExecuteAsync(_updateStatement.Bind(obj.ETag, DateTime.UtcNow, contents, obj.Id, oldEtag));
 
                 return rowSet != null;
             }

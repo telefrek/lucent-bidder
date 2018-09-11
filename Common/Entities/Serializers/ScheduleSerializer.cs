@@ -5,65 +5,18 @@ using Lucent.Common.Serialization.Json;
 
 namespace Lucent.Common.Entities.Serializers
 {
-    internal class ScheduleSerializer : IEntitySerializer<Schedule>
+    internal class CampaignScheduleSerializer : IEntitySerializer<CampaignSchedule>
     {
-        public Schedule Read(ISerializationStreamReader serializationStreamReader)
-        {
-            if (serializationStreamReader.Token == SerializationToken.Unknown)
-                if (!serializationStreamReader.HasNext())
-                    return null;
+        public CampaignSchedule Read(ISerializationStreamReader serializationStreamReader)
+            => ReadAsync(serializationStreamReader, CancellationToken.None).Result;
 
-            try
-            {
-                var instance = new Schedule();
-                while (serializationStreamReader.HasMoreProperties())
-                {
-                    var propId = serializationStreamReader.Id;
-                    switch (propId.Name)
-                    {
-                        case "":
-                            switch (propId.Id)
-                            {
-                                case 0:
-                                    instance.StartDate = serializationStreamReader.ReadDateTime();
-                                    break;
-                                case 1:
-                                    instance.EndDate = serializationStreamReader.ReadDateTime();
-                                    break;
-                                default:
-                                    serializationStreamReader.Skip();
-                                    break;
-                            }
-                            break;
-                        case "start":
-                            instance.StartDate = serializationStreamReader.ReadDateTime();
-                            break;
-                        case "end":
-                            instance.EndDate = serializationStreamReader.ReadDateTime();
-                            break;
-                        default:
-                            serializationStreamReader.Skip();
-                            break;
-
-                    }
-                }
-                return instance;
-            }
-            catch
-            {
-
-            }
-
-            return null;
-        }
-
-        public async Task<Schedule> ReadAsync(ISerializationStreamReader serializationStreamReader, CancellationToken token)
+        public async Task<CampaignSchedule> ReadAsync(ISerializationStreamReader serializationStreamReader, CancellationToken token)
         {
             if (serializationStreamReader.Token == SerializationToken.Unknown)
                 if (!await serializationStreamReader.HasNextAsync())
                     return null;
 
-            var instance = new Schedule();
+            var instance = new CampaignSchedule();
             while (await serializationStreamReader.HasMorePropertiesAsync())
             {
                 var propId = serializationStreamReader.Id;
@@ -99,10 +52,10 @@ namespace Lucent.Common.Entities.Serializers
             return instance;
         }
 
-        public void Write(ISerializationStreamWriter serializationStreamWriter, Schedule instance)
+        public void Write(ISerializationStreamWriter serializationStreamWriter, CampaignSchedule instance)
             => WriteAsync(serializationStreamWriter, instance, CancellationToken.None).Wait();
 
-        public async Task WriteAsync(ISerializationStreamWriter serializationStreamWriter, Schedule instance, CancellationToken token)
+        public async Task WriteAsync(ISerializationStreamWriter serializationStreamWriter, CampaignSchedule instance, CancellationToken token)
         {
             if (instance != null)
             {

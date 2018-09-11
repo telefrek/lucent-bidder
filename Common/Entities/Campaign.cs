@@ -11,17 +11,22 @@ namespace Lucent.Common.Entities
         [Required, StringLength(100)]
         public string Name { get; set; }
 
-        [Display(Name = "Start")]
+        [Display(Name = "Spend")]
         public double Spend { get; set; }
 
         [Display(Name = "Id")]
         public string Id { get; set; }
+
+        [Display(Name = "Status")]
         public CampaignStatus Status { get; set; }
 
         public List<Creative> Creatives { get; set; } = new List<Creative>();
 
-        public Schedule Schedule { get; set; } = new Schedule { };
-        public Budget Budget { get; set; }
+        [Display(Name = "Schedule")]
+        public CampaignSchedule Schedule { get; set; } = new CampaignSchedule { };
+
+        [Display(Name = "Caps")]
+        public CampaignSpendCaps SpendCaps { get; set; } = new CampaignSpendCaps { };
 
         // storage properties
         string IStorageEntity.ETag { get; set; }
@@ -41,7 +46,17 @@ namespace Lucent.Common.Entities
         BudgedExhausted = 3,
     }
 
-    public class Schedule
+    public class CampaignSpendCaps
+    {
+        [Display(Name = "Hourly Cap")]
+        public double HourlySpendCap { get; set; } = 100d;
+        [Display(Name = "Daily Cap")]
+        public double DailySpendCap { get; set; } = 100d;
+        [Display(Name = "Weekly Cap")]
+        public double WeeklySpendCap { get; set; } = 100d;
+    }
+
+    public class CampaignSchedule
     {
         [Display(Name = "Start")]
         [DataType(DataType.Date)]
@@ -52,22 +67,5 @@ namespace Lucent.Common.Entities
         [DataType(DataType.Date)]
         [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
         public DateTime EndDate { get; set; } = DateTime.Now;
-    }
-
-    public class Targetting
-    {
-        // need some rules
-    }
-
-    public class Budget
-    {
-        public double TotalHourly { get; set; }
-        public double TotalDaily { get; set; }
-        public double Total { get; set; }
-    }
-
-    public class FrequencyCaps
-    {
-
     }
 }

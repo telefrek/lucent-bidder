@@ -35,7 +35,7 @@ namespace Lucent.Common.Entities.Serializers
                                 instance.Spend = await serializationStreamReader.ReadDoubleAsync();
                                 break;
                             case 3:
-                                instance.Schedule = await serializationStreamReader.ReadAsAsync<Schedule>();
+                                instance.Schedule = await serializationStreamReader.ReadAsAsync<CampaignSchedule>();
                                 break;
                             default:
                                 await serializationStreamReader.SkipAsync();
@@ -52,7 +52,7 @@ namespace Lucent.Common.Entities.Serializers
                         instance.Spend = await serializationStreamReader.ReadDoubleAsync();
                         break;
                     case "schedule":
-                        instance.Schedule = await serializationStreamReader.ReadAsAsync<Schedule>();
+                        instance.Schedule = await serializationStreamReader.ReadAsAsync<CampaignSchedule>();
                         break;
                     default:
                         await serializationStreamReader.SkipAsync();

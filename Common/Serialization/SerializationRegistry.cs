@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Extensions.Logging;
 
 namespace Lucent.Common.Serialization
@@ -28,7 +29,7 @@ namespace Lucent.Common.Serialization
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public IEntitySerializer<T> GetSerializer<T>() where T : new() => (IEntitySerializer<T>)_registry.GetValueOrDefault(typeof(T), null);
+        public IEntitySerializer<T> GetSerializer<T>() where T : new() => _registry.GetValueOrDefault(typeof(T), null) as IEntitySerializer<T>;
 
         /// <summary>
         /// 

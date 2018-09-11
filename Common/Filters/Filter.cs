@@ -1,13 +1,17 @@
+using System;
+
 namespace Lucent.Common.Filters
 {
-    public class Filter<T>
+    public class Filter
     {
         public string Property { get; set; }
         public object Value { get; set; }
         public object[] Values { get; set; }
         public FilterType FilterType { get; set; }
+        public Type PropertyType { get; set; }
     }
 
+                // Need a method to create filters in a generic way...
     public enum FilterType
     {
         EQ = 0,

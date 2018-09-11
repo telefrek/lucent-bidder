@@ -4,8 +4,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
+using Lucent.Common.Entities;
 using Lucent.Common.Filters;
+using Lucent.Common.Filters.Serializers;
 using Lucent.Common.OpenRTB;
+using Lucent.Common.Serialization;
 
 namespace Lucent.Common
 {
@@ -103,7 +108,7 @@ namespace Lucent.Common
         }
 
 
-        public static Expression CreateExpression<T>(this Filter<T> filter, Expression p)
+        public static Expression CreateExpression(this Filter filter, Expression p)
         {
             var prop = Expression.Property(p, filter.Property);
 
@@ -113,6 +118,37 @@ namespace Lucent.Common
                 case FilterType.NEQ:
                     exp = Expression.NotEqual(prop, Expression.Constant(filter.Value));
                     break;
+                case FilterType.GT:
+                    exp = Expression.GreaterThan(prop, Expression.Constant(filter.Value));
+                    break;
+                case FilterType.GTE:
+                    exp = Expression.GreaterThanOrEqual(prop, Expression.Constant(filter.Value));
+                    break;
+                case FilterType.LT:
+                    exp = Expression.LessThan(prop, Expression.Constant(filter.Value));
+                    break;
+                case FilterType.LTE:
+                    exp = Expression.LessThanOrEqual(prop, Expression.Constant(filter.Value));
+                    break;
+                case FilterType.IN:
+                case FilterType.NOTIN:
+                    // Need to check types to do this efficiently ?
+                    // if prop is string, contains
+                    // else if prop is array, for blah in Length...
+                    // else if prop is collection, Linq.Contains
+                    if (filter.Values != null)
+                    {
+
+                    }
+                    else
+                    {
+
+                    }
+
+                    // Not in is just assert in != true
+                    if (filter.FilterType == FilterType.NOTIN)
+                        exp = Expression.NotEqual(exp, Expression.Constant(true));
+                    break;
                 default:
                     exp = Expression.Equal(prop, Expression.Constant(filter.Value));
                     break;
@@ -121,7 +157,7 @@ namespace Lucent.Common
             return exp;
         }
 
-        public static Expression CombineFilters<T>(this ICollection<Filter<T>> filters, Expression target)
+        public static Expression CombineFilters(this ICollection<Filter> filters, Expression target)
         {
             Expression exp = null;
 
@@ -136,18 +172,6 @@ namespace Lucent.Common
             }
 
             return exp;
-        }
-
-        public static Func<T, bool> CreateFilter<T>(this ICollection<Filter<T>> filters)
-        {
-            var fType = typeof(T);
-            var p = Expression.Parameter(fType, "p1");
-
-            Expression exp = filters.CombineFilters(p);
-
-            var ftype = typeof(Func<,>).MakeGenericType(fType, typeof(bool));
-            var comp = makeLambda.MakeGenericMethod(ftype).Invoke(null, new object[] { exp, new ParameterExpression[] { p } });
-            return (Func<T, bool>)comp.GetType().GetMethod("Compile", Type.EmptyTypes).Invoke(comp, new object[] { });
         }
 
         static readonly MethodInfo makeLambda = typeof(Expression).GetMethods().Where(m =>

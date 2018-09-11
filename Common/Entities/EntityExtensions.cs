@@ -1,5 +1,7 @@
 using Lucent.Common.Entities;
 using Lucent.Common.Entities.Serializers;
+using Lucent.Common.Filters;
+using Lucent.Common.Filters.Serializers;
 using Lucent.Common.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -13,7 +15,9 @@ namespace Lucent.Common
             if (!registry.IsSerializerRegisterred<Campaign>())
             {
                 registry.Register<Campaign>(new CampaignSerializer());
-                registry.Register<Schedule>(new ScheduleSerializer());
+                registry.Register<CampaignSchedule>(new CampaignScheduleSerializer());
+                registry.Register<Filter>(new FilterSerializer());
+                registry.Register<BidFilter>(new BidFilterSerializer());
             }
             return provider;
         }
