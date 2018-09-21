@@ -1,0 +1,15 @@
+FROM microsoft/dotnet:latest AS build-env
+WORKDIR /opt/lucent
+
+# Copy everything else and build
+COPY ./ContentServer/ ./
+RUN ls -la
+RUN dotnet restore
+RUN dotnet publish -c Release
+RUN mkdir -p ./bin/Release/netcoreapp2.1/publish/adcontent
+
+# Build runtime image
+FROM microsoft/dotnet:aspnetcore-runtime
+WORKDIR /opt/lucent
+COPY --from=build-env /opt/lucent/bin/Release/netcoreapp2.1/publish .
+ENTRYPOINT ["dotnet", "ContentServer.dll"]
