@@ -1,0 +1,46 @@
+replicaCount: 1
+
+image:
+  repository: telefrek/lucent-bidder
+  tag: alpha
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  annotations: {}
+    kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  path: /
+  hosts:
+    - west.lucentbid.com
+  tls:
+  - secretName: lucent-tls
+    hosts:
+      - west.lucentbid.com
+
+resources: 
+  limits:
+   memory: 1Gi
+  requests:
+   memory: 256Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchExpression:
+          - key: component
+            operator: In
+            values:
+            - bidder
+        topologyKey: kubernetes.io/hostname

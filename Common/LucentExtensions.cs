@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Security;
 using System.Security.Cryptography;
 using Lucent.Common;
 
@@ -14,6 +15,20 @@ public static partial class LucentExtensions
     static MD5 _md5 = System.Security.Cryptography.MD5.Create();
 
     public static string CalculateETag(this byte[] buffer) => _md5.ComputeHash(buffer).ToHex();
+
+    public static string SafeBase64Encode(this string str) => str.Replace("/", "_").Replace("+", "-");
+
+    public static string SafeBase64Decode(this string str) => str.Replace("_", "/").Replace("-", "+");
+
+    public static string Escape(this string src) => SecurityElement.Escape(src);
+
+    public static string CDataEscape(this string src) => "<![CDATA[" + SecurityElement.Escape(src) + "]]>";
+
+    public static string CDataWrap(this string src) => "<![CDATA[" + src + "]]>";
+
+    public static string EncodeGuid(this Guid g) => Convert.ToBase64String(g.ToByteArray()).SafeBase64Encode().Substring(0, 22);
+
+    public static Guid DecodeGuid(this string s) => new Guid(Convert.FromBase64String(s.SafeBase64Decode() + "=="));
 
     public static string ToHex(this byte[] bytes)
     {

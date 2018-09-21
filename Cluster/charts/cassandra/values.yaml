@@ -23,9 +23,9 @@ persistence:
   ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
   ##   GKE, AWS & OpenStack)
   ##
-  storageClass: "managed-standard"
+  storageClass: "default"
   accessMode: ReadWriteOnce
-  size: 10Gi
+  size: 256Gi
 
 ## Configure resource requests and limits
 ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
@@ -35,7 +35,7 @@ persistence:
 resources:
   requests:
     memory: 4Gi
-    cpu: 2
+    cpu: .5
   limits:
     memory: 4Gi
     cpu: 2
@@ -47,8 +47,8 @@ resources:
 ## ref: http://docs.datastax.com/en/cassandra/3.0/cassandra/operations/opsTuneJVM.html
 config:
   cluster_name: cassandra
-  cluster_size: 1
-  seed_size: 1
+  cluster_size: 3
+  seed_size: 2
   num_tokens: 256
   dc_name: DC1
   rack_name: RAC1
@@ -70,7 +70,8 @@ config:
 
 ## Additional pod labels
 ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
-podLabels: {}
+podLabels:
+  component: cassandra
 
 ## Additional pod-level settings
 podSettings:
@@ -89,4 +90,16 @@ securityContext:
 
 ## Affinity for pod assignment
 ## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
-affinity: {}
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchExpression:
+          - key: component
+            operator: In
+            values:
+            - cassandra
+        topologyKey: kubernetes.io/hostname
+

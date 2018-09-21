@@ -173,13 +173,12 @@ updateStrategy: OnDelete
 ## rabbitmqMemoryHighWatermark following the formula:
 ##   rabbitmqMemoryHighWatermark = 0.4 * resources.limits.memory
 ##
-resources: {}
-# limits:
-#  cpu: 100m
-#  memory: 1Gi
-# requests:
-#  cpu: 100m
-#  memory: 1Gi
+resources:
+  limits:
+    cpu: 250m
+    memory: 1Gi
+  requests:
+    cpu: 100m
 
 
 ## Data Persistency
@@ -191,7 +190,7 @@ persistentVolume:
   ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
   ##   GKE, AWS & OpenStack)
   ##
-  storageClass: "managed-standard"
+  storageClass: "default"
   name: data
   accessModes:
     - ReadWriteOnce

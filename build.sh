@@ -24,6 +24,3 @@ docker tag telefrek/lucent-scoring:$IMAGE_TAG telefrek/lucent-scoring:${LUCENT_V
 
 echo 'Publishing scoring'
 docker push telefrek/lucent-scoring:${LUCENT_VERSION:-alpha}
-
-echo 'Updating deployment'
-kubectl -n lucent-bidder delete -f lucent.yaml --ignore-not-found && kubectl -n lucent-bidder create -f lucent.yaml
