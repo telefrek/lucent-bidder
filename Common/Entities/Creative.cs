@@ -8,7 +8,7 @@ namespace Lucent.Common.Entities
     {
         public string Id { get; set; }
         public string Description { get; set; }
-        public string Title {get;set;}
+        public string Title { get; set; }
 
         [Required, StringLength(100)]
         public string Name { get; set; }
@@ -21,5 +21,8 @@ namespace Lucent.Common.Entities
         public string Codec { get; set; }
         public int Duration { get; set; }
         public int Offset { get; set; }
+        public string CreativeUri {get;set;}
+
+        public string RawUri { get { return null; } }
     }
 }

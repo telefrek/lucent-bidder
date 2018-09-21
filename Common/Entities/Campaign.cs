@@ -22,6 +22,9 @@ namespace Lucent.Common.Entities
 
         public List<Creative> Creatives { get; set; } = new List<Creative>();
 
+        public string LandingPage { get; set; }
+        public string[] AdDomains { get; set; }
+
         [Display(Name = "Schedule")]
         public CampaignSchedule Schedule { get; set; } = new CampaignSchedule { };
 

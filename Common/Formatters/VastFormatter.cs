@@ -180,9 +180,13 @@ namespace Lucent.Common.Formatters
         public static void AddImpression(this XmlElement element, XmlDocument xDoc, Creative creative, Bid bid)
         {
             var impression = xDoc.CreateElement("Impression");
-            impression.AppendChild(xDoc.CreateCDataSection(FunctionEnv.GetPostbackUri("/api/track") + "&a=imp&lctx=" + bid.Id.SafeBase64Encode()));
+            impression.AppendChild(xDoc.CreateCDataSection(GetPostbackUri("/api/track") + "&a=imp&lctx=" + bid.Id.SafeBase64Encode()));
             impression.Attributes.Append(xDoc.CreateVastAttribute("id", SequentialGuid.NextGuid().ToString()));
             element.AppendChild(impression);
+        }
+
+        static string GetPostbackUri(string segment){
+            throw new NotImplementedException("nope");
         }
 
         public static void AddDescription(this XmlElement element, XmlDocument xDoc, Creative creative)
@@ -195,7 +199,7 @@ namespace Lucent.Common.Formatters
         public static void AddAdvertiser(this XmlElement element, XmlDocument xDoc, Campaign campaign)
         {
             var adv = xDoc.CreateElement("Advertiser");
-            adv.InnerText = campaign.AdDomain.FirstOrDefault();
+            adv.InnerText = campaign.AdDomains.FirstOrDefault();
             element.AppendChild(adv);
         }
 
@@ -211,7 +215,7 @@ namespace Lucent.Common.Formatters
         public static void AddErrorUri(this XmlElement element, XmlDocument xDoc, Creative creative, Bid bid)
         {
             var err = xDoc.CreateElement("Error");
-            err.AppendChild(xDoc.CreateCDataSection(FunctionEnv.GetPostbackUri("/api/track") + "&a=err&lctx=" + bid.Id.SafeBase64Encode()));
+            err.AppendChild(xDoc.CreateCDataSection(GetPostbackUri("/api/track") + "&a=err&lctx=" + bid.Id.SafeBase64Encode()));
             element.AppendChild(err);
         }
 
@@ -219,9 +223,9 @@ namespace Lucent.Common.Formatters
         {
             var viewImp = xDoc.CreateElement("ViewableImpression");
             var viewable = xDoc.CreateElement("Viewable");
-            viewable.AppendChild(xDoc.CreateCDataSection(FunctionEnv.GetPostbackUri("/api/track") + "&a=view&lctx=" + bid.Id.SafeBase64Encode()));
+            viewable.AppendChild(xDoc.CreateCDataSection(GetPostbackUri("/api/track") + "&a=view&lctx=" + bid.Id.SafeBase64Encode()));
             var notviewable = xDoc.CreateElement("NotViewable");
-            notviewable.AppendChild(xDoc.CreateCDataSection(FunctionEnv.GetPostbackUri("/api/track") + "&a=noview&lctx=" + bid.Id.SafeBase64Encode()));
+            notviewable.AppendChild(xDoc.CreateCDataSection(GetPostbackUri("/api/track") + "&a=noview&lctx=" + bid.Id.SafeBase64Encode()));
             viewImp.Attributes.Append(xDoc.CreateVastAttribute("id", SequentialGuid.NextGuid().ToString()));
             viewImp.AppendChild(viewable);
             viewImp.AppendChild(notviewable);
@@ -272,7 +276,7 @@ namespace Lucent.Common.Formatters
             clicks.AppendChild(clickThrough);
 
             var clickTrack = xDoc.CreateElement("ClickTracking");
-            clickTrack.AppendChild(xDoc.CreateCDataSection(FunctionEnv.GetPostbackUri("/api/track") + "&a=click&lctx=" + bid.Id.SafeBase64Encode()));
+            clickTrack.AppendChild(xDoc.CreateCDataSection(GetPostbackUri("/api/track") + "&a=click&lctx=" + bid.Id.SafeBase64Encode()));
             clickTrack.Attributes.Append(xDoc.CreateVastAttribute("id", SequentialGuid.NextGuid().ToString()));
             clicks.AppendChild(clickTrack);
 
