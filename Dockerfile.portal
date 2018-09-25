@@ -10,4 +10,5 @@ RUN dotnet publish -c Release
 FROM microsoft/dotnet:aspnetcore-runtime
 WORKDIR /opt/lucent
 COPY --from=build-env /Portal/bin/Release/netcoreapp2.1/publish .
+RUN rm -rf appsettings*.json
 ENTRYPOINT ["dotnet", "Portal.dll"]

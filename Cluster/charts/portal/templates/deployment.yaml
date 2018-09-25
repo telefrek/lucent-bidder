@@ -3,7 +3,7 @@ kind: ConfigMap
 metadata:
   name: portal-config
 data:
-  application.json: |
+  appsettings.json: |
     {
       "Logging": {
         "LogLevel": {
@@ -17,9 +17,9 @@ data:
         "port": 636
       },
       "ldap_mgmt": {
-        "administrator": "{{ default admin .Values.openldap.user }}",
-        "credentials": "{{ default admin .Values.openldap.password }}",
-        "domain": "{{ default lucent-dev.com .Values.openldap.domain }}"
+        "administrator": "{{ .Values.openldap.user }}",
+        "credentials": "{{ .Values.openldap.password }}",
+        "domain": "{{ .Values.openldap.domain }}"
       },
       "rabbit": {
         "host": "rabbitmq.lucent.svc",
@@ -28,12 +28,24 @@ data:
       },
       "cassandra": {
         "endpoint": "cassandra.lucent.svc",
-        "user": "{{ default test .Values.cassandra.user }}",
-        "credentials": "{{ default test .Values.cassandra.password }}",
-        "keyspace": "{{ default portal .Values.cassandra.keyspace }}",
-        "format": "{{ default PROTOBUF .Values.cassandra.format }}"
+        "user": "{{ default "test" .Values.cassandra.user }}",
+        "credentials": "{{ default "test" .Values.cassandra.password }}",
+        "keyspace": "{{ default "portal" .Values.cassandra.keyspace }}",
+        "format": "{{ default "PROTOBUF" .Values.cassandra.format }}"
       }
     }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ad-content-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: azurefile
+  resources:
+    requests:
+      storage: 1000Gi
 ---
 apiVersion: apps/v1beta2
 kind: Deployment
@@ -72,9 +84,20 @@ spec:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - "/bin/sh"
+            - "-ec"
+            - |
+              echo "Getting configuration"
+              cp /etc/config/*.json ./
+
+              echo "Starting the process"
+              dotnet Portal.dll
           volumeMounts:
-            - mountPath: /usr/share/nginx/html
+            - mountPath: /etc/config
               name: app-config
+            - mountPath: /mnt/ad-contents
+              name: ad-contents
           ports:
             - name: http
               containerPort: 80
@@ -105,3 +128,6 @@ spec:
         - name: app-config
           configMap:
             name: portal-config
+        - name: ad-contents
+          persistentVolumeClaim:
+            claimName: ad-content-pvc

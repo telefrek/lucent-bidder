@@ -11,6 +11,8 @@ docker tag telefrek/lucent-portal:$IMAGE_TAG telefrek/lucent-portal:${LUCENT_VER
 echo 'Publishing portal'
 docker push telefrek/lucent-portal:${LUCENT_VERSION:-alpha}
 
+exit 0
+
 echo 'Building bidder'
 docker build -t telefrek/lucent-bidder:$IMAGE_TAG -f Dockerfile.bidder .
 docker tag telefrek/lucent-bidder:$IMAGE_TAG telefrek/lucent-bidder:${LUCENT_VERSION:-alpha}

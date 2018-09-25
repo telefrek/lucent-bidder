@@ -5,18 +5,15 @@
 replicaCount: 1
 
 image:
-  repository: nginx
-  tag: stable
-  pullPolicy: IfNotPresent
+  repository: telefrek/lucent-portal
+  tag: alpha
+  pullPolicy: Always
 
-rabbitmq:
-  user: ""
-  password: ""
+rabbitmq: {}
 
-openldap:
-  user: "admin"
-  password: ""
-  domain: ""
+openldap: {}
+
+cassandra: {}
 
 service:
   type: ClusterIP
