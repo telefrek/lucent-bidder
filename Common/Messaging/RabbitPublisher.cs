@@ -6,12 +6,14 @@ namespace Lucent.Common.Messaging
     {
         readonly IConnection _conn;
         readonly IModel _channel;
+        readonly IMessageFactory _factory;
 
         public string Topic { get; set; }
 
-        public RabbitPublisher(IConnection conn, string topic)
+        public RabbitPublisher(IMessageFactory factory, IConnection conn, string topic)
         {
             _conn = conn;
+            _factory = factory;
             _channel = conn.CreateModel();
             _channel.ExchangeDeclare(topic, "topic");
             Topic = topic;

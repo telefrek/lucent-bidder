@@ -8,17 +8,19 @@ namespace Lucent.Common.Messaging
 {
 
     internal class RabbitSubscriber<T> : IMessageSubscriber<T>
-        where T : IMessage, new()
+        where T : IMessage
     {
         readonly IConnection _conn;
         readonly IModel _channel;
         readonly EventingBasicConsumer _consumer;
         readonly string _queueName;
+        readonly IMessageFactory _factory;
 
-        public RabbitSubscriber(IConnection conn, string topic, ushort maxConcurrency, string filter)
+        public RabbitSubscriber(IMessageFactory factory, IConnection conn, string topic, ushort maxConcurrency, string filter)
         {
             _conn = conn;
             _channel = conn.CreateModel();
+            _factory = factory;
             Topic = topic;
 
             // Leave defaults if 0
@@ -40,11 +42,12 @@ namespace Lucent.Common.Messaging
                     try
                     {
                         // Build the message
-                        var msg = new T();
+                        var msg = _factory.CreateMessage<T>();
                         msg.Route = ea.RoutingKey;
                         msg.Timestamp = ea.BasicProperties.Timestamp.UnixTime;
                         msg.CorrelationId = ea.BasicProperties.CorrelationId;
                         msg.FirstDelivery = !ea.Redelivered;
+                        msg.ContentType = ea.BasicProperties.ContentType;
                         msg.Load(ea.Body);
 
                         OnReceive.Invoke(msg);

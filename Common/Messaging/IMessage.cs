@@ -36,6 +36,11 @@ namespace Lucent.Common.Messaging
         bool FirstDelivery { get; set; }
 
         /// <summary>
+        /// Tracks the content type of the contents
+        /// </summary>
+        string ContentType { get; set; }
+
+        /// <summary>
         /// Transforms the message into a byte array for transport
         /// </summary>
         /// <returns>A byte array representing the message</returns>
