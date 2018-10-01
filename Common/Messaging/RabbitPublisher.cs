@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using RabbitMQ.Client;
 
 namespace Lucent.Common.Messaging
@@ -24,6 +25,8 @@ namespace Lucent.Common.Messaging
             var props = _channel.CreateBasicProperties();
             if (!string.IsNullOrEmpty(message.CorrelationId))
                 props.CorrelationId = message.CorrelationId;
+            foreach(var header in message.Headers ?? new Dictionary<string, object>())
+                props.Headers.Add(header);
 
             _channel.BasicPublish(exchange: Topic,
                      routingKey: message.Route ?? "undefined",

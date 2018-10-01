@@ -46,6 +46,7 @@ namespace Bidder
             services.AddSerialization(Configuration);
             services.AddOpenRTBSerializers();
             services.AddSingleton<IBidHandler, BidHandler>();
+            services.AddStorage(Configuration);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -62,15 +63,25 @@ namespace Bidder
             }
 
             //app.UseHttpsRedirection(); turn this off for now
-            app.UseLoadShedding();
-            app.UseStaticFiles();
             app.UseCookiePolicy();
+            app.UseLoadShedding();
 
             var routeBuilder = new RouteBuilder(app);
-            app.UseMvc();
             routeBuilder.MapPost("/v1/bidder", async (context) =>
             {
                 await context.RequestServices.GetRequiredService<IBidHandler>().HandleAsync(context);
+            });
+
+            routeBuilder.MapGet("/health", (context) =>
+            {
+                context.Response.StatusCode = 200;
+                return Task.CompletedTask;
+            });
+
+            routeBuilder.MapGet("/ready", (context) =>
+            {
+                context.Response.StatusCode = 200;
+                return Task.CompletedTask;
             });
 
             app.UseRouter(routeBuilder.Build());

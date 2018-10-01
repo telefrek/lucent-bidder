@@ -1,3 +1,45 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bidder-config
+data:
+  appsettings.json: |
+    {
+      "Logging": {
+        "LogLevel": {
+          "Default": "Information"
+        }
+      },
+      "AllowedHosts": "*",
+      "rabbit": {
+        "host": "rabbitmq.lucent.svc",
+        "user": "{{ .Values.rabbitmq.user }}",
+        "credentials": "{{ .Values.rabbitmq.password }}",
+        "clusters": {
+          "secondary" : {
+            "user": "{{ .Values.rabbitmq.user }}",
+            "credentials": "{{ .Values.rabbitmq.password }}",
+            "host": "{{ .Values.rabbitmq.secondaryHost }}"
+          }
+        }
+      },
+      "load_shedding": {
+        "strategy": "Head",
+        "maxlatencyms": 100,
+        "maxconcurrentrequests": 20,
+        "maxqueuedepth": 5,
+        "statuscode": 204,
+        "isadaptive": true
+      },
+      "cassandra": {
+        "endpoint": "cassandra.lucent.svc",
+        "user": "{{ default "test" .Values.cassandra.user }}",
+        "credentials": "{{ default "test" .Values.cassandra.password }}",
+        "keyspace": "{{ default "portal" .Values.cassandra.keyspace }}",
+        "format": "{{ default "PROTOBUF" .Values.cassandra.format }}"
+      }
+    }
+---
 apiVersion: apps/v1beta2
 kind: Deployment
 metadata:
@@ -14,6 +56,7 @@ spec:
       maxSurge: 25%
       maxUnavailable: 25%
     type: RollingUpdate
+  minReadySeconds: 5
   progressDeadlineSeconds: 600
   selector:
     matchLabels:
@@ -31,21 +74,37 @@ spec:
       schedulerName: default-scheduler
       securityContext: {}
       terminationGracePeriodSeconds: 30
+    {{- with .Values.hostAlias }}
+      hostAliases:
+{{ toYaml . | indent 6 }}
+    {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - "/bin/sh"
+            - "-ec"
+            - |
+              echo "Getting configuration"
+              cp /etc/config/*.json ./
+
+              echo "Starting the bidder"
+              dotnet Bidder.dll
+          volumeMounts:
+            - mountPath: /etc/config
+              name: app-config
           ports:
             - name: http
               containerPort: 80
               protocol: TCP
           livenessProbe:
             httpGet:
-              path: /
+              path: /health
               port: http
           readinessProbe:
             httpGet:
-              path: /
+              path: /ready
               port: http
           resources:
 {{ toYaml .Values.resources | indent 12 }}
@@ -61,3 +120,7 @@ spec:
       tolerations:
 {{ toYaml . | indent 8 }}
     {{- end }}
+      volumes:
+        - name: app-config
+          configMap:
+            name: bidder-config

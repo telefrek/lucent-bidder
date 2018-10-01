@@ -34,7 +34,6 @@ namespace Lucent.Common.Entities
         // storage properties
         string IStorageEntity.ETag { get; set; }
         DateTime IStorageEntity.Updated { get; set; }
-        int IStorageEntity.Version { get; set; }
     }
 
     public enum CampaignStatus

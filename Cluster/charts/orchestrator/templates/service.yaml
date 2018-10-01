@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ template "orchestator.fullname" . }}
+  name: {{ template "orchestrator.fullname" . }}
   labels:
-    app: {{ template "orchestator.name" . }}
-    chart: {{ template "orchestator.chart" . }}
+    app: {{ template "orchestrator.name" . }}
+    chart: {{ template "orchestrator.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
@@ -15,5 +15,5 @@ spec:
       protocol: TCP
       name: http
   selector:
-    app: {{ template "orchestator.name" . }}
+    app: {{ template "orchestrator.name" . }}
     release: {{ .Release.Name }}

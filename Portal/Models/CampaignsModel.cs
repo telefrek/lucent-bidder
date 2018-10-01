@@ -9,6 +9,7 @@ using System;
 using Microsoft.Extensions.Logging;
 using Lucent.Common.Storage;
 using System.Linq;
+using Lucent.Common.Messaging;
 
 namespace Lucent.Portal.Models
 {
@@ -16,11 +17,13 @@ namespace Lucent.Portal.Models
     {
         private readonly ILucentRepository<Campaign> _db;
         private readonly ILogger<CampaignsModel> _log;
+        readonly IMessageFactory _factory;
 
-        public CampaignsModel(IStorageManager db, ILogger<CampaignsModel> logger)
+        public CampaignsModel(IStorageManager db, ILogger<CampaignsModel> logger, IMessageFactory factory)
         {
             _db = db.GetRepository<Campaign>();
             _log = logger;
+            _factory = factory;
         }
 
         public IList<Campaign> Campaigns { get; private set; }
@@ -33,11 +36,27 @@ namespace Lucent.Portal.Models
 
         public async Task<IActionResult> OnPostDeleteAsync(string id)
         {
-            var contact = await _db.Get(id);
+            var contact = Campaigns.FirstOrDefault(c => c.Id == id);
 
             if (contact != null)
             {
-                await _db.TryRemove(contact);
+                if (await _db.TryRemove(contact))
+                {
+                    _log.LogInformation("Created campaign, sending across clusters");
+                    var cluster = _factory.GetClusters().FirstOrDefault();
+                    if (!string.IsNullOrWhiteSpace(cluster))
+                    {
+                        var msg = _factory.CreateMessage<LucentMessage<Campaign>>();
+                        msg.Body = contact;
+                        msg.ContentType = "application/x-protobuf";
+                        msg.Headers.Add("x-lucent-action-type", "delete");
+
+                        if (_factory.CreatePublisher(cluster, "campaign-updates").TryPublish(msg))
+                            _log.LogInformation("published message for cross cluster");
+                        else
+                            _log.LogWarning("Failed to publish to secondary cluster");
+                    }
+                }
             }
 
             return RedirectToPage();

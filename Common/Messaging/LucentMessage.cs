@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Lucent.Common.Serialization;
@@ -19,6 +20,7 @@ namespace Lucent.Common.Messaging
         public string ContentType { get; set; }
         public string Route { get; set; }
         public bool FirstDelivery { get; set; }
+        public IDictionary<string, object> Headers { get; set; } = new Dictionary<string, object>();
 
         public void Load(byte[] buffer) => Body = Encoding.UTF8.GetString(buffer);
 
@@ -39,9 +41,10 @@ namespace Lucent.Common.Messaging
         public T Body { get; set; }
         public long Timestamp { get; set; }
         public string CorrelationId { get; set; }
-        public string ContentType { get; set; }
+        public string ContentType { get; set; } = "application/json";
         public string Route { get; set; }
         public bool FirstDelivery { get; set; }
+        public IDictionary<string, object> Headers { get; set; } = new Dictionary<string, object>();
 
         public void Load(byte[] buffer)
         {
@@ -61,13 +64,13 @@ namespace Lucent.Common.Messaging
             switch (ContentType.ToLowerInvariant())
             {
                 case "application/x-protobuf":
-                    using(var ms = new MemoryStream())
+                    using (var ms = new MemoryStream())
                     {
                         _provider.GetRequiredService<ISerializationRegistry>().GetSerializer<T>().Write(ms.WrapSerializer(_provider, SerializationFormat.PROTOBUF, true).Writer, Body);
                         return ms.ToArray();
                     }
                 default:
-                    using(var ms = new MemoryStream())
+                    using (var ms = new MemoryStream())
                     {
                         _provider.GetRequiredService<ISerializationRegistry>().GetSerializer<T>().Write(ms.WrapSerializer(_provider, SerializationFormat.JSON, true).Writer, Body);
                         return ms.ToArray();

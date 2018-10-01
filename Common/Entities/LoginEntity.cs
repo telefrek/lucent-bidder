@@ -6,8 +6,7 @@ namespace Lucent.Common.Entities
     {
         [Required]
         public string Username { get; set; }
-        [Required]
-        public string Domain { get; set; } = "lucent-dev.com";
+        public string Domain { get; set; }
         [Required]
         [DataType(DataType.Password)]
         public string Credentials { get; set; }

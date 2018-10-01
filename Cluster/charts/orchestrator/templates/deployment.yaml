@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: portal-config
+  name: orchestrator-config
 data:
   appsettings.json: |
     {
@@ -11,23 +11,6 @@ data:
         }
       },
       "AllowedHosts": "*",
-      "ldap": {
-        "host": "openldap-service.lucent.svc",
-        "issecured": true,
-        "port": 636
-      },
-      "ldap_mgmt": {
-        "administrator": "{{ .Values.openldap.user }}",
-        "credentials": "{{ .Values.openldap.password }}",
-        "domain": "{{ .Values.openldap.domain }}",
-        "clusters": {
-          "secondary" : {
-            "user": "{{ .Values.rabbitmq.user }}",
-            "credentials": "{{ .Values.rabbitmq.password }}",
-            "host": "{{ .Values.rabbitmq.secondaryHost }}"
-          }
-        }
-      },
       "rabbit": {
         "host": "rabbitmq.lucent.svc",
         "user": "{{ .Values.rabbitmq.user }}",
@@ -44,6 +27,14 @@ data:
         "clusters": {}
         {{- end }}
       },
+      "load_shedding": {
+        "strategy": "Head",
+        "maxlatencyms": 100,
+        "maxconcurrentrequests": 20,
+        "maxqueuedepth": 5,
+        "statuscode": 429,
+        "isadaptive": true
+      },
       "cassandra": {
         "endpoint": "cassandra.lucent.svc",
         "user": "{{ default "test" .Values.cassandra.user }}",
@@ -53,25 +44,13 @@ data:
       }
     }
 ---
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: ad-content-pvc
-spec:
-  accessModes:
-    - ReadWriteMany
-  storageClassName: azurefile
-  resources:
-    requests:
-      storage: 1000Gi
----
 apiVersion: apps/v1beta2
 kind: Deployment
 metadata:
-  name: {{ template "portal.fullname" . }}
+  name: {{ template "orchestrator.fullname" . }}
   labels:
-    app: {{ template "portal.name" . }}
-    chart: {{ template "portal.chart" . }}
+    app: {{ template "orchestrator.name" . }}
+    chart: {{ template "orchestrator.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
@@ -85,14 +64,14 @@ spec:
   progressDeadlineSeconds: 600
   selector:
     matchLabels:
-      app: {{ template "portal.name" . }}
+      app: {{ template "orchestrator.name" . }}
       release: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        app: {{ template "portal.name" . }}
+        app: {{ template "orchestrator.name" . }}
         release: {{ .Release.Name }}
-        component: portal
+        component: orchestrator
     spec:
       restartPolicy: Always
       dnsPolicy: ClusterFirst
@@ -114,24 +93,22 @@ spec:
               echo "Getting configuration"
               cp /etc/config/*.json ./
 
-              echo "Starting the portal"
-              dotnet Portal.dll
+              echo "Starting the orchestrator"
+              dotnet Orchestration.dll
           volumeMounts:
             - mountPath: /etc/config
               name: app-config
-            - mountPath: /mnt/ad-contents
-              name: ad-contents
           ports:
             - name: http
               containerPort: 80
               protocol: TCP
           livenessProbe:
             httpGet:
-              path: /
+              path: /health
               port: http
           readinessProbe:
             httpGet:
-              path: /
+              path: /ready
               port: http
           resources:
 {{ toYaml .Values.resources | indent 12 }}
@@ -150,7 +127,4 @@ spec:
       volumes:
         - name: app-config
           configMap:
-            name: portal-config
-        - name: ad-contents
-          persistentVolumeClaim:
-            claimName: ad-content-pvc
+            name: orchestrator-config

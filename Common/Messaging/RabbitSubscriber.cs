@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
+using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -15,11 +17,13 @@ namespace Lucent.Common.Messaging
         readonly EventingBasicConsumer _consumer;
         readonly string _queueName;
         readonly IMessageFactory _factory;
+        readonly ILogger _log;
 
-        public RabbitSubscriber(IMessageFactory factory, IConnection conn, string topic, ushort maxConcurrency, string filter)
+        public RabbitSubscriber(IMessageFactory factory, IConnection conn, ILogger log, string topic, ushort maxConcurrency, string filter)
         {
             _conn = conn;
             _channel = conn.CreateModel();
+            _log = log;
             _factory = factory;
             Topic = topic;
 
@@ -46,15 +50,23 @@ namespace Lucent.Common.Messaging
                         msg.Route = ea.RoutingKey;
                         msg.Timestamp = ea.BasicProperties.Timestamp.UnixTime;
                         msg.CorrelationId = ea.BasicProperties.CorrelationId;
+                        msg.Headers = new Dictionary<string, object>();
+                        foreach (var header in ea.BasicProperties.Headers ?? new Dictionary<string, object>())
+                        {
+                            if (header.Value.GetType() == typeof(byte[]))
+                                msg.Headers.Add(header.Key, Encoding.UTF8.GetString(header.Value as byte[]));
+                            else
+                                msg.Headers.Add(header);
+                        }
                         msg.FirstDelivery = !ea.Redelivered;
                         msg.ContentType = ea.BasicProperties.ContentType;
                         msg.Load(ea.Body);
 
                         OnReceive.Invoke(msg);
                     }
-                    catch
+                    catch (Exception e)
                     {
-
+                        _log.LogError(e, "Failed to handle message receipt for topic: {0}", Topic);
                     }
                 }
             };

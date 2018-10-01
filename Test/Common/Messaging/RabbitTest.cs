@@ -1,6 +1,8 @@
+using System;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Lucent.Common.Entities;
 using Lucent.Common.OpenRTB;
 using Lucent.Common.Test;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,7 +13,7 @@ namespace Lucent.Common.Messaging.Test
 {
     [TestClass]
     public class RabbitTests : BaseTestClass
-    {    
+    {
         [TestInitialize]
         public override void TestInitialize() => base.TestInitialize();
 
@@ -19,28 +21,32 @@ namespace Lucent.Common.Messaging.Test
         public void TestSecondary()
         {
             var factory = ServiceProvider.GetRequiredService<IMessageFactory>();
-            var sub = factory.CreateSubscriber<LucentMessage<Geo>>("blah1", 0);
+            var pub = factory.CreatePublisher("secondary", "campaign-test");
+            var sub = factory.CreateSubscriber<LucentMessage<Campaign>>("campaign-test", 0);
             var received = false;
             var are = new AutoResetEvent(false);
-            sub.OnReceive = (m)=>
+            sub.OnReceive = (m) =>
             {
                 received = true;
                 Assert.IsNotNull(m, "Failed to receive message successfully");
                 Assert.IsNotNull(m.Body, "Failed to deserialize body");
-                Assert.AreEqual("SF", m.Body.City, true, "Wrong message returned");
+                foreach (var header in m.Headers)
+                    TestContext.WriteLine("{0} : {1}", header.Key, header.Value);
+                TestContext.WriteLine("Campaign Name: " + m.Body.Name);
                 are.Set();
             };
-            var pub = factory.CreatePublisher("east", "blah1");
-            var msg = factory.CreateMessage<LucentMessage<Geo>>();
-            msg.Body = new Geo { City = "SF"};
-            msg.Route = "hello.world";
-            msg.ContentType = "application/x-protobuf";
 
-            Assert.IsTrue(pub.TryPublish(msg), "Failed to send the message"); 
-            
+            var msg = factory.CreateMessage<LucentMessage<Campaign>>();
+            msg.Route = "hello";
+            msg.Headers.Add("x-lucent-test-header", "something");
+            msg.Headers.Add("x-lucent-header-count", 4);
+            msg.Body = new Campaign { Id = SequentialGuid.NextGuid().ToString(), Name = "hello", Schedule = new CampaignSchedule { StartDate = DateTime.Now, EndDate = DateTime.Now.AddDays(1) } };
+
+            Assert.IsTrue(pub.TryPublish(msg));
+
             // Wait for some time
-            Assert.IsTrue(are.WaitOne(50000)); 
-            
+            Assert.IsTrue(are.WaitOne(50000));
+
             Assert.IsTrue(received, "Failed to retrieve message");
         }
 
@@ -53,7 +59,7 @@ namespace Lucent.Common.Messaging.Test
             var received = false;
             var are = new AutoResetEvent(false);
 
-            sub.OnReceive = (m)=>
+            sub.OnReceive = (m) =>
             {
                 received = true;
                 var tm = m as LucentMessage;
@@ -62,7 +68,7 @@ namespace Lucent.Common.Messaging.Test
                 are.Set();
             };
 
-            Assert.IsTrue(pub.TryPublish(new LucentMessage { Body = "Hello World", Route="hello.world"}), "Failed to send the message");            
+            Assert.IsTrue(pub.TryPublish(new LucentMessage { Body = "Hello World", Route = "hello.world" }), "Failed to send the message");
             // Wait for some time
             Assert.IsFalse(are.WaitOne(5000));
 
@@ -78,7 +84,7 @@ namespace Lucent.Common.Messaging.Test
             var received = false;
             var are = new AutoResetEvent(false);
 
-            sub.OnReceive = (m)=>
+            sub.OnReceive = (m) =>
             {
                 received = true;
                 var tm = m as LucentMessage;
@@ -87,7 +93,7 @@ namespace Lucent.Common.Messaging.Test
                 are.Set();
             };
 
-            Assert.IsTrue(pub.TryPublish(new LucentMessage { Body = "Hello World", Route="hello.world"}), "Failed to send the message");            
+            Assert.IsTrue(pub.TryPublish(new LucentMessage { Body = "Hello World", Route = "hello.world" }), "Failed to send the message");
             // Wait for some time
             Assert.IsTrue(are.WaitOne(5000));
 
@@ -104,7 +110,7 @@ namespace Lucent.Common.Messaging.Test
             var count = 0;
             var are = new AutoResetEvent(false);
 
-            sub.OnReceive = (m)=>
+            sub.OnReceive = (m) =>
             {
                 received = true;
                 count++;
@@ -114,9 +120,9 @@ namespace Lucent.Common.Messaging.Test
                 are.Set();
             };
 
-            Assert.IsTrue(pub.TryPublish(new LucentMessage { Body = "Hello World", Route="hello.world"}), "Failed to send the message");   
-            Assert.IsTrue(pub.TryPublish(new LucentMessage { Body = "Hello World", Route="goodbye.world.nope"}), "Failed to send the message");            
-            Assert.IsTrue(pub.TryPublish(new LucentMessage { Body = "Hello World", Route="goodbye.world"}), "Failed to send the message");
+            Assert.IsTrue(pub.TryPublish(new LucentMessage { Body = "Hello World", Route = "hello.world" }), "Failed to send the message");
+            Assert.IsTrue(pub.TryPublish(new LucentMessage { Body = "Hello World", Route = "goodbye.world.nope" }), "Failed to send the message");
+            Assert.IsTrue(pub.TryPublish(new LucentMessage { Body = "Hello World", Route = "goodbye.world" }), "Failed to send the message");
 
             // Wait for some time
             Assert.IsTrue(are.WaitOne(5000));

@@ -199,7 +199,8 @@ namespace Lucent.Common.Serialization.Protobuf
         {
             _registry.Guard<T>();
 
-            return await _registry.GetSerializer<T>().ReadAsync(this, CancellationToken.None);
+            var protoReader = _protoReader.GetNextMessageReader();
+            return await _registry.GetSerializer<T>().ReadAsync(new ProtobufSerializationStreamReader(protoReader, _registry, _log), CancellationToken.None);
         }
 
         /// <summary>

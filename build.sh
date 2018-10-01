@@ -1,28 +1,53 @@
 #!/bin/bash
-set -e
-IMAGE_TAG=$(date +%s)
+set -xe
+IMAGE_TAG=$(date '+%Y%m%d%H%M%S')
+LUCENT_VERSION="$(cat VERSION).$IMAGE_TAG"
+
+echo 'Pulling latest dotnet images'
 docker pull microsoft/dotnet
 docker pull microsoft/dotnet:aspnetcore-runtime
 
-echo 'Building portal'
-docker build -t telefrek/lucent-portal:$IMAGE_TAG -f Dockerfile.portal .
-docker tag telefrek/lucent-portal:$IMAGE_TAG telefrek/lucent-portal:${LUCENT_VERSION:-alpha}
+docker image prune -f
+[[ ! -z "$(docker ps -aq)" ]] && docker rm -vf $(docker ps -qa)
 
-echo 'Publishing portal'
-docker push telefrek/lucent-portal:${LUCENT_VERSION:-alpha}
+[[ ! -z "$(docker images | grep 'telefrek')" ]] && docker rmi -f $(docker images | grep 'telefrek' | awk '{print $3}')
 
-exit 0
+echo 'Building images'
+docker build --rm=false -t telefrek/lucent-build:$IMAGE_TAG . 
 
-echo 'Building bidder'
-docker build -t telefrek/lucent-bidder:$IMAGE_TAG -f Dockerfile.bidder .
-docker tag telefrek/lucent-bidder:$IMAGE_TAG telefrek/lucent-bidder:${LUCENT_VERSION:-alpha}
+sleep 2
 
-echo 'Publishing bidder'
-docker push telefrek/lucent-bidder:${LUCENT_VERSION:-alpha}
+echo 'Tagging images'
+docker tag $(docker ps -a -f "label=component=portal" -f "status=exited" --format "{{.Image}}") telefrek/lucent-portal:$LUCENT_VERSION
+docker tag telefrek/lucent-portal:$LUCENT_VERSION telefrek/lucent-portal:latest
 
-echo 'Building scoring'
-docker build -t telefrek/lucent-scoring:$IMAGE_TAG -f Dockerfile.scoring .
-docker tag telefrek/lucent-scoring:$IMAGE_TAG telefrek/lucent-scoring:${LUCENT_VERSION:-alpha}
+docker tag $(docker ps -a -f "label=component=bidder" -f "status=exited" --format "{{.Image}}") telefrek/lucent-bidder:$LUCENT_VERSION
+docker tag telefrek/lucent-bidder:$LUCENT_VERSION telefrek/lucent-bidder:latest
 
-echo 'Publishing scoring'
-docker push telefrek/lucent-scoring:${LUCENT_VERSION:-alpha}
+docker tag $(docker ps -a -f "label=component=orchestrator" -f "status=exited" --format "{{.Image}}") telefrek/lucent-orchestrator:$LUCENT_VERSION
+docker tag telefrek/lucent-orchestrator:$LUCENT_VERSION telefrek/lucent-orchestrator:latest
+
+docker tag $(docker ps -a -f "label=component=content" -f "status=exited" --format "{{.Image}}") telefrek/lucent-content:$LUCENT_VERSION
+docker tag telefrek/lucent-content:$LUCENT_VERSION telefrek/lucent-content:latest
+
+docker tag $(docker ps -a -f "label=component=scoring" -f "status=exited" --format "{{.Image}}") telefrek/lucent-scoring:$LUCENT_VERSION
+docker tag telefrek/lucent-scoring:$LUCENT_VERSION telefrek/lucent-scoring:latest
+
+echo 'Pushing images'
+
+docker push telefrek/lucent-portal:$LUCENT_VERSION
+docker push telefrek/lucent-portal:latest
+
+docker push telefrek/lucent-bidder:$LUCENT_VERSION
+docker push telefrek/lucent-bidder:latest
+
+docker push telefrek/lucent-orchestrator:$LUCENT_VERSION
+docker push telefrek/lucent-orchestrator:latest
+
+echo 'Cleanup local docker'
+
+docker rm -vf $(docker ps -aq)
+
+[[ ! -z "$(docker images | grep 'telefrek')" ]] && docker rmi -f $(docker images | grep 'telefrek' | awk '{print $3}')
+
+docker image prune -f

@@ -8,7 +8,9 @@ using Lucent.Portal.Hubs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using Lucent.Common.Messaging;
 using Microsoft.Extensions.Logging;
+using System.Linq;
 
 namespace Lucent.Portal.Models
 {
@@ -17,12 +19,14 @@ namespace Lucent.Portal.Models
         private readonly ILucentRepository<Campaign> _db;
         private readonly ILogger _log;
         private readonly ICampaignUpdateContext _context;
+        private readonly IMessageFactory _factory;
 
-        public EditCampaignModel(IStorageManager db, ILogger<CreateCampaignModel> log, ICampaignUpdateContext context)
+        public EditCampaignModel(IStorageManager db, ILogger<CreateCampaignModel> log, ICampaignUpdateContext context, IMessageFactory factory)
         {
             _db = db.GetRepository<Campaign>();
             _log = log;
             _context = context;
+            _factory = factory;
         }
 
         [BindProperty]
@@ -58,7 +62,24 @@ namespace Lucent.Portal.Models
                 try
                 {
                     if (await _db.TryUpdate(c))
+                    {
                         await _context.UpdateCampaignAsync(c, CancellationToken.None);
+
+                        _log.LogInformation("Modified campaign, sending across clusters");
+                        var cluster = _factory.GetClusters().FirstOrDefault();
+                        if (!string.IsNullOrWhiteSpace(cluster))
+                        {
+                            var msg = _factory.CreateMessage<LucentMessage<Campaign>>();
+                            msg.Body = Campaign;
+                            msg.ContentType = "application/x-protobuf";
+                            msg.Headers.Add("x-lucent-action-type", "update");
+
+                            if (_factory.CreatePublisher(cluster, "campaign-updates").TryPublish(msg))
+                                _log.LogInformation("published message for cross cluster");
+                            else
+                                _log.LogWarning("Failed to publish to secondary cluster");
+                        }
+                    }
                 }
                 catch (DbUpdateConcurrencyException)
                 {

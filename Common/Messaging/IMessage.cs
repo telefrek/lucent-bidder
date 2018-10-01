@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Lucent.Common.Messaging
 {
     /// <summary>
@@ -19,6 +21,11 @@ namespace Lucent.Common.Messaging
         /// Gets/Sets the current message state
         /// </summary>
         MessageState State { get; set; }
+
+        /// <summary>
+        /// Custom defined headers
+        /// </summary> 
+        IDictionary<string, object> Headers { get; set; }
 
         /// <summary>
         /// The message timestamp when it was created

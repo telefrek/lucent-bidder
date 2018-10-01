@@ -53,10 +53,10 @@ namespace Lucent.Common.Storage
             _insertStatement = _session.Prepare("INSERT INTO {0} (id, etag, format, updated, contents) VALUES (?, ?, ?, ?, ?) IF NOT EXISTS".FormatWith(_tableName));
 
             // Check etag
-            _updateStatement = _session.Prepare("UPDATE {0} SET etag=?, updated=?, contents=?, format=? WHERE id=? IF EXISTS AND etag=?".FormatWith(_tableName));
+            _updateStatement = _session.Prepare("UPDATE {0} SET etag=?, updated=?, contents=?, format=? WHERE id=? IF etag=?".FormatWith(_tableName));
 
             // Check etag
-            _deleteStatement = _session.Prepare("DELETE FROM {0} WHERE id=? IF EXISTS".FormatWith(_tableName));
+            _deleteStatement = _session.Prepare("DELETE FROM {0} WHERE id=? IF etag=?".FormatWith(_tableName));
         }
 
         public async Task<ICollection<T>> Get()
@@ -90,7 +90,6 @@ namespace Lucent.Common.Storage
                                                 var o = _serializer.Read(reader);
                                                 o.ETag = row.GetValue<string>("etag");
                                                 o.Updated = row.GetValue<DateTime>("updated");
-                                                o.Version = row.GetValue<int>("version");
                                                 res.Add(o);
                                             }
                                         }
@@ -118,7 +117,6 @@ namespace Lucent.Common.Storage
                                         var o = _serializer.Read(reader);
                                         o.ETag = row.GetValue<string>("etag");
                                         o.Updated = row.GetValue<DateTime>("updated");
-                                        o.Version = row.GetValue<int>("version");
                                         res.Add(o);
                                     }
                                 }
@@ -165,7 +163,6 @@ namespace Lucent.Common.Storage
                                                 var o = _serializer.Read(reader);
                                                 o.ETag = row.GetValue<string>("etag");
                                                 o.Updated = row.GetValue<DateTime>("updated");
-                                                o.Version = row.GetValue<int>("version");
                                                 return o;
                                             }
                                         }
@@ -193,7 +190,6 @@ namespace Lucent.Common.Storage
                                         var o = _serializer.Read(reader);
                                         o.ETag = row.GetValue<string>("etag");
                                         o.Updated = row.GetValue<DateTime>("updated");
-                                        o.Version = row.GetValue<int>("version");
                                         return o;
                                     }
                                 }
@@ -228,8 +224,7 @@ namespace Lucent.Common.Storage
                     contents = ms.ToArray();
                 }
 
-                if (string.IsNullOrEmpty(obj.ETag))
-                    obj.ETag = contents.CalculateETag();
+                obj.ETag = contents.CalculateETag();
 
                 var rowSet = await _session.ExecuteAsync(_insertStatement.Bind(obj.Id, obj.ETag, _format.ToString(), DateTime.UtcNow, contents));
 
@@ -247,7 +242,7 @@ namespace Lucent.Common.Storage
         {
             try
             {
-                var rowSet = await _session.ExecuteAsync(_deleteStatement.Bind(obj.Id));
+                var rowSet = await _session.ExecuteAsync(_deleteStatement.Bind(obj.Id, obj.ETag));
 
                 return rowSet != null;
             }
@@ -261,9 +256,9 @@ namespace Lucent.Common.Storage
 
         public async Task<bool> TryUpdate(T obj)
         {
+            var oldEtag = obj.ETag;
             try
             {
-                var oldEtag = obj.ETag;
                 var contents = new byte[0];
                 using (var ms = new MemoryStream())
                 {
@@ -279,6 +274,7 @@ namespace Lucent.Common.Storage
             }
             catch (Exception ex)
             {
+                obj.ETag = oldEtag;
                 _log.LogError(ex, "Failed to Update {0}", obj.Id);
             }
 

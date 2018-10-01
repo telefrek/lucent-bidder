@@ -11,6 +11,8 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Logging;
+using System.Linq;
 
 namespace Lucent.Portal.Models
 {
@@ -18,10 +20,12 @@ namespace Lucent.Portal.Models
     public class LoginModel : PageModel
     {
         ILDAPUserManager _manager;
+        ILogger<LoginModel> _log;
 
-        public LoginModel(ILDAPUserManager manager)
+        public LoginModel(ILDAPUserManager manager, ILogger<LoginModel> log)
         {
             _manager = manager;
+            _log = log;
         }
 
         [BindProperty]
@@ -31,6 +35,10 @@ namespace Lucent.Portal.Models
         {
             if (ModelState.IsValid)
             {
+                LoginEntity.Domain = HttpContext.Request.Host.Host;
+                while (LoginEntity.Domain.Count(c => c == '.') > 1)
+                    LoginEntity.Domain = LoginEntity.Domain.Substring(LoginEntity.Domain.IndexOf('.') + 1);
+
                 var principal = await _manager.TryAuthenticate(LoginEntity.Username, LoginEntity.Domain, LoginEntity.Credentials, CancellationToken.None);
 
                 if (principal != null)

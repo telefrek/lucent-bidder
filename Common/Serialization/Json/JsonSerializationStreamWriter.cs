@@ -55,6 +55,9 @@ namespace Lucent.Common.Serialization.Json
                     {
                         _jsonWriter.WritePropertyName(prop);
                         var val = properties[prop];
+                        if(val == null)
+                            continue; // skip nulls
+
                         var valType = val.GetType();
 
                         var method = typeof(JsonSerializationStreamWriter).GetMethod("Write", new Type[] { valType });
@@ -240,6 +243,7 @@ namespace Lucent.Common.Serialization.Json
                     {
                         await _jsonWriter.WritePropertyNameAsync(prop);
                         var val = properties[prop];
+                        if(val == null) continue;
                         var method = typeof(JsonSerializationStreamWriter).GetMethod("WriteAsync", new Type[] { val.GetType() });
                         if (method != null)
                             await (Task)method.Invoke(this, new object[] { val });

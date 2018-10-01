@@ -1,15 +1,9 @@
 replicaCount: 1
 
 image:
-  repository: telefrek/lucent-portal
+  repository: telefrek/lucent-orchestrator
   tag: latest
   pullPolicy: IfNotPresent
-
-rabbitmq: {}
-
-openldap: {}
-
-cassandra: {}
 
 service:
   type: ClusterIP
@@ -23,7 +17,14 @@ ingress:
     - chart-example.local
   tls: []
 
-resources: {}
+resources: 
+  limits:
+   memory: 1Gi
+   cpu: 1
+  requests:
+   memory: 256Mi
+
+hostAlias: {}
 
 nodeSelector: {}
 
@@ -39,5 +40,5 @@ affinity:
           - key: component
             operator: In
             values:
-            - portal
+            - orchestrator
         topologyKey: kubernetes.io/hostname

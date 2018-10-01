@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Security.Authentication;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
 
@@ -16,14 +17,18 @@ namespace Lucent.Common.Messaging
         private ConnectionFactory _factory;
         private Dictionary<string, RabbitCluster> _clusters;
         private IServiceProvider _provider;
+        readonly ILogger<RabbitFactory> _log;
 
         /// <summary>
         /// Default constructor
         /// </summary>
         /// <param name="options">Configuration parameters for the environment</param>
-        public RabbitFactory(IOptions<RabbitConfiguration> options, IServiceProvider provider)
+        /// <param name="provider"></param>
+        /// <param name="log"></param>
+        public RabbitFactory(IOptions<RabbitConfiguration> options, IServiceProvider provider, ILogger<RabbitFactory> log)
         {
             var configuration = options.Value;
+            _log = log;
 
             _factory = new ConnectionFactory();
             _factory.HostName = configuration.Host;
@@ -40,9 +45,11 @@ namespace Lucent.Common.Messaging
             }
         }
 
+        /// <inheritdoc/>
         public IMessage CreateMessage()
             => new LucentMessage();
 
+        /// <inheritdoc/>
         public T CreateMessage<T>()
             where T : IMessage
         {
@@ -73,14 +80,14 @@ namespace Lucent.Common.Messaging
         public IMessageSubscriber<T> CreateSubscriber<T>(string topic, ushort maxConcurrency)
             where T : IMessage
         {
-            return new RabbitSubscriber<T>(this, _factory.CreateConnection(), topic, maxConcurrency, null);
+            return new RabbitSubscriber<T>(this, _factory.CreateConnection(), _log, topic, maxConcurrency, null);
         }
 
         /// <inheritdoc />
         public IMessageSubscriber<T> CreateSubscriber<T>(string topic, ushort maxConcurrency, string filter)
             where T : IMessage
         {
-            return new RabbitSubscriber<T>(this, _factory.CreateConnection(), topic, maxConcurrency, filter);
+            return new RabbitSubscriber<T>(this, _factory.CreateConnection(), _log, topic, maxConcurrency, filter);
         }
     }
 }

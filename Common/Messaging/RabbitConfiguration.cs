@@ -25,7 +25,7 @@ namespace Lucent.Common.Messaging
         /// <summary>
         /// Gets/Sets the cluster info
         /// </summary>
-        public Dictionary<string, RabbitCluster> Clusters { get; set; }
+        public Dictionary<string, RabbitCluster> Clusters { get; set; } = new Dictionary<string, RabbitCluster>();
     }
 
     /// <summary>

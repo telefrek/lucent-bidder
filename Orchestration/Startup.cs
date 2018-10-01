@@ -2,22 +2,45 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Lucent.Common;
+using Lucent.Orchestration;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Orchestration
 {
     public class Startup
     {
-        // This method gets called by the runtime. Use this method to add services to the container.
-        // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
-        public void ConfigureServices(IServiceCollection services)
+        public Startup(IConfiguration configuration)
         {
+            Configuration = configuration;
         }
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+        public IConfiguration Configuration { get; }
+
+        public void ConfigureServices(IServiceCollection services)
+        {
+            services.Configure<CookiePolicyOptions>(options =>
+            {
+                options.CheckConsentNeeded = context => true;
+                options.MinimumSameSitePolicy = SameSiteMode.None;
+            });
+
+
+            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+            services.ConfigureLoadShedding(Configuration);
+            services.AddMessaging(Configuration);
+            services.AddSerialization(Configuration);
+            services.AddOpenRTBSerializers();
+            services.AddSingleton<ICampaignProcessor, CampaignManager>();            
+            services.AddStorage(Configuration);
+        }
+
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
             if (env.IsDevelopment())
@@ -25,10 +48,26 @@ namespace Orchestration
                 app.UseDeveloperExceptionPage();
             }
 
-            app.Run(async (context) =>
+            app.UseCookiePolicy();
+            app.UseLoadShedding();
+
+            var routeBuilder = new RouteBuilder(app);
+
+            routeBuilder.MapGet("/health", (context) =>
             {
-                await context.Response.WriteAsync("Hello World!");
+                context.Response.StatusCode = 200;
+                return Task.CompletedTask;
             });
+
+            routeBuilder.MapGet("/ready", (context) =>
+            {
+                context.Response.StatusCode = 200;
+                return Task.CompletedTask;
+            });
+
+            app.UseRouter(routeBuilder.Build());
+
+            app.ApplicationServices.GetService<ICampaignProcessor>().Start();
         }
     }
 }

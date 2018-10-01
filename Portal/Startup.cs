@@ -50,7 +50,7 @@ namespace Portal
             services.AddMvc().AddRazorOptions(options =>
             {
                 options.PageViewLocationFormats.Add("/Pages/Partials/{0}.cshtml");
-            });
+            });            
 
             services.AddScoped<ICampaignUpdateContext, CampaignUpdateContext>();
 
@@ -60,6 +60,7 @@ namespace Portal
             services.AddSignalR();
             services.AddRouting();
             services.AddSerialization(Configuration);
+            services.AddOpenRTBSerializers();
             services.AddStorage(Configuration);
         }
 
