@@ -17,7 +17,7 @@ namespace Lucent.Common.Serialization.Json
     {
         JsonWriter _jsonWriter;
         ISerializationRegistry _registry;
-        ILogger<JsonSerializationStreamWriter> _log;
+        ILogger _log;
 
         /// <summary>
         /// 
@@ -25,7 +25,7 @@ namespace Lucent.Common.Serialization.Json
         /// <param name="jsonWriter"></param>
         /// <param name="registry"></param>
         /// <param name="log"></param>
-        public JsonSerializationStreamWriter(JsonWriter jsonWriter, ISerializationRegistry registry, ILogger<JsonSerializationStreamWriter> log)
+        public JsonSerializationStreamWriter(JsonWriter jsonWriter, ISerializationRegistry registry, ILogger log)
         {
             _jsonWriter = jsonWriter;
             _registry = registry;

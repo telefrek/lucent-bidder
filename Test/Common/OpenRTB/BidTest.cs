@@ -179,7 +179,7 @@ namespace Lucent.Common.OpenRTB.Test
             HttpContent content;
             using (var ms = new MemoryStream())
             {
-                var serializer = ms.WrapSerializer(ServiceProvider, SerializationFormat.JSON, true);
+                var serializer = ServiceProvider.GetService<ISerializationContext>().WrapStream(ms, true, SerializationFormat.JSON);
 
                 using (var writer = serializer.Writer)
                 {
@@ -198,11 +198,11 @@ namespace Lucent.Common.OpenRTB.Test
 
         async Task<BidResponse> GetResponse(HttpResponseMessage response)
         {
-            var serializer = (await response.Content.ReadAsStreamAsync()).WrapSerializer(ServiceProvider, SerializationFormat.JSON, false);
+            var serializer = ServiceProvider.GetService<ISerializationContext>().WrapStream((await response.Content.ReadAsStreamAsync()), false, SerializationFormat.JSON);
 
             using (var reader = serializer.Reader)
             {
-                return await ServiceProvider.GetService<ISerializationRegistry>().GetSerializer<BidResponse>().ReadAsync(reader, CancellationToken.None);
+                return await reader.ReadAsAsync<BidResponse>();
             }
         }
 

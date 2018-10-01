@@ -2,8 +2,10 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Cassandra;
+using Lucent.Common.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Lucent.Common.Storage
 {
@@ -37,6 +39,6 @@ namespace Lucent.Common.Storage
             _session.ChangeKeyspace(_config.Keyspace);
         }
 
-        public ILucentRepository<T> GetRepository<T>() where T : IStorageEntity, new() => new CassandraRepository<T>(_session, _provider, _config.Format);
+        public ILucentRepository<T> GetRepository<T>() where T : IStorageEntity, new() => new CassandraRepository<T>(_session, _config.Format, _provider.GetService<ISerializationContext>(), _log);
     }
 }

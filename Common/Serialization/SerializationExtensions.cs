@@ -24,7 +24,8 @@ namespace Lucent.Common
         public static IServiceCollection AddSerialization(this IServiceCollection services, IConfiguration configuration) =>
             // Each request should get it's own seriailzation registry, depending on context
             services.AddSingleton<ISerializationRegistry, SerializationRegistry>()
-            .AddEntitySerializers();
+            .AddEntitySerializers()
+            .AddSingleton<ISerializationContext, LucentSerializationContext>();
 
         /// <summary>
         /// Validates if an object is the default for it's type
@@ -57,8 +58,12 @@ namespace Lucent.Common
             return false;
         }
 
-        public static ISerializationStream WrapSerializer(this Stream target, IServiceProvider provider, SerializationFormat format, bool leaveOpen) => new SerializationStream(target, format, provider, leaveOpen);
-
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="instance"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
         public static object UnwrapValue<T>(this T instance)
         {
             Type instanceType = instance.GetType();
@@ -68,6 +73,12 @@ namespace Lucent.Common
             return instance;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="info"></param>
+        /// <param name="target"></param>
+        /// <param name="value"></param>
         public static void SetWrapValue(this PropertyInfo info, object target, object value)
         {
             if (info.PropertyType.IsEnum)

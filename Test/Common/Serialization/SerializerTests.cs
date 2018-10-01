@@ -29,10 +29,11 @@ namespace Lucent.Common.Storage.Test
         public async Task TestProtoSerializer()
         {
             var dt = DateTime.Now;
+            var context = ServiceProvider.GetService<ISerializationContext>();
 
             using(var ms = new MemoryStream())
             {
-                using(var writer = ms.WrapSerializer(ServiceProvider, SerializationFormat.PROTOBUF, true).Writer)
+                using(var writer = context.CreateWriter(ms, true, SerializationFormat.PROTOBUF))
                 {
                     await writer.WriteAsync(dt);
                     await writer.FlushAsync();
@@ -40,7 +41,7 @@ namespace Lucent.Common.Storage.Test
 
                 ms.Seek(0, SeekOrigin.Begin);
 
-                using(var reader = ms.WrapSerializer(ServiceProvider, SerializationFormat.PROTOBUF, true).Reader)
+                using(var reader = context.CreateReader(ms, true, SerializationFormat.PROTOBUF))
                 {
                     var v1 = reader.ReadDateTime();
                     Assert.AreEqual(dt, v1, "date mismatch");
@@ -49,7 +50,7 @@ namespace Lucent.Common.Storage.Test
 
             using(var ms = new MemoryStream())
             {
-                using(var writer = ms.WrapSerializer(ServiceProvider, SerializationFormat.JSON, true).Writer)
+                using(var writer = context.CreateWriter(ms, true, SerializationFormat.JSON))
                 {
                     await writer.WriteAsync(dt);
                     await writer.FlushAsync();
@@ -57,7 +58,7 @@ namespace Lucent.Common.Storage.Test
 
                 ms.Seek(0, SeekOrigin.Begin);
 
-                using(var reader = ms.WrapSerializer(ServiceProvider, SerializationFormat.JSON, true).Reader)
+                using(var reader = context.CreateReader(ms, true, SerializationFormat.JSON))
                 {
                     var v1 = reader.ReadDateTime();
                     Assert.AreEqual(dt, v1, "date mismatch");

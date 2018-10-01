@@ -18,7 +18,7 @@ namespace Lucent.Common.Serialization
     {
         Stream _wrappedStream;
         SerializationFormat _streamFormat;
-        IServiceProvider _serviceProvider;
+        ISerializationContext _serializationContext;
         bool _leaveOpen;
 
         /// <summary>
@@ -26,13 +26,13 @@ namespace Lucent.Common.Serialization
         /// </summary>
         /// <param name="source">The source stream</param>
         /// <param name="streamFormat"></param>
-        /// <param name="serviceProvider"></param>
+        /// <param name="serializationContext"></param>
         /// <param name="leaveOpen"></param>
-        public SerializationStream(Stream source, SerializationFormat streamFormat, IServiceProvider serviceProvider, bool leaveOpen = false)
+        public SerializationStream(Stream source, SerializationFormat streamFormat, ISerializationContext serializationContext, bool leaveOpen = false)
         {
             _wrappedStream = source;
             _streamFormat = streamFormat;
-            _serviceProvider = serviceProvider;
+            _serializationContext = serializationContext;
             _leaveOpen = leaveOpen;
         }
 
@@ -47,28 +47,7 @@ namespace Lucent.Common.Serialization
         /// <returns>An initialized ISerializationStreamReader</returns>
         public ISerializationStreamReader Reader
         {
-            get
-            {
-                var target = _wrappedStream;
-                if ((_streamFormat & SerializationFormat.COMPRESSED) == SerializationFormat.COMPRESSED)
-                    target = new GZipStream(target, CompressionMode.Decompress, _leaveOpen);
-
-                if ((_streamFormat & SerializationFormat.JSON) == SerializationFormat.JSON)
-                {
-                    var jsonReader = new JsonTextReader(new StreamReader(target, Encoding.UTF8, true, 4096, _leaveOpen));
-                    if (_leaveOpen)
-                        jsonReader.CloseInput = false;
-
-                    return _serviceProvider.CreateInstance<JsonSerializationStreamReader>(jsonReader);
-                }
-                else if ((_streamFormat & SerializationFormat.PROTOBUF) == SerializationFormat.PROTOBUF)
-                {
-                    var protoReader = new ProtobufReader(target, _leaveOpen);
-                    return _serviceProvider.CreateInstance<ProtobufSerializationStreamReader>(protoReader);
-                }
-
-                return null;
-            }
+            get => _serializationContext.CreateReader(_wrappedStream, _leaveOpen, _streamFormat);
         }
 
         /// <summary>
@@ -77,29 +56,7 @@ namespace Lucent.Common.Serialization
         /// <returns>An initialized ISerializationStreamWriter</returns>
         public ISerializationStreamWriter Writer
         {
-            get
-            {
-                var target = _wrappedStream;
-                if ((_streamFormat & SerializationFormat.COMPRESSED) == SerializationFormat.COMPRESSED)
-                    target = new GZipStream(target, CompressionMode.Compress, _leaveOpen);
-
-                if ((_streamFormat & SerializationFormat.JSON) == SerializationFormat.JSON)
-                {
-                    var jsonWriter = new JsonTextWriter(new StreamWriter(target, Encoding.UTF8, 4096, _leaveOpen));
-                    if(_leaveOpen)
-                        jsonWriter.CloseOutput = false;
-                        
-                    return _serviceProvider.CreateInstance<JsonSerializationStreamWriter>(jsonWriter);
-
-                }
-                else if ((_streamFormat & SerializationFormat.PROTOBUF) == SerializationFormat.PROTOBUF)
-                {
-                    var protoWriter = new ProtobufWriter(target, _leaveOpen);
-                    return _serviceProvider.CreateInstance<ProtobufSerializationStreamWriter>(protoWriter);
-                }
-
-                return null;
-            }
+            get => _serializationContext.CreateWriter(_wrappedStream, _leaveOpen, _streamFormat);
         }
     }
 }

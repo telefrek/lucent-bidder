@@ -34,8 +34,8 @@ namespace Lucent.Common.Messaging
     public class LucentMessage<T> : IMessage
     where T : class, new()
     {
-        IServiceProvider _provider;
-        public LucentMessage(IServiceProvider provider) => _provider = provider;
+        ISerializationContext _serializationContext;
+        public LucentMessage(ISerializationContext serializationContext) => _serializationContext = serializationContext;
         public string MessageId { get; set; } = Guid.NewGuid().ToString();
         public MessageState State { get; set; }
         public T Body { get; set; }
@@ -51,10 +51,10 @@ namespace Lucent.Common.Messaging
             switch (ContentType.ToLowerInvariant())
             {
                 case "application/x-protobuf":
-                    Body = _provider.GetRequiredService<ISerializationRegistry>().GetSerializer<T>().Read(new MemoryStream(buffer).WrapSerializer(_provider, SerializationFormat.PROTOBUF, false).Reader);
+                    Body = _serializationContext.CreateReader(new MemoryStream(buffer), false, SerializationFormat.PROTOBUF).ReadAs<T>();
                     break;
                 default:
-                    Body = _provider.GetRequiredService<ISerializationRegistry>().GetSerializer<T>().Read(new MemoryStream(buffer).WrapSerializer(_provider, SerializationFormat.JSON, false).Reader);
+                    Body = _serializationContext.CreateReader(new MemoryStream(buffer), false, SerializationFormat.JSON).ReadAs<T>();
                     break;
             }
         }
@@ -66,13 +66,13 @@ namespace Lucent.Common.Messaging
                 case "application/x-protobuf":
                     using (var ms = new MemoryStream())
                     {
-                        _provider.GetRequiredService<ISerializationRegistry>().GetSerializer<T>().Write(ms.WrapSerializer(_provider, SerializationFormat.PROTOBUF, true).Writer, Body);
+                        _serializationContext.CreateWriter(ms, true, SerializationFormat.PROTOBUF).Write(Body);
                         return ms.ToArray();
                     }
                 default:
                     using (var ms = new MemoryStream())
                     {
-                        _provider.GetRequiredService<ISerializationRegistry>().GetSerializer<T>().Write(ms.WrapSerializer(_provider, SerializationFormat.JSON, true).Writer, Body);
+                        _serializationContext.CreateWriter(ms, true, SerializationFormat.JSON).Write(Body);
                         return ms.ToArray();
                     }
             }

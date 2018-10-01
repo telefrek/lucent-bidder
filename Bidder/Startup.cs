@@ -97,13 +97,13 @@ namespace Bidder
     {
         ILogger<BidHandler> _log;
         IMessageSubscriber<LucentMessage> _subscriber;
-        ISerializationRegistry _registry;
+        ISerializationContext _serializationContext;
         int _next = 0;
 
-        public BidHandler(ILogger<BidHandler> log, IMessageFactory factory, ISerializationRegistry registry)
+        public BidHandler(ILogger<BidHandler> log, IMessageFactory factory, ISerializationContext serializationContext)
         {
             _log = log;
-            _registry = registry;
+            _serializationContext = serializationContext;
             _subscriber = factory.CreateSubscriber<LucentMessage>("campaigns", 0);
             _subscriber.OnReceive = (m) =>
            {
@@ -117,13 +117,15 @@ namespace Bidder
 
         public async Task HandleAsync(HttpContext context)
         {
-            var sstream = context.Request.Body.WrapSerializer(context.RequestServices, SerializationFormat.JSON, false);
-            var request = await _registry.GetSerializer<BidRequest>().ReadAsync(sstream.Reader, CancellationToken.None);
+            using (var serializationReader = _serializationContext.CreateReader(context.Request.Body, false, SerializationFormat.JSON))
+            {
+                var request = await serializationReader.ReadAsAsync<BidRequest>();
 
-            if (request != null)
-                _log.LogInformation("Got request {0}", request.Id);
+                if (request != null)
+                    _log.LogInformation("Got request {0}", request.Id);
 
-            context.Response.StatusCode = request == null ? 400 : 204;
+                context.Response.StatusCode = request == null ? 400 : 204;
+            }
         }
     }
 }

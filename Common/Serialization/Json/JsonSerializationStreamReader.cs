@@ -14,7 +14,7 @@ namespace Lucent.Common.Serialization.Json
     public class JsonSerializationStreamReader : ISerializationStreamReader
     {
         readonly JsonReader _jsonReader;
-        readonly ILogger<JsonSerializationStreamReader> _log;
+        readonly ILogger _log;
         readonly ISerializationRegistry _registry;
 
         volatile SerializationToken _token;
@@ -26,7 +26,7 @@ namespace Lucent.Common.Serialization.Json
         /// <param name="jsonReader">The JsonReader pointing to the current resource</param>
         /// <param name="registry">The serialization registry to use</param>
         /// <param name="log">The logger to use</param>
-        public JsonSerializationStreamReader(JsonReader jsonReader, ISerializationRegistry registry, ILogger<JsonSerializationStreamReader> log)
+        public JsonSerializationStreamReader(JsonReader jsonReader, ISerializationRegistry registry, ILogger log)
         {
             _jsonReader = jsonReader;
             _token = SerializationToken.Unknown;

@@ -23,25 +23,22 @@ namespace Lucent.Common.Storage
     {
         ISession _session;
         string _tableName;
-        IEntitySerializer<T> _serializer;
+        ISerializationContext _serializationContext;
 
         Statement _getAllStatement;
         PreparedStatement _getStatement;
         PreparedStatement _insertStatement;
         PreparedStatement _updateStatement;
         PreparedStatement _deleteStatement;
-        IServiceProvider _provider;
         ILogger _log;
         SerializationFormat _format;
 
         // Need to get table name mapping
-        public CassandraRepository(ISession session, IServiceProvider provider, SerializationFormat format)
+        public CassandraRepository(ISession session, SerializationFormat format, ISerializationContext serializationContext, ILogger log)
         {
             _session = session;
-            _provider = provider;
             _tableName = typeof(T).Name.ToLowerInvariant();
-            _log = provider.GetService<ILoggerFactory>().CreateLogger<CassandraRepository<T>>();
-            _serializer = provider.GetService<ISerializationRegistry>().GetSerializer<T>();
+            _log = log;
             _format = format;
 
             _getAllStatement = new SimpleStatement("SELECT * FROM {0}".FormatWith(_tableName));
@@ -83,11 +80,11 @@ namespace Lucent.Common.Storage
 
                                     using (var ms = new MemoryStream(contents))
                                     {
-                                        using (var reader = ms.WrapSerializer(_provider, format, true).Reader)
+                                        using (var reader = _serializationContext.CreateReader(ms, false, _format))
                                         {
                                             if (reader.HasNext())
                                             {
-                                                var o = _serializer.Read(reader);
+                                                var o = reader.ReadAs<T>();
                                                 o.ETag = row.GetValue<string>("etag");
                                                 o.Updated = row.GetValue<DateTime>("updated");
                                                 res.Add(o);
@@ -110,11 +107,11 @@ namespace Lucent.Common.Storage
 
                             using (var ms = new MemoryStream(contents))
                             {
-                                using (var reader = ms.WrapSerializer(_provider, format, true).Reader)
+                                using (var reader = _serializationContext.CreateReader(ms, false, _format))
                                 {
                                     if (reader.HasNext())
                                     {
-                                        var o = _serializer.Read(reader);
+                                        var o = reader.ReadAs<T>();
                                         o.ETag = row.GetValue<string>("etag");
                                         o.Updated = row.GetValue<DateTime>("updated");
                                         res.Add(o);
@@ -156,11 +153,11 @@ namespace Lucent.Common.Storage
 
                                     using (var ms = new MemoryStream(contents))
                                     {
-                                        using (var reader = ms.WrapSerializer(_provider, format, true).Reader)
+                                        using (var reader = _serializationContext.CreateReader(ms, false, _format))
                                         {
                                             if (reader.HasNext())
                                             {
-                                                var o = _serializer.Read(reader);
+                                                var o = reader.ReadAs<T>();
                                                 o.ETag = row.GetValue<string>("etag");
                                                 o.Updated = row.GetValue<DateTime>("updated");
                                                 return o;
@@ -183,11 +180,11 @@ namespace Lucent.Common.Storage
 
                             using (var ms = new MemoryStream(contents))
                             {
-                                using (var reader = ms.WrapSerializer(_provider, format, true).Reader)
+                                using (var reader = _serializationContext.CreateReader(ms, false, _format))
                                 {
                                     if (reader.HasNext())
                                     {
-                                        var o = _serializer.Read(reader);
+                                        var o = reader.ReadAs<T>();
                                         o.ETag = row.GetValue<string>("etag");
                                         o.Updated = row.GetValue<DateTime>("updated");
                                         return o;
@@ -214,9 +211,9 @@ namespace Lucent.Common.Storage
                 var contents = new byte[0];
                 using (var ms = new MemoryStream())
                 {
-                    using (var writer = ms.WrapSerializer(_provider, _format, true).Writer)
+                    using (var writer = _serializationContext.CreateWriter(ms, true, _format))
                     {
-                        _serializer.Write(writer, obj);
+                        writer.Write(obj);
                         writer.Flush();
                     }
 
@@ -262,10 +259,15 @@ namespace Lucent.Common.Storage
                 var contents = new byte[0];
                 using (var ms = new MemoryStream())
                 {
-                    _serializer.Write(ms.WrapSerializer(_provider, _format, true).Writer, obj);
+                    using(var writer = _serializationContext.CreateWriter(ms, true, _format))
+                    {
+                        writer.Write(obj);
+                    }
+
                     ms.Seek(0, SeekOrigin.Begin);
                     contents = ms.ToArray();
                 }
+                
                 obj.ETag = contents.CalculateETag();
 
                 var rowSet = await _session.ExecuteAsync(_updateStatement.Bind(obj.ETag, DateTime.UtcNow, contents, _format.ToString(), obj.Id, oldEtag));
