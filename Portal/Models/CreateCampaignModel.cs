@@ -47,6 +47,7 @@ namespace Lucent.Portal.Models
                 {
                     var msg = _factory.CreateMessage<LucentMessage<Campaign>>();
                     msg.Body = Campaign;
+                    msg.Route = Campaign.Id;
                     msg.ContentType = "application/x-protobuf";
                     msg.Headers.Add("x-lucent-action-type", "create");
 

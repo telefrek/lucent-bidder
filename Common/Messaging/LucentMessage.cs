@@ -48,13 +48,22 @@ namespace Lucent.Common.Messaging
 
         public void Load(byte[] buffer)
         {
+            Body = null;
             switch (ContentType.ToLowerInvariant())
             {
                 case "application/x-protobuf":
-                    Body = _serializationContext.CreateReader(new MemoryStream(buffer), false, SerializationFormat.PROTOBUF).ReadAs<T>();
+                    using (var reader = _serializationContext.CreateReader(new MemoryStream(buffer), false, SerializationFormat.PROTOBUF))
+                    {
+                        if (reader.HasNext())
+                            Body = reader.ReadAs<T>();
+                    }
                     break;
                 default:
-                    Body = _serializationContext.CreateReader(new MemoryStream(buffer), false, SerializationFormat.JSON).ReadAs<T>();
+                    using (var reader = _serializationContext.CreateReader(new MemoryStream(buffer), false, SerializationFormat.JSON))
+                    {
+                        if (reader.HasNext())
+                            Body = reader.ReadAs<T>();
+                    }
                     break;
             }
         }
@@ -66,13 +75,17 @@ namespace Lucent.Common.Messaging
                 case "application/x-protobuf":
                     using (var ms = new MemoryStream())
                     {
-                        _serializationContext.CreateWriter(ms, true, SerializationFormat.PROTOBUF).Write(Body);
+                        using(var writer = _serializationContext.CreateWriter(ms, true, SerializationFormat.PROTOBUF))
+                            writer.Write(Body);
+
                         return ms.ToArray();
                     }
                 default:
                     using (var ms = new MemoryStream())
                     {
-                        _serializationContext.CreateWriter(ms, true, SerializationFormat.JSON).Write(Body);
+                        using(var writer = _serializationContext.CreateWriter(ms, true, SerializationFormat.JSON))
+                            writer.Write(Body);
+                            
                         return ms.ToArray();
                     }
             }

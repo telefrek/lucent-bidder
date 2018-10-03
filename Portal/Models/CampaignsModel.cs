@@ -48,6 +48,7 @@ namespace Lucent.Portal.Models
                     {
                         var msg = _factory.CreateMessage<LucentMessage<Campaign>>();
                         msg.Body = contact;
+                        msg.Route = contact.Id;
                         msg.ContentType = "application/x-protobuf";
                         msg.Headers.Add("x-lucent-action-type", "delete");
 

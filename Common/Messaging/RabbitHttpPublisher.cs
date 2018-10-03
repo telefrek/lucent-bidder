@@ -8,6 +8,7 @@ using Newtonsoft.Json;
 using Lucent.Common.Serialization.Json;
 using System.Dynamic;
 using System.Collections.Generic;
+using Microsoft.Extensions.Logging;
 
 namespace Lucent.Common.Messaging
 {
@@ -23,9 +24,11 @@ namespace Lucent.Common.Messaging
 
         Uri _publishEndpoint;
         RabbitCluster _cluster;
+        readonly ILogger _log;
 
-        public RabbitHttpPublisher(IMessageFactory factory, RabbitCluster clusterInfo, string topic)
+        public RabbitHttpPublisher(IMessageFactory factory, ILogger log, RabbitCluster clusterInfo, string topic)
         {
+            _log = log;
             _publishEndpoint = new UriBuilder
             {
                 Scheme = "https",
@@ -49,7 +52,6 @@ namespace Lucent.Common.Messaging
             {
                 using (var jsw = new JsonSerializationStreamWriter(new JsonTextWriter(new StreamWriter(ms)), null, null))
                 {
-
                     dynamic expando = new ExpandoObject();
                     expando.properties = new ExpandoObject();
                     expando.properties.delivery_mode = 2;
@@ -70,6 +72,8 @@ namespace Lucent.Common.Messaging
                     jsw.Flush();
 
                     var msg = Encoding.UTF8.GetString(ms.ToArray());
+
+                    _log.LogInformation("Sending : {0}", msg);
 
                     using (var req = new HttpRequestMessage(HttpMethod.Post, _publishEndpoint.ToString()))
                     {

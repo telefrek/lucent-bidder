@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Security.Authentication;
+using Lucent.Common.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
@@ -16,16 +17,16 @@ namespace Lucent.Common.Messaging
     {
         private ConnectionFactory _factory;
         private Dictionary<string, RabbitCluster> _clusters;
-        private IServiceProvider _provider;
+        private ISerializationContext _serializationContext;
         readonly ILogger<RabbitFactory> _log;
 
         /// <summary>
         /// Default constructor
         /// </summary>
         /// <param name="options">Configuration parameters for the environment</param>
-        /// <param name="provider"></param>
+        /// <param name="serializationContext"></param>
         /// <param name="log"></param>
-        public RabbitFactory(IOptions<RabbitConfiguration> options, IServiceProvider provider, ILogger<RabbitFactory> log)
+        public RabbitFactory(IOptions<RabbitConfiguration> options, ISerializationContext serializationContext, ILogger<RabbitFactory> log)
         {
             var configuration = options.Value;
             _log = log;
@@ -36,7 +37,7 @@ namespace Lucent.Common.Messaging
             _factory.Password = configuration.Credentials;
 
             _clusters = new Dictionary<string, RabbitCluster>();
-            _provider = provider;
+            _serializationContext = serializationContext;
 
             // Build connections to each of the clusters
             foreach (var cluster in configuration.Clusters)
@@ -55,10 +56,10 @@ namespace Lucent.Common.Messaging
         {
             var constructor = typeof(T).GetConstructors().FirstOrDefault(ci =>
             {
-                return ci.GetParameters().Any(p => p.ParameterType.Equals(typeof(IServiceProvider)));
+                return ci.GetParameters().Any(p => p.ParameterType.Equals(typeof(ISerializationContext)));
             });
 
-            return constructor != null ? (T)constructor.Invoke(new object[] { _provider }) : (T)typeof(T).GetConstructor(Type.EmptyTypes).Invoke(new object[] { });
+            return constructor != null ? (T)constructor.Invoke(new object[] { _serializationContext }) : (T)typeof(T).GetConstructor(Type.EmptyTypes).Invoke(new object[] { });
         }
 
         /// <inheritdoc />
@@ -70,7 +71,7 @@ namespace Lucent.Common.Messaging
         /// <inheritdoc />
         public IMessagePublisher CreatePublisher(string cluster, string topic)
         {
-            return new RabbitHttpPublisher(this, _clusters[cluster], topic);
+            return new RabbitHttpPublisher(this, _log, _clusters[cluster], topic);
         }
 
         /// <inheritdoc />

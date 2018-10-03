@@ -21,8 +21,8 @@ namespace Lucent.Common.Messaging.Test
         public void TestSecondary()
         {
             var factory = ServiceProvider.GetRequiredService<IMessageFactory>();
+            var sub = factory.CreateSubscriber<LucentMessage<Campaign>>("campaign-updates", 0);
             var pub = factory.CreatePublisher("secondary", "campaign-test");
-            var sub = factory.CreateSubscriber<LucentMessage<Campaign>>("campaign-test", 0);
             var received = false;
             var are = new AutoResetEvent(false);
             sub.OnReceive = (m) =>
@@ -33,11 +33,17 @@ namespace Lucent.Common.Messaging.Test
                 foreach (var header in m.Headers)
                     TestContext.WriteLine("{0} : {1}", header.Key, header.Value);
                 TestContext.WriteLine("Campaign Name: " + m.Body.Name);
+                if (m.Body.Schedule != null)
+                {
+                    TestContext.WriteLine("Start : {0}", m.Body.Schedule.StartDate);
+                    TestContext.WriteLine("End   : {0}", m.Body.Schedule.EndDate);
+                }
                 are.Set();
             };
 
             var msg = factory.CreateMessage<LucentMessage<Campaign>>();
             msg.Route = "hello";
+            msg.ContentType = "application/x-protobuf";
             msg.Headers.Add("x-lucent-test-header", "something");
             msg.Headers.Add("x-lucent-header-count", 4);
             msg.Body = new Campaign { Id = SequentialGuid.NextGuid().ToString(), Name = "hello", Schedule = new CampaignSchedule { StartDate = DateTime.Now, EndDate = DateTime.Now.AddDays(1) } };
