@@ -17,13 +17,14 @@ namespace Lucent.Common.Storage
         ICluster _cluster;
         ISession _session;
         IServiceProvider _provider;
+        ISerializationContext _serializationContext;
         CassandraConfiguration _config;
         ILogger _log;
         ConcurrentDictionary<Type, object> _registry;
 
-        public CassandraStorageManager(IServiceProvider provider, IOptions<CassandraConfiguration> options, ILogger<CassandraStorageManager> log)
+        public CassandraStorageManager(ISerializationContext serializationContext, IOptions<CassandraConfiguration> options, ILogger<CassandraStorageManager> log)
         {
-            _provider = provider;
+            _serializationContext = serializationContext;
             _log = log;
             _registry = new ConcurrentDictionary<Type, object>();
             _config = options.Value;
@@ -39,6 +40,6 @@ namespace Lucent.Common.Storage
             _session.ChangeKeyspace(_config.Keyspace);
         }
 
-        public ILucentRepository<T> GetRepository<T>() where T : IStorageEntity, new() => new CassandraRepository<T>(_session, _config.Format, _provider.GetService<ISerializationContext>(), _log);
+        public ILucentRepository<T> GetRepository<T>() where T : IStorageEntity, new() => new CassandraRepository<T>(_session, _config.Format, _serializationContext, _log);
     }
 }

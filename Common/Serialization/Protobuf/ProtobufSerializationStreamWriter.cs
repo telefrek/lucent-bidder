@@ -13,7 +13,7 @@ namespace Lucent.Common.Serialization.Protobuf
     /// </summary>
     public class ProtobufSerializationStreamWriter : ISerializationStreamWriter
     {
-        ILogger<ProtobufSerializationStreamWriter> _log;
+        ILogger _log;
         ISerializationRegistry _registry;
         ProtobufWriter _protoWriter;
 
@@ -23,7 +23,7 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <param name="protoWriter"></param>
         /// <param name="registry"></param>
         /// <param name="log"></param>
-        public ProtobufSerializationStreamWriter(ProtobufWriter protoWriter, ISerializationRegistry registry, ILogger<ProtobufSerializationStreamWriter> log)
+        public ProtobufSerializationStreamWriter(ProtobufWriter protoWriter, ISerializationRegistry registry, ILogger log)
         {
             _protoWriter = protoWriter;
             _registry = registry;

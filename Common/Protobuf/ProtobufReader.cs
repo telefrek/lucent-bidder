@@ -15,6 +15,7 @@ namespace Lucent.Common.Protobuf
         /// </summary>
         protected Stream _raw;
         bool _leaveOpen;
+        long _start;
 
         volatile WireType _fieldType = WireType.UNKNOWN;
         ulong _fieldNumber = ulong.MaxValue;
@@ -44,6 +45,7 @@ namespace Lucent.Common.Protobuf
                 _raw = raw;
             else
                 _raw = new BufferedStream(raw);
+            _start = raw.Position;
         }
 
         /// <summary>
@@ -82,6 +84,7 @@ namespace Lucent.Common.Protobuf
             }
         }
 
+
         /// <summary>
         /// Check if there is more data on the stream
         /// </summary>
@@ -105,6 +108,11 @@ namespace Lucent.Common.Protobuf
         /// </summary>
         /// <returns>True if the position is at or over the length</returns>
         public virtual bool IsEmpty() => _raw.Position >= _raw.Length;
+
+        /// <summary>
+        /// Gets the current stream position
+        /// </summary>
+        public virtual long Position { get => _raw.Position - _start; }
 
         /// <summary>
         /// Read a boolean (1/0) byte off the stream.

@@ -1,6 +1,9 @@
 using System.IO;
+using System.IO.Compression;
 using System.Text;
+using Lucent.Common.Protobuf;
 using Lucent.Common.Serialization.Json;
+using Lucent.Common.Serialization.Protobuf;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -26,14 +29,32 @@ namespace Lucent.Common.Serialization
         }
 
         /// <inheritdoc />
-        public ISerializationStreamReader CreateReader(Stream target, bool leaveOpen, SerializationFormat format) => new JsonSerializationStreamReader(new JsonTextReader(new StreamReader(target)) { CloseInput = !leaveOpen }, _registry, _log);
+        public ISerializationStreamReader CreateReader(Stream target, bool leaveOpen, SerializationFormat format)
+        {
+            if (format.HasFlag(SerializationFormat.COMPRESSED))
+                target = new GZipStream(target, CompressionMode.Compress, leaveOpen);
+
+            if (format.HasFlag(SerializationFormat.PROTOBUF))
+                return new ProtobufSerializationStreamReader(new ProtobufReader(target, leaveOpen), _registry, _log);
+            else
+                return new JsonSerializationStreamReader(new JsonTextReader(new StreamReader(target)) { CloseInput = !leaveOpen }, _registry, _log);
+        }
 
         /// <inheritdoc />
         public ISerializationStream CreateStream(SerializationFormat format)
             => new SerializationStream(new MemoryStream(), format, this);
 
         /// <inheritdoc />
-        public ISerializationStreamWriter CreateWriter(Stream target, bool leaveOpen, SerializationFormat format) => new JsonSerializationStreamWriter(new JsonTextWriter(new StreamWriter(target, Encoding.UTF8, 4096, leaveOpen)), _registry, _log);
+        public ISerializationStreamWriter CreateWriter(Stream target, bool leaveOpen, SerializationFormat format)
+        {
+            if (format.HasFlag(SerializationFormat.COMPRESSED))
+                target = new GZipStream(target, CompressionMode.Decompress, leaveOpen);
+
+            if (format.HasFlag(SerializationFormat.PROTOBUF))
+                return new ProtobufSerializationStreamWriter(new ProtobufWriter(target, leaveOpen), _registry, _log);
+            else
+                return new JsonSerializationStreamWriter(new JsonTextWriter(new StreamWriter(target, Encoding.UTF8, 4096, leaveOpen)), _registry, _log);
+        }
 
         /// <inheritdoc />
         public ISerializationStream WrapStream(Stream target, bool leaveOpen, SerializationFormat format)

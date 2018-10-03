@@ -12,9 +12,8 @@ namespace Lucent.Common.OpenRTB.Serializers
 
         public async Task<Segment> ReadAsync(ISerializationStreamReader serializationStreamReader, CancellationToken token)
         {
-            if (serializationStreamReader.Token == SerializationToken.Unknown)
-                if (!await serializationStreamReader.HasNextAsync())
-                    return null;
+            if(!await serializationStreamReader.StartObjectAsync())
+                return null;
 
             var instance = new Segment();
             while (await serializationStreamReader.HasMorePropertiesAsync())

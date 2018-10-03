@@ -12,9 +12,8 @@ namespace Lucent.Common.OpenRTB.Serializers
 
         public async Task<Banner> ReadAsync(ISerializationStreamReader serializationStreamReader, CancellationToken token)
         {
-            if (serializationStreamReader.Token == SerializationToken.Unknown)
-                if (!await serializationStreamReader.HasNextAsync())
-                    return null;
+            if(!await serializationStreamReader.StartObjectAsync())
+                return null;
 
             var instance = new Banner();
             while (await serializationStreamReader.HasMorePropertiesAsync())

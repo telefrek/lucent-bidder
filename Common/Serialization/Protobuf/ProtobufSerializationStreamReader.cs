@@ -14,7 +14,7 @@ namespace Lucent.Common.Serialization.Protobuf
     {
         ProtobufReader _protoReader;
         ISerializationRegistry _registry;
-        ILogger<ProtobufSerializationStreamReader> _log;
+        ILogger _log;
         volatile int _firstFlag;
 
         volatile SerializationToken _token;
@@ -25,12 +25,13 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <param name="protoReader"></param>
         /// <param name="registry"></param>
         /// <param name="log"></param>
-        public ProtobufSerializationStreamReader(ProtobufReader protoReader, ISerializationRegistry registry, ILogger<ProtobufSerializationStreamReader> log)
+        public ProtobufSerializationStreamReader(ProtobufReader protoReader, ISerializationRegistry registry, ILogger log)
         {
             _protoReader = protoReader;
             _registry = registry;
             _log = log;
             _firstFlag = 0;
+            _token = SerializationToken.Object;
         }
 
         /// <summary>
@@ -101,6 +102,9 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public bool HasNext()
         {
+            if(_protoReader.Position == 0 && !_protoReader.IsEmpty())
+                return true;
+
             if (!_protoReader.IsEmpty() && _protoReader.Read())
             {
                 updateToken();
@@ -117,6 +121,9 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public async Task<bool> HasNextAsync()
         {
+            if(_protoReader.Position == 0 && !_protoReader.IsEmpty())
+                return true;
+
             if (!_protoReader.IsEmpty() && await _protoReader.ReadAsync())
             {
                 await updateTokenAsync();
@@ -136,8 +143,7 @@ namespace Lucent.Common.Serialization.Protobuf
         {
             _registry.Guard<T>();
 
-            var protoReader = _protoReader.GetNextMessageReader();
-            return _registry.GetSerializer<T>().Read(new ProtobufSerializationStreamReader(protoReader, _registry, _log));
+            return _registry.GetSerializer<T>().Read(new ProtobufSerializationStreamReader(_protoReader.GetNextMessageReader(), _registry, _log));
         }
 
         /// <summary>
@@ -199,8 +205,7 @@ namespace Lucent.Common.Serialization.Protobuf
         {
             _registry.Guard<T>();
 
-            var protoReader = _protoReader.GetNextMessageReader();
-            return await _registry.GetSerializer<T>().ReadAsync(new ProtobufSerializationStreamReader(protoReader, _registry, _log), CancellationToken.None);
+            return await _registry.GetSerializer<T>().ReadAsync(new ProtobufSerializationStreamReader(_protoReader.GetNextMessageReader(), _registry, _log), CancellationToken.None);
         }
 
         /// <summary>
@@ -450,6 +455,10 @@ namespace Lucent.Common.Serialization.Protobuf
         {
             return Interlocked.Exchange(ref _firstFlag, 1) == 0 || await HasNextAsync();
         }
+
+
+        public bool StartObject() => _protoReader.Read();
+        public Task<bool> StartObjectAsync() => _protoReader.ReadAsync();
 
         #region IDisposable
         bool _disposed = false;

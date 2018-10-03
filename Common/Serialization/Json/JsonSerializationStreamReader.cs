@@ -735,6 +735,22 @@ namespace Lucent.Common.Serialization.Json
             return _jsonReader.TokenType == JsonToken.PropertyName;
         }
 
+        public bool StartObject()
+        {
+            if(_jsonReader.TokenType == JsonToken.PropertyName)
+                return HasNext() && _jsonReader.TokenType == JsonToken.StartObject;;
+
+            return _jsonReader.TokenType == JsonToken.StartObject;
+        }
+
+        public async Task<bool> StartObjectAsync()
+        {
+            if(_jsonReader.TokenType == JsonToken.PropertyName)
+                return await HasNextAsync() && _jsonReader.TokenType == JsonToken.StartObject;;
+
+            return _jsonReader.TokenType == JsonToken.StartObject;
+        }
+
         #region IDisposable
         bool _disposed = false;
 

@@ -12,9 +12,8 @@ namespace Lucent.Common.Entities.Serializers
 
         public async Task<CampaignSchedule> ReadAsync(ISerializationStreamReader serializationStreamReader, CancellationToken token)
         {
-            if (serializationStreamReader.Token == SerializationToken.Unknown)
-                if (!await serializationStreamReader.HasNextAsync())
-                    return null;
+            if(!await serializationStreamReader.StartObjectAsync())
+                return null;
 
             var instance = new CampaignSchedule();
             while (await serializationStreamReader.HasMorePropertiesAsync())

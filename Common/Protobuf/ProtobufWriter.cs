@@ -189,7 +189,7 @@ namespace Lucent.Common.Protobuf
         /// <param name="src">The source writer to copy from</param>
         public async Task CopyFromAsync(ProtobufWriter src)
         {
-            await WriteFixed64Async((ulong)src._raw.Length);
+            await WriteVarintAsync((ulong)src._raw.Length);
 
             // This may not be entirely safe, but only used from MemoryStream for now so...meh
             src._raw.Seek(0, SeekOrigin.Begin);

@@ -27,6 +27,17 @@ namespace Lucent.Common.Serialization
         bool HasNext();
 
         /// <summary>
+        /// 
+        /// </summary>
+        bool StartObject();
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        Task<bool> StartObjectAsync();
+
+        /// <summary>
         /// Skips the next token
         /// </summary>
         void Skip();

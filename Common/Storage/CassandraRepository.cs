@@ -40,6 +40,7 @@ namespace Lucent.Common.Storage
             _tableName = typeof(T).Name.ToLowerInvariant();
             _log = log;
             _format = format;
+            _serializationContext = serializationContext;
 
             _getAllStatement = new SimpleStatement("SELECT * FROM {0}".FormatWith(_tableName));
 
