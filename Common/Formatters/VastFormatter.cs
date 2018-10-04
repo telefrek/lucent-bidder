@@ -9,7 +9,7 @@ namespace Lucent.Common.Formatters
 {
     public class VastFormatter
     {
-        public static string ToVast4(Campaign campaign, Creative creative, Bid bid)
+        public static string ToVast4(Campaign campaign, Creative creative, CreativeContent content, Bid bid)
         {
             var xDoc = new XmlDocument();
 
@@ -40,13 +40,13 @@ namespace Lucent.Common.Formatters
             uId.InnerText = creative.Id;
             xCreative.AppendChild(uId);
 
-            var linear = xDoc.CreateLinear(creative);
-            linear.AddDuration(xDoc, creative);
+            var linear = xDoc.CreateLinear(content);
+            linear.AddDuration(xDoc, content);
 
-            var mediaFiles = xDoc.CreateMediaFiles(creative, 4);
+            var mediaFiles = xDoc.CreateMediaFiles(content, 4);
 
             var mez = xDoc.CreateElement("Mezzanine");
-            mez.AppendChild(xDoc.CreateCDataSection(creative.RawUri));
+            mez.AppendChild(xDoc.CreateCDataSection(content.RawUri));
             mediaFiles.AppendChild(mez);
 
             linear.AppendChild(mediaFiles);
@@ -64,7 +64,7 @@ namespace Lucent.Common.Formatters
             return vastRoot.OuterXml;
         }
 
-        public static string ToVast3(Campaign campaign, Creative creative, Bid bid)
+        public static string ToVast3(Campaign campaign, Creative creative, CreativeContent content, Bid bid)
         {
             var xDoc = new XmlDocument();
 
@@ -94,13 +94,13 @@ namespace Lucent.Common.Formatters
             uId.InnerText = creative.Id;
             xCreative.AppendChild(uId);
 
-            var linear = xDoc.CreateLinear(creative);
-            linear.AddDuration(xDoc, creative);
+            var linear = xDoc.CreateLinear(content);
+            linear.AddDuration(xDoc, content);
 
-            var mediaFiles = xDoc.CreateMediaFiles(creative, 4);
+            var mediaFiles = xDoc.CreateMediaFiles(content, 4);
 
             var mez = xDoc.CreateElement("Mezzanine");
-            mez.AppendChild(xDoc.CreateCDataSection(creative.RawUri));
+            mez.AppendChild(xDoc.CreateCDataSection(content.RawUri));
             mediaFiles.AppendChild(mez);
 
             linear.AppendChild(mediaFiles);
@@ -118,7 +118,7 @@ namespace Lucent.Common.Formatters
             return vastRoot.OuterXml;
         }
 
-        public static string ToVast2(Campaign campaign, Creative creative, Bid bid)
+        public static string ToVast2(Campaign campaign, Creative creative, CreativeContent content, Bid bid)
         {
             var xDoc = new XmlDocument();
 
@@ -139,10 +139,10 @@ namespace Lucent.Common.Formatters
             var creatives = xDoc.CreateElement("Creatives");
             var xCreative = xDoc.CreateCreative(creative);
 
-            var linear = xDoc.CreateLinear(creative);
-            linear.AddDuration(xDoc, creative);
+            var linear = xDoc.CreateLinear(content);
+            linear.AddDuration(xDoc, content);
 
-            var mediaFiles = xDoc.CreateMediaFiles(creative, 2);
+            var mediaFiles = xDoc.CreateMediaFiles(content, 2);
 
             linear.AppendChild(mediaFiles);
             linear.AddVideoClicks(xDoc, campaign, creative, bid);
@@ -162,6 +162,8 @@ namespace Lucent.Common.Formatters
 
     public static class VastXmlExtensions
     {
+        public static string POSTBACK_URI = "";
+
         public static void AddAdSystem(this XmlElement element, XmlDocument xDoc)
         {
             var adSystem = xDoc.CreateElement("AdSystem");
@@ -180,13 +182,9 @@ namespace Lucent.Common.Formatters
         public static void AddImpression(this XmlElement element, XmlDocument xDoc, Creative creative, Bid bid)
         {
             var impression = xDoc.CreateElement("Impression");
-            impression.AppendChild(xDoc.CreateCDataSection(GetPostbackUri("/api/track") + "&a=imp&lctx=" + bid.Id.SafeBase64Encode()));
+            impression.AppendChild(xDoc.CreateCDataSection(POSTBACK_URI + "&a=imp&lctx=" + bid.Id.SafeBase64Encode()));
             impression.Attributes.Append(xDoc.CreateVastAttribute("id", SequentialGuid.NextGuid().ToString()));
             element.AppendChild(impression);
-        }
-
-        static string GetPostbackUri(string segment){
-            throw new NotImplementedException("nope");
         }
 
         public static void AddDescription(this XmlElement element, XmlDocument xDoc, Creative creative)
@@ -215,7 +213,7 @@ namespace Lucent.Common.Formatters
         public static void AddErrorUri(this XmlElement element, XmlDocument xDoc, Creative creative, Bid bid)
         {
             var err = xDoc.CreateElement("Error");
-            err.AppendChild(xDoc.CreateCDataSection(GetPostbackUri("/api/track") + "&a=err&lctx=" + bid.Id.SafeBase64Encode()));
+            err.AppendChild(xDoc.CreateCDataSection(POSTBACK_URI + "&a=err&lctx=" + bid.Id.SafeBase64Encode()));
             element.AppendChild(err);
         }
 
@@ -223,9 +221,9 @@ namespace Lucent.Common.Formatters
         {
             var viewImp = xDoc.CreateElement("ViewableImpression");
             var viewable = xDoc.CreateElement("Viewable");
-            viewable.AppendChild(xDoc.CreateCDataSection(GetPostbackUri("/api/track") + "&a=view&lctx=" + bid.Id.SafeBase64Encode()));
+            viewable.AppendChild(xDoc.CreateCDataSection(POSTBACK_URI + "&a=view&lctx=" + bid.Id.SafeBase64Encode()));
             var notviewable = xDoc.CreateElement("NotViewable");
-            notviewable.AppendChild(xDoc.CreateCDataSection(GetPostbackUri("/api/track") + "&a=noview&lctx=" + bid.Id.SafeBase64Encode()));
+            notviewable.AppendChild(xDoc.CreateCDataSection(POSTBACK_URI + "&a=noview&lctx=" + bid.Id.SafeBase64Encode()));
             viewImp.Attributes.Append(xDoc.CreateVastAttribute("id", SequentialGuid.NextGuid().ToString()));
             viewImp.AppendChild(viewable);
             viewImp.AppendChild(notviewable);
@@ -242,27 +240,27 @@ namespace Lucent.Common.Formatters
             return xCreative;
         }
 
-        public static XmlElement CreateLinear(this XmlDocument xDoc, Creative creative)
+        public static XmlElement CreateLinear(this XmlDocument xDoc, CreativeContent content)
         {
             var linear = xDoc.CreateElement("Linear");
-            if (creative.Offset > 0)
-                linear.Attributes.Append(xDoc.CreateVastAttribute("skipoffset", TimeSpan.FromSeconds(creative.Offset).ToString()));
+            if (content.Offset > 0)
+                linear.Attributes.Append(xDoc.CreateVastAttribute("skipoffset", TimeSpan.FromSeconds(content.Offset).ToString()));
 
             return linear;
         }
 
-        public static XmlElement CreateMediaFiles(this XmlDocument xDoc, Creative creative, int version = 4)
+        public static XmlElement CreateMediaFiles(this XmlDocument xDoc, CreativeContent content, int version = 4)
         {
             var mediaFiles = xDoc.CreateElement("MediaFiles");
-            mediaFiles.AppendChild(xDoc.CreateMediaFile(creative, creative.CreativeUri, version));
+            mediaFiles.AppendChild(xDoc.CreateMediaFile(content, content.CreativeUri, version));
 
             return mediaFiles;
         }
 
-        public static void AddDuration(this XmlElement element, XmlDocument xDoc, Creative creative)
+        public static void AddDuration(this XmlElement element, XmlDocument xDoc, CreativeContent content)
         {
             var duration = xDoc.CreateElement("Duration");
-            duration.InnerText = TimeSpan.FromSeconds(creative.Duration).ToString();
+            duration.InnerText = TimeSpan.FromSeconds(content.Duration).ToString();
             element.AppendChild(duration);
         }
 
@@ -276,29 +274,29 @@ namespace Lucent.Common.Formatters
             clicks.AppendChild(clickThrough);
 
             var clickTrack = xDoc.CreateElement("ClickTracking");
-            clickTrack.AppendChild(xDoc.CreateCDataSection(GetPostbackUri("/api/track") + "&a=click&lctx=" + bid.Id.SafeBase64Encode()));
+            clickTrack.AppendChild(xDoc.CreateCDataSection(POSTBACK_URI + "&a=click&lctx=" + bid.Id.SafeBase64Encode()));
             clickTrack.Attributes.Append(xDoc.CreateVastAttribute("id", SequentialGuid.NextGuid().ToString()));
             clicks.AppendChild(clickTrack);
 
             element.AppendChild(clicks);
         }
 
-        public static XmlElement CreateMediaFile(this XmlDocument xDoc, Creative creative, string creativeUri, int version = 4)
+        public static XmlElement CreateMediaFile(this XmlDocument xDoc, CreativeContent content, string creativeUri, int version = 4)
         {
             var media = xDoc.CreateElement("MediaFile");
             media.AppendChild(xDoc.CreateCDataSection(creativeUri));
             media.Attributes.Append(xDoc.CreateVastAttribute("delivery", "progressive"));
-            media.Attributes.Append(xDoc.CreateVastAttribute("type", creative.MimeType));
-            media.Attributes.Append(xDoc.CreateVastAttribute("width", creative.W.ToString()));
-            media.Attributes.Append(xDoc.CreateVastAttribute("heigt", creative.H.ToString()));
+            media.Attributes.Append(xDoc.CreateVastAttribute("type", content.MimeType));
+            media.Attributes.Append(xDoc.CreateVastAttribute("width", content.W.ToString()));
+            media.Attributes.Append(xDoc.CreateVastAttribute("heigt", content.H.ToString()));
             media.Attributes.Append(xDoc.CreateVastAttribute("id", SequentialGuid.NextGuid().ToString()));
-            media.Attributes.Append(xDoc.CreateVastAttribute("scalable", creative.CanScale ? "1" : "0"));
-            media.Attributes.Append(xDoc.CreateVastAttribute("bitrate", creative.BitRate.ToString()));
-            media.Attributes.Append(xDoc.CreateVastAttribute("maintainAspectRatio", creative.PreserveAspect ? "1" : "0"));
+            media.Attributes.Append(xDoc.CreateVastAttribute("scalable", content.CanScale ? "1" : "0"));
+            media.Attributes.Append(xDoc.CreateVastAttribute("bitrate", content.BitRate.ToString()));
+            media.Attributes.Append(xDoc.CreateVastAttribute("maintainAspectRatio", content.PreserveAspect ? "1" : "0"));
 
             if (version >= 3)
-                if (!string.IsNullOrWhiteSpace(creative.Codec))
-                    media.Attributes.Append(xDoc.CreateVastAttribute("codec", creative.Codec));
+                if (!string.IsNullOrWhiteSpace(content.Codec))
+                    media.Attributes.Append(xDoc.CreateVastAttribute("codec", content.Codec));
 
             return media;
         }

@@ -1,10 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using Lucent.Common.Storage;
 
 namespace Lucent.Common.Entities
 {
-    public class Creative
+    public class Creative : IStorageEntity
     {
         public string Id { get; set; }
         public string Description { get; set; }
@@ -12,17 +13,9 @@ namespace Lucent.Common.Entities
 
         [Required, StringLength(100)]
         public string Name { get; set; }
-        public bool PreserveAspect { get; set; }
-        public bool CanScale { get; set; }
-        public int BitRate { get; set; }
-        public int W { get; set; }
-        public int H { get; set; }
-        public string MimeType { get; set; }
-        public string Codec { get; set; }
-        public int Duration { get; set; }
-        public int Offset { get; set; }
-        public string CreativeUri {get;set;}
+        public List<CreativeContent> Contents { get; set; } = new List<CreativeContent>();
 
-        public string RawUri { get { return null; } }
+        string IStorageEntity.ETag { get; set; }
+        DateTime IStorageEntity.Updated { get; set; }
     }
 }

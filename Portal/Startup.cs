@@ -51,6 +51,7 @@ namespace Portal
             {
                 options.PageViewLocationFormats.Add("/Pages/Partials/{0}.cshtml");
             });            
+            services.AddAntiforgery(o => o.HeaderName = "XSRF-TOKEN");
 
             services.AddScoped<ICampaignUpdateContext, CampaignUpdateContext>();
 

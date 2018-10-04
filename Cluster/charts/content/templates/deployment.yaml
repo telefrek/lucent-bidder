@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: portal-config
+  name: content-config
 data:
   appsettings.json: |
     {
@@ -11,58 +11,16 @@ data:
         }
       },
       "ContentPath":"{{ .Values.content.path }}",
-      "ContentHost":"{{ .Values.content.host }}",
-      "ContentCache":"{{ .Values.content.cache }}",
-      "AllowedHosts": "*",
-      "ldap": {
-        "host": "openldap-service.lucent.svc",
-        "issecured": true,
-        "port": 636
-      },
-      "ldap_mgmt": {
-        "administrator": "{{ .Values.openldap.user }}",
-        "credentials": "{{ .Values.openldap.password }}",
-        "domain": "{{ .Values.openldap.domain }}",
-        "clusters": {
-          "secondary" : {
-            "user": "{{ .Values.rabbitmq.user }}",
-            "credentials": "{{ .Values.rabbitmq.password }}",
-            "host": "{{ .Values.rabbitmq.secondaryHost }}"
-          }
-        }
-      },
-      "rabbit": {
-        "host": "rabbitmq.lucent.svc",
-        "user": "{{ .Values.rabbitmq.user }}",
-        "credentials": "{{ .Values.rabbitmq.password }}",
-        {{- if .Values.rabbitmq.secondaryHost }}
-        "clusters": {
-          "secondary" : {
-            "user": "{{ .Values.rabbitmq.user }}",
-            "credentials": "{{ .Values.rabbitmq.password }}",
-            "host": "{{ .Values.rabbitmq.secondaryHost }}"
-          }
-        }
-        {{- else }}
-        "clusters": {}
-        {{- end }}
-      },
-      "cassandra": {
-        "endpoint": "cassandra.lucent.svc",
-        "user": "{{ default "test" .Values.cassandra.user }}",
-        "credentials": "{{ default "test" .Values.cassandra.password }}",
-        "keyspace": "{{ default "portal" .Values.cassandra.keyspace }}",
-        "format": "{{ default "PROTOBUF" .Values.cassandra.format }}"
-      }
+      "AllowedHosts": "*"
     }
 ---
 apiVersion: apps/v1beta2
 kind: Deployment
 metadata:
-  name: {{ template "portal.fullname" . }}
+  name: {{ template "content.fullname" . }}
   labels:
-    app: {{ template "portal.name" . }}
-    chart: {{ template "portal.chart" . }}
+    app: {{ template "content.name" . }}
+    chart: {{ template "content.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
@@ -76,14 +34,14 @@ spec:
   progressDeadlineSeconds: 600
   selector:
     matchLabels:
-      app: {{ template "portal.name" . }}
+      app: {{ template "content.name" . }}
       release: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        app: {{ template "portal.name" . }}
+        app: {{ template "content.name" . }}
         release: {{ .Release.Name }}
-        component: portal
+        component: content
     spec:
       restartPolicy: Always
       dnsPolicy: ClusterFirst
@@ -105,8 +63,8 @@ spec:
               echo "Getting configuration"
               cp /etc/config/*.json ./
 
-              echo "Starting the portal"
-              dotnet Portal.dll
+              echo "Starting the content server"
+              dotnet ContentServer.dll
           volumeMounts:
             - mountPath: /etc/config
               name: app-config
@@ -118,11 +76,11 @@ spec:
               protocol: TCP
           livenessProbe:
             httpGet:
-              path: /
+              path: /health
               port: http
           readinessProbe:
             httpGet:
-              path: /
+              path: /ready
               port: http
           resources:
 {{ toYaml .Values.resources | indent 12 }}
@@ -141,7 +99,7 @@ spec:
       volumes:
         - name: app-config
           configMap:
-            name: portal-config
+            name: content-config
         - name: ad-contents
           persistentVolumeClaim:
             claimName: ad-content-pvc

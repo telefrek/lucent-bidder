@@ -1,0 +1,55 @@
+@page
+@using Lucent.Common.Entities
+@model Lucent.Portal.Models.CreateCreativeModel
+@{
+    Layout = "~/Pages/Shared/_Layout.cshtml";
+}
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+<html>
+<body>
+    <form method="post" enctype="multipart/form-data"> 
+    <div class="row">
+        <div class="col-md-12">
+           <input type="file" id="fUpload" name="files" multiple class="form-control" />
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12" style="padding-top:10px;">
+            <input type="button" id="btnUpload" value="Upload" />
+        </div>
+    </div>
+</form>
+</body>
+<script>
+    $(document).ready(function () {
+   $('#btnUpload').on('click', function () {
+      var files = $('#fUpload').prop("files");
+      var fdata = new FormData();
+      for (var i = 0; i < files.length; i++)
+      {
+          fdata.append("files", files[i]);
+      }
+      if (files.length > 0) {
+          $.ajax({
+             type: "POST",
+             url: "/Index?handler=Upload",
+             beforeSend: function (xhr) {
+                xhr.setRequestHeader("XSRF-TOKEN",
+                   $('input:hidden[name="__RequestVerificationToken"]').val());
+             },
+             data: fdata,
+             contentType: false,
+             processData: false,
+             success: function (response) {
+               alert('File Uploaded Successfully.')
+             }
+          });
+      }
+      else {
+          alert('Please select a file.')
+      }
+   })
+});
+</script>
+</html>

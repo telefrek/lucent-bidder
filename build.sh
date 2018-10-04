@@ -44,6 +44,9 @@ docker push telefrek/lucent-bidder:latest
 docker push telefrek/lucent-orchestrator:$LUCENT_VERSION
 docker push telefrek/lucent-orchestrator:latest
 
+docker push telefrek/lucent-content:$LUCENT_VERSION
+docker push telefrek/lucent-content:latest
+
 echo 'Cleanup local docker'
 
 docker rm -vf $(docker ps -aq)

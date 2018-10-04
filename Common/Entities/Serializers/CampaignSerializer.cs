@@ -24,16 +24,16 @@ namespace Lucent.Common.Entities.Serializers
                     case "":
                         switch (propId.Id)
                         {
-                            case 0:
+                            case 1:
                                 instance.Id = await serializationStreamReader.ReadStringAsync();
                                 break;
-                            case 1:
+                            case 2:
                                 instance.Name = await serializationStreamReader.ReadStringAsync();
                                 break;
-                            case 2:
+                            case 3:
                                 instance.Spend = await serializationStreamReader.ReadDoubleAsync();
                                 break;
-                            case 3:
+                            case 4:
                                 instance.Schedule = await serializationStreamReader.ReadAsAsync<CampaignSchedule>();
                                 break;
                             default:
@@ -69,10 +69,10 @@ namespace Lucent.Common.Entities.Serializers
             if (instance != null)
             {
                 await serializationStreamWriter.StartObjectAsync();
-                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 0, Name = "id" }, instance.Id);
-                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 1, Name = "name" }, instance.Name);
-                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 2, Name = "spend" }, instance.Spend);
-                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 3, Name = "schedule" }, instance.Schedule);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 1, Name = "id" }, instance.Id);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 2, Name = "name" }, instance.Name);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 3, Name = "spend" }, instance.Spend);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 4, Name = "schedule" }, instance.Schedule);
                 await serializationStreamWriter.EndObjectAsync();
                 await serializationStreamWriter.FlushAsync();
             }

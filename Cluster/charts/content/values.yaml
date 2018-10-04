@@ -1,0 +1,43 @@
+replicaCount: 1
+
+image:
+  repository: telefrek/lucent-content
+  tag: latest
+  pullPolicy: IfNotPresent
+
+rabbitmq: {}
+
+openldap: {}
+
+cassandra: {}
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  annotations: {}
+  path: /
+  hosts:
+    - chart-example.local
+  tls: []
+
+resources: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchExpression:
+          - key: component
+            operator: In
+            values:
+            - content
+        topologyKey: kubernetes.io/hostname

@@ -25,10 +25,10 @@ namespace Lucent.Common.Entities.Serializers
                     case "":
                         switch (propId.Id)
                         {
-                            case 0:
+                            case 1:
                                 instance.StartDate = (await serializationStreamReader.ReadDateTimeAsync());
                                 break;
-                            case 1:
+                            case 2:
                                 instance.EndDate = (await serializationStreamReader.ReadDateTimeAsync());
                                 break;
                             default:
@@ -59,8 +59,8 @@ namespace Lucent.Common.Entities.Serializers
             if (instance != null)
             {
                 await serializationStreamWriter.StartObjectAsync();
-                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 0, Name = "start" }, instance.StartDate);
-                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 1, Name = "end" }, instance.EndDate);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 1, Name = "start" }, instance.StartDate);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 2, Name = "end" }, instance.EndDate);
                 await serializationStreamWriter.EndObjectAsync();
                 await serializationStreamWriter.FlushAsync();
             }

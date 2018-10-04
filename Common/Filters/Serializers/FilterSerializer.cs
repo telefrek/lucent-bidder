@@ -26,16 +26,16 @@ namespace Lucent.Common.Filters.Serializers
                     case "":
                         switch (propId.Id)
                         {
-                            case 0:
+                            case 1:
                                 filter.Property = await serializationStreamReader.ReadStringAsync();
                                 break;
-                            case 1:
+                            case 2:
                                 filter.FilterType = (FilterType)(await serializationStreamReader.ReadIntAsync());
                                 break;
-                            case 2:
+                            case 3:
                                 filter.Value = await serializationStreamReader.ReadStringAsync();
                                 break;
-                            case 3:
+                            case 4:
                                 filter.PropertyType = Type.GetType(await serializationStreamReader.ReadStringAsync(), true, true);
                                 break;
                             default:
@@ -76,10 +76,10 @@ namespace Lucent.Common.Filters.Serializers
             if (instance != null)
             {
                 await serializationStreamWriter.StartObjectAsync();
-                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 0, Name = "property" }, instance.Property);
-                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 1, Name = "type" }, (int)instance.FilterType);
-                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 2, Name = "value" }, instance.Value.ToString());
-                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 3, Name = "ptype" }, instance.PropertyType.AssemblyQualifiedName);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 1, Name = "property" }, instance.Property);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 2, Name = "type" }, (int)instance.FilterType);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 3, Name = "value" }, instance.Value.ToString());
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 4, Name = "ptype" }, instance.PropertyType.AssemblyQualifiedName);
                 await serializationStreamWriter.EndObjectAsync();
                 await serializationStreamWriter.FlushAsync();
             }

@@ -21,7 +21,7 @@ namespace Lucent.Common.Messaging.Test
         public void TestSecondary()
         {
             var factory = ServiceProvider.GetRequiredService<IMessageFactory>();
-            var sub = factory.CreateSubscriber<LucentMessage<Campaign>>("campaign-updates", 0);
+            var sub = factory.CreateSubscriber<LucentMessage<Campaign>>("campaign-test", 0);
             var pub = factory.CreatePublisher("secondary", "campaign-test");
             var received = false;
             var are = new AutoResetEvent(false);

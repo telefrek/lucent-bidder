@@ -36,7 +36,7 @@ namespace Lucent.Portal.Models
 
         public async Task<IActionResult> OnPostDeleteAsync(string id)
         {
-            var contact = Campaigns.FirstOrDefault(c => c.Id == id);
+            var contact = (await _db.Get()).ToList().FirstOrDefault(c => c.Id == id);
 
             if (contact != null)
             {
