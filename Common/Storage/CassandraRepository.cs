@@ -113,6 +113,7 @@ namespace Lucent.Common.Storage
                                     if (reader.HasNext())
                                     {
                                         var o = reader.ReadAs<T>();
+                                        o.Id = id;
                                         o.ETag = row.GetValue<string>("etag");
                                         o.Updated = row.GetValue<DateTime>("updated");
                                         res.Add(o);
@@ -260,7 +261,7 @@ namespace Lucent.Common.Storage
                 var contents = new byte[0];
                 using (var ms = new MemoryStream())
                 {
-                    using(var writer = _serializationContext.CreateWriter(ms, true, _format))
+                    using (var writer = _serializationContext.CreateWriter(ms, true, _format))
                     {
                         writer.Write(obj);
                     }
@@ -268,7 +269,7 @@ namespace Lucent.Common.Storage
                     ms.Seek(0, SeekOrigin.Begin);
                     contents = ms.ToArray();
                 }
-                
+
                 obj.ETag = contents.CalculateETag();
 
                 var rowSet = await _session.ExecuteAsync(_updateStatement.Bind(obj.ETag, DateTime.UtcNow, contents, _format.ToString(), obj.Id, oldEtag));

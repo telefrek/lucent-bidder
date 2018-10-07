@@ -21,7 +21,7 @@ namespace Lucent.Common.Storage.Test
             var manager = ServiceProvider.GetRequiredService<IStorageManager>();
             Assert.IsNotNull(manager, "Failed to create manager");
 
-            var testRepo = manager.GetRepository<Campaign>();
+            var testRepo = manager.GetRepository<Creative>();
             Assert.IsNotNull(testRepo, "Failed to create repo");
 
             foreach (var entry in testRepo.Get().Result)
@@ -40,12 +40,19 @@ namespace Lucent.Common.Storage.Test
             var manager = ServiceProvider.GetRequiredService<IStorageManager>();
             Assert.IsNotNull(manager, "Failed to create manager");
 
-            var testRepo = manager.GetRepository<Campaign>();
+            var testRepo = manager.GetRepository<Creative>();
             Assert.IsNotNull(testRepo, "Failed to create repo");
 
             var res = await testRepo.Get(Guid.NewGuid().ToString());
             Assert.IsNull(res, "No object should be returned");
-            var tObj = new Campaign { Id = Guid.NewGuid().ToString(), Name = "item", Spend = 1.0 };
+            var tObj = new Creative { Id = Guid.NewGuid().ToString(), Name = "item" };
+
+            tObj.Contents.Add(new CreativeContent {
+                CreativeUri = "https://google.com/mycreative",
+                ContentLocation = "/mnt/somepath",
+                RawUri = "https://google.com/rawcreative",
+                Duration = 100
+            });
 
             var success = await testRepo.TryInsert(tObj);
             Assert.IsTrue(success);
@@ -53,8 +60,8 @@ namespace Lucent.Common.Storage.Test
             res = await testRepo.Get(tObj.Id);
             Assert.IsNotNull(res);
             Assert.AreEqual(tObj.Id, res.Id, "mismatch id");
-            Assert.AreEqual(tObj.Schedule.StartDate, res.Schedule.StartDate, "startdate mismatch");
-            Assert.AreEqual(tObj.Schedule.EndDate, res.Schedule.EndDate, "invalid end date");
+            Assert.AreEqual(tObj.Contents.Count, 1, "mismatch count");
+            Assert.AreEqual(tObj.Contents[0].Duration, 100, "bad duration");
 
             tObj.Name = "Updated";
 

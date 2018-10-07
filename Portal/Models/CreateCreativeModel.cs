@@ -66,13 +66,14 @@ namespace Lucent.Portal.Models
                     {
                         string fileName = ContentDispositionHeaderValue.Parse(item.ContentDisposition).FileName.Trim('"');
                         _log.LogInformation("Creating {0}", fileName);
+                        _log.LogInformation("ContentType: {0}", item.ContentType);
                         string fullPath = Path.Combine(creativeRoot, fileName);
                         creative.Contents.Add(new CreativeContent
                         {
                             ContentLocation = fullPath,
                             MimeType = item.ContentType,
-                            RawUri = _contentHost + fileName,
-                            CreativeUri = _contentCache + fileName,
+                            RawUri = _contentHost + "/creatives/" + creative.Id + "/" + fileName,
+                            CreativeUri = _contentCache + "/creatives/" + creative.Id + "/" + fileName,
                         });
                         using (var stream = new FileStream(fullPath, FileMode.Create))
                         {
