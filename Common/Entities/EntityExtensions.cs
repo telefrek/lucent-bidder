@@ -16,6 +16,8 @@ namespace Lucent.Common
             {
                 registry.Register<Campaign>(new CampaignSerializer());
                 registry.Register<CampaignSchedule>(new CampaignScheduleSerializer());
+                registry.Register<Creative>(new CreativeSearializer());
+                registry.Register<CreativeContent>(new CreativeContentSerializer());
                 registry.Register<Filter>(new FilterSerializer());
                 registry.Register<BidFilter>(new BidFilterSerializer());
             }

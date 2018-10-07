@@ -45,8 +45,9 @@ namespace Lucent.Portal.Models
             Creatives = (await _db.Get()).ToList();
         }
 
-        public async Task<IActionResult> OnPostUpload(List<IFormFile> files)
+        public async Task<IActionResult> OnPostAsync(List<IFormFile> files)
         {
+            _log.LogInformation("Uploading {0} files", files.Count);
 
             if (files != null && files.Count > 0)
             {
@@ -54,13 +55,18 @@ namespace Lucent.Portal.Models
                     Directory.CreateDirectory(_contentRoot);
 
                 var creative = new Creative { Id = SequentialGuid.NextGuid().ToString() };
+                var creativeRoot = Path.Combine(_contentRoot, creative.Id);
+
+                if (!Directory.Exists(creativeRoot))
+                    Directory.CreateDirectory(creativeRoot);
 
                 foreach (IFormFile item in files)
                 {
                     if (item.Length > 0)
                     {
                         string fileName = ContentDispositionHeaderValue.Parse(item.ContentDisposition).FileName.Trim('"');
-                        string fullPath = Path.Combine(_contentRoot, fileName);
+                        _log.LogInformation("Creating {0}", fileName);
+                        string fullPath = Path.Combine(creativeRoot, fileName);
                         creative.Contents.Add(new CreativeContent
                         {
                             ContentLocation = fullPath,
@@ -75,6 +81,7 @@ namespace Lucent.Portal.Models
                     }
                 }
 
+                _log.LogInformation("Creating creative");
                 if (await _db.TryInsert(creative))
                     return this.Content("Success");
                 else

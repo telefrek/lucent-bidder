@@ -35,17 +35,25 @@ docker tag telefrek/lucent-scoring:$LUCENT_VERSION telefrek/lucent-scoring:lates
 
 echo 'Pushing images'
 
-docker push telefrek/lucent-portal:$LUCENT_VERSION
-docker push telefrek/lucent-portal:latest
+if [ "${1:-portal}" == "portal" ]; then
+    docker push telefrek/lucent-portal:$LUCENT_VERSION
+    docker push telefrek/lucent-portal:latest
+fi
 
+if [ "${1:-bidder}" == "bidder" ]; then
 docker push telefrek/lucent-bidder:$LUCENT_VERSION
 docker push telefrek/lucent-bidder:latest
+fi
 
+if [ "${1:-orchestrator}" == "orchestrator" ]; then
 docker push telefrek/lucent-orchestrator:$LUCENT_VERSION
 docker push telefrek/lucent-orchestrator:latest
+fi
 
-docker push telefrek/lucent-content:$LUCENT_VERSION
-docker push telefrek/lucent-content:latest
+if [ "${1:-contenta}" == "content" ]; then
+    docker push telefrek/lucent-content:$LUCENT_VERSION
+    docker push telefrek/lucent-content:latest
+fi
 
 echo 'Cleanup local docker'
 
