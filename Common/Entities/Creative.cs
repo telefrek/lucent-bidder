@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using Lucent.Common.Filters;
 using Lucent.Common.Storage;
 
 namespace Lucent.Common.Entities
@@ -14,7 +15,6 @@ namespace Lucent.Common.Entities
         [Required, StringLength(100)]
         public string Name { get; set; }
         public List<CreativeContent> Contents { get; set; } = new List<CreativeContent>();
-
         string IStorageEntity.ETag { get; set; }
         DateTime IStorageEntity.Updated { get; set; }
     }

@@ -1,5 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
+using Lucent.Common.Filters;
 using Lucent.Common.Serialization;
 using Lucent.Common.Serialization.Json;
 
@@ -60,6 +61,9 @@ namespace Lucent.Common.Entities.Serializers
                             case 12:
                                 instance.RawUri = await serializationStreamReader.ReadStringAsync();
                                 break;
+                            case 13:
+                                instance.ContentType = await serializationStreamReader.ReadAsAsync<ContentType>();
+                                break;
                             default:
                                 await serializationStreamReader.SkipAsync();
                                 break;
@@ -101,6 +105,9 @@ namespace Lucent.Common.Entities.Serializers
                     case "raw_uri":
                         instance.RawUri = await serializationStreamReader.ReadStringAsync();
                         break;
+                    case "content_type":
+                        instance.ContentType = await serializationStreamReader.ReadAsAsync<ContentType>();
+                        break;
                     default:
                         await serializationStreamReader.SkipAsync();
                         break;
@@ -118,17 +125,18 @@ namespace Lucent.Common.Entities.Serializers
             {
                 await serializationStreamWriter.StartObjectAsync();
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 1, Name = "content_location" }, instance.ContentLocation);
-                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 2, Name = "preserve_aspect" }, instance.ContentLocation);
-                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 3, Name = "can_scale" }, instance.ContentLocation);
-                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 4, Name = "bitrate" }, instance.ContentLocation);
-                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 5, Name = "w" }, instance.ContentLocation);
-                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 6, Name = "h" }, instance.ContentLocation);
-                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 7, Name = "mime_type" }, instance.ContentLocation);
-                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 8, Name = "codec" }, instance.ContentLocation);
-                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 9, Name = "duration" }, instance.ContentLocation);
-                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 10, Name = "offset" }, instance.ContentLocation);
-                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 11, Name = "creative_uri" }, instance.ContentLocation);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 2, Name = "preserve_aspect" }, instance.PreserveAspect);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 3, Name = "can_scale" }, instance.CanScale);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 4, Name = "bitrate" }, instance.BitRate);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 5, Name = "w" }, instance.W);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 6, Name = "h" }, instance.H);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 7, Name = "mime_type" }, instance.MimeType);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 8, Name = "codec" }, instance.Codec);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 9, Name = "duration" }, instance.Duration);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 10, Name = "offset" }, instance.Offset);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 11, Name = "creative_uri" }, instance.CreativeUri);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 12, Name = "raw_uri" }, instance.ContentLocation);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 13, Name = "content_type" }, instance.ContentType);
                 await serializationStreamWriter.EndObjectAsync();
                 await serializationStreamWriter.FlushAsync();
             }

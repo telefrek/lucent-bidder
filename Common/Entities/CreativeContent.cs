@@ -1,3 +1,7 @@
+using System;
+using Lucent.Common.Filters;
+using Lucent.Common.OpenRTB;
+
 namespace Lucent.Common.Entities
 {
     public class CreativeContent
@@ -14,5 +18,7 @@ namespace Lucent.Common.Entities
         public int Offset { get; set; }
         public string CreativeUri { get; set; }
         public string RawUri { get; set; }
+        public ContentType ContentType { get; set; }
+        public Func<Impression, bool> Filter { get; set; }
     }
 }

@@ -57,7 +57,6 @@ namespace Lucent.Common
 
             // Keep track of all the expressions in this chain
             var expList = new List<Expression> { };
-            //expList.Add(Expression.Assign(fValue, Expression.Constant(false)));
 
             // Need a sentinal value for breaking in loops
             var loopBreak = Expression.Label();

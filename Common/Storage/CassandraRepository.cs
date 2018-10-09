@@ -104,6 +104,7 @@ namespace Lucent.Common.Storage
                             var id = row.GetValue<string>("id");
 
                             var contents = row.GetValue<byte[]>("contents");
+                            var tm = Encoding.UTF8.GetString(contents);
                             var format = Enum.Parse<SerializationFormat>(row.GetValue<string>("format"));
 
                             using (var ms = new MemoryStream(contents))
