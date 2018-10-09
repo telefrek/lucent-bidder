@@ -96,9 +96,9 @@ namespace Lucent.Common.Media
 
                     return true;
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    // ignore
+                    _log.LogWarning(e, "Failed to load {0}", content.ContentLocation);
                 }
             }
 
@@ -118,9 +118,9 @@ namespace Lucent.Common.Media
                     return true;
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                // Ignore
+                _log.LogWarning(e, "Failed to load {0}", content.ContentLocation);
             }
 
             return false;

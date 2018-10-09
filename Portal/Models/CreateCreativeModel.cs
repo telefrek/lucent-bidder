@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Http;
 using System.IO;
 using System.Net.Http.Headers;
 using Lucent.Common;
+using Lucent.Common.Media;
 
 namespace Lucent.Portal.Models
 {
@@ -23,11 +24,12 @@ namespace Lucent.Portal.Models
         private readonly ILucentRepository<Creative> _db;
         private readonly ILogger<CreateCreativeModel> _log;
         readonly IMessageFactory _factory;
+        readonly IMediaScanner _scanner;
         readonly string _contentRoot;
         readonly string _contentHost;
         readonly string _contentCache;
 
-        public CreateCreativeModel(IStorageManager db, IConfiguration configuration, ILogger<CreateCreativeModel> logger, IMessageFactory factory)
+        public CreateCreativeModel(IStorageManager db, IConfiguration configuration, ILogger<CreateCreativeModel> logger, IMessageFactory factory, IMediaScanner scanner)
         {
             _contentRoot = configuration.GetValue("ContentPath", "/tmp/content");
             _contentHost = configuration.GetValue("ContentHost", "http://localhost");
@@ -35,6 +37,7 @@ namespace Lucent.Portal.Models
             _db = db.GetRepository<Creative>();
             _log = logger;
             _factory = factory;
+            _scanner = scanner;
         }
 
         public IList<Creative> Creatives { get; private set; }
@@ -45,6 +48,7 @@ namespace Lucent.Portal.Models
             Creatives = (await _db.Get()).ToList();
         }
 
+        [DisableRequestSizeLimit] // questionable on if this is advised, but auth should keep bad actors out in theory...
         public async Task<IActionResult> OnPostAsync(List<IFormFile> files)
         {
             _log.LogInformation("Uploading {0} files", files.Count);
@@ -68,16 +72,24 @@ namespace Lucent.Portal.Models
                         _log.LogInformation("Creating {0}", fileName);
                         _log.LogInformation("ContentType: {0}", item.ContentType);
                         string fullPath = Path.Combine(creativeRoot, fileName);
-                        creative.Contents.Add(new CreativeContent
-                        {
-                            ContentLocation = fullPath,
-                            MimeType = item.ContentType,
-                            RawUri = _contentHost + "/creatives/" + creative.Id + "/" + fileName,
-                            CreativeUri = _contentCache + "/creatives/" + creative.Id + "/" + fileName,
-                        });
                         using (var stream = new FileStream(fullPath, FileMode.Create))
                         {
                             await item.CopyToAsync(stream);
+                        }
+
+                        // Scan the contents
+                        var content = _scanner.Scan(fullPath, item.ContentType);
+
+                        if (content != null)
+                        {
+                            content.RawUri = _contentHost + "/creatives/" + creative.Id + "/" + fileName;
+                            content.CreativeUri = _contentCache + "/creatives/" + creative.Id + "/" + fileName;
+
+                            creative.Contents.Add(content);
+                        }
+                        else
+                        {
+                            new FileInfo(fullPath).Delete();
                         }
                     }
                 }
