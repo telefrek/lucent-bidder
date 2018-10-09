@@ -16,6 +16,9 @@ data:
       "ContentHost":"{{ .Values.content.host }}",
       "ContentCache":"{{ .Values.content.cache }}",
       "AllowedHosts": "*",
+      "media":{
+        "ffmpegpath":"/opt/ffmpeg/bin/ffmpeg"
+      },
       "ldap": {
         "host": "openldap-service.lucent.svc",
         "issecured": true,

@@ -11,11 +11,17 @@ RUN dotnet publish -c Release
 ########################
 # Create runtime images
 ########################
-FROM microsoft/dotnet:aspnetcore-runtime
+FROM telefrek/aspnetcore:ffmpeg
 WORKDIR /opt/lucent
 LABEL component=portal
 COPY --from=build-env /opt/lucent/Portal/bin/Release/netcoreapp2.1/publish .
-RUN rm -rf appsettings*.json
+RUN apt-get update \
+    && apt-get install -y --allow-unauthenticated \
+        libc6-dev \
+        libgdiplus \
+        libx11-dev \
+     && rm -rf /var/lib/apt/lists/* && \
+     rm -rf appsettings*.json
 ENTRYPOINT ["dotnet", "Portal.dll"]
 
 FROM microsoft/dotnet:aspnetcore-runtime

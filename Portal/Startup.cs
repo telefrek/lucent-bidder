@@ -42,6 +42,7 @@ namespace Portal
                 options.MinimumSameSitePolicy = SameSiteMode.None;
             });
 
+            services.AddMediaScanner(Configuration);
             services.AddDbContext<PortalDbContext>(options =>
                               options.UseInMemoryDatabase("local"));
 
