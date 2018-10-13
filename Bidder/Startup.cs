@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,6 +18,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Prometheus;
 
 namespace Bidder
 {
@@ -65,6 +67,27 @@ namespace Bidder
             //app.UseHttpsRedirection(); turn this off for now
             app.UseCookiePolicy();
             app.UseLoadShedding();
+
+            // Add metrics ftw
+            app.UseMetricServer();
+
+            // Track the api latency for each request type
+            var api_latency = Metrics.CreateHistogram("bidder_latency", "Latency for each bidder call", new HistogramConfiguration
+            {
+                LabelNames = new string[] { "method", "path" },
+                Buckets = new double[] { 0.005, 0.010, 0.015, 0.025, 0.050, 0.075, 0.100, 0.125, 0.150, 0.200, 0.25, 0.5, 0.75, 1.0 },
+            });
+
+            // This should be fun...
+            app.Use(async (context, next) =>
+            {
+                var instance = api_latency.WithLabels(context.Request.Method, context.Request.Path);
+                var sw = Stopwatch.StartNew();
+                await next().ContinueWith(t =>
+                {
+                    instance.Observe(sw.ElapsedTicks * 1000d / Stopwatch.Frequency);
+                });
+            });
 
             var routeBuilder = new RouteBuilder(app);
             routeBuilder.MapPost("/v1/bidder", async (context) =>
@@ -119,12 +142,16 @@ namespace Bidder
         {
             using (var serializationReader = _serializationContext.CreateReader(context.Request.Body, false, SerializationFormat.JSON))
             {
-                var request = await serializationReader.ReadAsAsync<BidRequest>();
+                if (await serializationReader.HasNextAsync())
+                {
+                    var request = await serializationReader.ReadAsAsync<BidRequest>();
 
-                if (request != null)
-                    _log.LogInformation("Got request {0}", request.Id);
+                    if (request != null)
+                        _log.LogInformation("Got request {0}", request.Id);
 
-                context.Response.StatusCode = request == null ? 400 : 204;
+                    context.Response.StatusCode = request == null ? 400 : 204;
+                }
+                else context.Response.StatusCode = 400;
             }
         }
     }
