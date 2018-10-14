@@ -63,13 +63,7 @@ namespace Bidder
                 app.UseExceptionHandler("/Error");
                 app.UseHsts();
             }
-
-            //app.UseHttpsRedirection(); turn this off for now
-            app.UseCookiePolicy();
-            app.UseLoadShedding();
-
-            // Add metrics ftw
-            app.UseMetricServer();
+            
 
             // Track the api latency for each request type
             var api_latency = Metrics.CreateHistogram("bidder_latency", "Latency for each bidder call", new HistogramConfiguration
@@ -89,6 +83,11 @@ namespace Bidder
                 });
             });
 
+            //app.UseHttpsRedirection(); turn this off for now
+            app.UseCookiePolicy();
+
+            // Add metrics ftw
+            app.UseMetricServer();
             var routeBuilder = new RouteBuilder(app);
             routeBuilder.MapPost("/v1/bidder", async (context) =>
             {
@@ -108,6 +107,10 @@ namespace Bidder
             });
 
             app.UseRouter(routeBuilder.Build());
+            app.MapWhen(context => context.Request.Path.StartsWithSegments("/v1"), appBuilder =>
+            {
+                appBuilder.UseLoadShedding();
+            });
         }
     }
 

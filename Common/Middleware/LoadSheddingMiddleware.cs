@@ -16,8 +16,8 @@ namespace Lucent.Common.Middleware
     {
         readonly RequestDelegate _next;
         readonly ILogger<LoadSheddingMiddleware> _log;
-        readonly LoadSheddingConfiguration _config;        
-        readonly LoadSheddingLock _lock;
+        readonly LoadSheddingConfiguration _config;
+        readonly LoadSheddingQueue _queue;
 
         /// <summary>
         /// Default constructor
@@ -30,7 +30,26 @@ namespace Lucent.Common.Middleware
             _next = next;
             _log = log;
             _config = options == null ? new LoadSheddingConfiguration() : options.Value ?? new LoadSheddingConfiguration();
-            _lock = new LoadSheddingLock(Math.Max(1, _config.MaxQueueDepth), Math.Max(1, _config.MaxConcurrentRequests), _config.Strategy, _log);
+            _queue = new LoadSheddingQueue(_config.MaxQueueDepth);
+
+            for (var i = 0; i < _config.MaxConcurrentRequests; ++i)
+            {
+                Task.Factory.StartNew(() =>
+                {
+                    LoadSheddableItem item;
+                    if (_queue.TryRemove(out item, TimeSpan.FromSeconds(60)))
+                    {
+                        try
+                        {
+                            item.Source.SetResult(item.HttpContext);
+                        }
+                        catch (Exception e)
+                        {
+                            _log.LogError(e, "Failed to execute request");
+                        }
+                    }
+                }, TaskCreationOptions.LongRunning);
+            }
         }
 
         /// <summary>
@@ -40,106 +59,175 @@ namespace Lucent.Common.Middleware
         /// <returns>A Task</returns>
         public async Task Invoke(HttpContext context)
         {
-            // Start timing for tracking latency, etc.
-            var sw = Stopwatch.StartNew();
+            // Create the wrapped item
+            var item = new LoadSheddableItem(context)
+            {
+                StatusCode = _config.StatusCode
+            };
 
             // Try to queue the request
-            if (await _lock.TryAcquire())
+            if (_queue.TryAdd(item, TimeSpan.FromMilliseconds(15)))
             {
-                try
+                await item.Source.Task.ContinueWith((ctx) =>
                 {
-                    // Invoke the next task
-                    await _next.Invoke(context);
-                }
-                finally
-                {
-                    _lock.Release();
-                }
+                    _next(context);
+                }, TaskContinuationOptions.NotOnCanceled);
             }
             else
             {
+                // Shed
                 context.Response.StatusCode = _config.StatusCode;
             }
-
-            // Done processing, track stats
-            var elapsed = sw.ElapsedMilliseconds;
         }
     }
 
-    /// <summary>
-    /// Lock that sheds load
-    /// </summary>
-    public class LoadSheddingLock
+    class LoadSheddableItem
     {
-        readonly Queue<TaskCompletionSource<bool>> _backlog;
-        volatile int _running, _queued;
-        readonly int _maxSize, _maxConcurrency, _maxWait;
-        readonly object _syncLock = new object();
-        readonly LoadSheddingStrategy _strategy;
-        readonly ILogger _log;
-
-        public LoadSheddingLock(int maxItems, int maxConcurrent, LoadSheddingStrategy strategy, ILogger log)
+        public LoadSheddableItem(HttpContext context)
         {
-            _backlog = new Queue<TaskCompletionSource<bool>>();
-            _running = 0;
-            _queued = 0;
-            _maxSize = maxItems;
-            _maxConcurrency = maxConcurrent;
-            _strategy = strategy;
-            _log = log;
+            Source = new TaskCompletionSource<HttpContext>();
+            HttpContext = context;
+        }
+
+        public TaskCompletionSource<HttpContext> Source { get; set; }
+        public HttpContext HttpContext { get; set; }
+        public int StatusCode { get; set; } = 429;
+    }
+
+    class LoadSheddingQueue
+    {
+        public const int DEFAULT_CAPACITY = 256;
+        public static readonly TimeSpan MAX_WAIT = TimeSpan.FromMinutes(1);
+
+        readonly int BUFFER_MASK = 0xFFF; // Used for bit shifting modulo
+
+        volatile int _head, _tail, _size;
+        volatile LoadSheddableItem[] _buffer;
+        volatile bool _isOpen, _isClosed;
+
+        int _capacity;
+        object _syncLock;
+
+        public LoadSheddingQueue()
+            : this(DEFAULT_CAPACITY)
+        {
+        }
+
+        public LoadSheddingQueue(int capacity)
+        {
+            if (capacity < 2 || capacity >= Math.Pow(2, 31))
+                throw new ArgumentOutOfRangeException("Capacity must be greater than 1 and less than 2^31");
+
+            _syncLock = new object();
+
+            var msb = capacity.MSB() + 1;
+            if((int)Math.Pow(2, msb-1) == capacity)
+                msb--;
+                
+            _capacity = (int)Math.Pow(2, msb);
+
+            BUFFER_MASK = 0x0;
+            for (var i = 0; i < msb; ++i)
+                BUFFER_MASK = (BUFFER_MASK << 1) | 0x1;
+
+            _buffer = new LoadSheddableItem[_capacity];
+            _isOpen = false;
+            _isClosed = false;
+
+            _head = 0;
+            _tail = 0;
+            _size = 0;
         }
 
         /// <summary>
-        /// Tries to asynchronously acquire a lock
+        /// Add a new context to execute
         /// </summary>
-        /// <returns>A task that will complete when the lock is available, or rejected</returns>
-        public Task<bool> TryAcquire()
+        /// <param name="item"></param>
+        /// <param name="timeout"></param>
+        /// <returns></returns>
+        public bool TryAdd(LoadSheddableItem item, TimeSpan timeout)
         {
-            var tcs = new TaskCompletionSource<bool>();
-
-            lock(_syncLock)
+            lock (_syncLock)
             {
-                if(_running < _maxConcurrency)
+                // If the queue is full, time to start shedding
+                while (Available == 0)
                 {
-                    _running++;
-                    tcs.SetResult(true);
-                }
-                else if(_backlog.Count < _maxSize)
-                {
-                    _backlog.Enqueue(tcs);
-                }
-                else
-                {
-                    _log.LogWarning("Shedding load : ({0},{1})", _running, _backlog.Count);
-                    if(_strategy == LoadSheddingStrategy.Head)
+                    var shed = _buffer[_tail];
+                    _tail = (_tail + 1) & BUFFER_MASK;
+                    _size--;
+                    try
                     {
-                        var next = _backlog.Dequeue();
-                        next.SetResult(false);
-                        _backlog.Enqueue(tcs);
+                        shed.HttpContext.Response.StatusCode = shed.StatusCode;
+                        shed.Source.SetCanceled();
                     }
-                    else
+                    catch
                     {
-                        tcs.SetResult(false);
+                        // swallow errors
                     }
                 }
-            }
 
-            return tcs.Task;
+                _size++;
+
+                // Increment and wrap the index then assign the item
+                _buffer[_head] = item;
+                _head = (_head + 1) & BUFFER_MASK;
+
+                // Notify waiting read threads a change has happened
+                Monitor.PulseAll(_syncLock);
+                return true;
+            }
         }
 
-        public void Release()
+        /// <summary>
+        /// Remove the next value if possible
+        /// </summary>
+        /// <param name="item"></param>
+        /// <param name="timeout"></param>
+        /// <returns></returns>
+        public bool TryRemove(out LoadSheddableItem item, TimeSpan timeout)
         {
-            lock(_syncLock)
+            item = null;
+
+            lock (_syncLock)
             {
-                if(_backlog.Count > 0)
-                {
-                    var next = _backlog.Dequeue();
-                    next.SetResult(true);
-                }
-                else
-                {
-                    _running--;
-                }
+                while (Size == 0)
+                    if (!Monitor.Wait(_syncLock, timeout))
+                        return false; // Failed to synchronize in time
+
+                // Get the item and move the tail
+                item = _buffer[_tail];
+                _tail = (_tail + 1) & BUFFER_MASK;
+                _size--;
+
+                // Notify that something was consumed
+                Monitor.PulseAll(_syncLock);
+
+                return true;
+            }
+        }
+
+        int Size
+        {
+            get
+            {
+                return _size;
+            }
+        }
+
+        int Available
+        {
+            get
+            {
+                return _capacity - _size - 1;
+            }
+        }
+
+        public int Count
+        {
+            get
+            {
+                lock (_syncLock)
+                    return Size;
             }
         }
     }

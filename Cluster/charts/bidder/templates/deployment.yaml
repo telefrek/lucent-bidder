@@ -26,8 +26,8 @@ data:
       "load_shedding": {
         "strategy": "Head",
         "maxlatencyms": 100,
-        "maxconcurrentrequests": 20,
-        "maxqueuedepth": 5,
+        "maxconcurrentrequests": 32,
+        "maxqueuedepth": 16,
         "statuscode": 204,
         "isadaptive": true
       },
