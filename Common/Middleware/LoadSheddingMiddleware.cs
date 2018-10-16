@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Prometheus;
 
 namespace Lucent.Common.Middleware
 {
@@ -96,6 +97,11 @@ namespace Lucent.Common.Middleware
 
     class LoadSheddingQueue
     {
+        static readonly Counter _shedCount = Metrics.CreateCounter("requests_shed", "Number of requests shed", new CounterConfiguration
+        {
+            LabelNames = new string[] { "method", "path" },
+        });
+
         public const int DEFAULT_CAPACITY = 256;
         public static readonly TimeSpan MAX_WAIT = TimeSpan.FromMinutes(1);
 
@@ -121,9 +127,9 @@ namespace Lucent.Common.Middleware
             _syncLock = new object();
 
             var msb = capacity.MSB() + 1;
-            if((int)Math.Pow(2, msb-1) == capacity)
+            if ((int)Math.Pow(2, msb - 1) == capacity)
                 msb--;
-                
+
             _capacity = (int)Math.Pow(2, msb);
 
             BUFFER_MASK = 0x0;
@@ -163,6 +169,10 @@ namespace Lucent.Common.Middleware
                     catch
                     {
                         // swallow errors
+                    }
+                    finally
+                    {
+                        _shedCount.WithLabels(shed.HttpContext.Request.Method, shed.HttpContext.Request.Path).Inc();
                     }
                 }
 

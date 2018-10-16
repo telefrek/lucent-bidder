@@ -38,6 +38,8 @@ namespace Lucent.Common.Entities.Serializers
                                 break;
                             case 5:
                                 instance.Contents.AddRange(await serializationStreamReader.ReadAsArrayAsync<CreativeContent>());
+                                foreach (var content in instance.Contents)
+                                    content.HydrateFilter();
                                 break;
                             default:
                                 await serializationStreamReader.SkipAsync();
@@ -58,6 +60,8 @@ namespace Lucent.Common.Entities.Serializers
                         break;
                     case "contents":
                         instance.Contents.AddRange(await serializationStreamReader.ReadAsArrayAsync<CreativeContent>());
+                        foreach (var content in instance.Contents)
+                            content.HydrateFilter();
                         break;
                     default:
                         await serializationStreamReader.SkipAsync();

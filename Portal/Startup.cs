@@ -19,6 +19,7 @@ using Newtonsoft.Json;
 using Lucent.Common;
 using Lucent.Common.Messaging;
 using Newtonsoft.Json.Linq;
+using Prometheus;
 
 namespace Portal
 {
@@ -82,6 +83,9 @@ namespace Portal
             //app.UseHttpsRedirection();
             app.UseStaticFiles();
             app.UseLDAPAuth();
+            
+            app.UseMetricServer();
+            app.UseApiLatency();
 
             app.UseMvc();
             app.UseSignalR(routes =>

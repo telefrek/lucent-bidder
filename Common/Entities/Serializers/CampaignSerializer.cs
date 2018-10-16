@@ -11,7 +11,7 @@ namespace Lucent.Common.Entities.Serializers
 
         public async Task<Campaign> ReadAsync(ISerializationStreamReader serializationStreamReader, CancellationToken token)
         {
-            if(!await serializationStreamReader.StartObjectAsync())
+            if (!await serializationStreamReader.StartObjectAsync())
                 return null;
 
             var instance = new Campaign();
@@ -36,6 +36,11 @@ namespace Lucent.Common.Entities.Serializers
                             case 4:
                                 instance.Schedule = await serializationStreamReader.ReadAsAsync<CampaignSchedule>();
                                 break;
+                            case 5:
+                                instance.BidFilter = await serializationStreamReader.ReadAsAsync<BidFilter>();
+                                if (instance.BidFilter != null)
+                                    instance.IsFiltered = instance.BidFilter.GenerateCode();
+                                break;
                             default:
                                 await serializationStreamReader.SkipAsync();
                                 break;
@@ -52,6 +57,11 @@ namespace Lucent.Common.Entities.Serializers
                         break;
                     case "schedule":
                         instance.Schedule = await serializationStreamReader.ReadAsAsync<CampaignSchedule>();
+                        break;
+                    case "filters":
+                        instance.BidFilter = await serializationStreamReader.ReadAsAsync<BidFilter>();
+                        if (instance.BidFilter != null)
+                            instance.IsFiltered = instance.BidFilter.GenerateCode();
                         break;
                     default:
                         await serializationStreamReader.SkipAsync();
@@ -73,6 +83,7 @@ namespace Lucent.Common.Entities.Serializers
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 2, Name = "name" }, instance.Name);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 3, Name = "spend" }, instance.Spend);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 4, Name = "schedule" }, instance.Schedule);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 5, Name = "filters" }, instance.BidFilter);
                 await serializationStreamWriter.EndObjectAsync();
                 await serializationStreamWriter.FlushAsync();
             }

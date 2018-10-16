@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using Lucent.Common.Entities;
 using Lucent.Common.OpenRTB;
 
 namespace Lucent.Common.Bidding
@@ -9,9 +10,10 @@ namespace Lucent.Common.Bidding
     public interface ICampaignBidder
     {
         /// <summary>
-        /// Gets the campaign identifier
+        /// Gets the associated campaign
         /// </summary>
-        string CampaignId { get; }
+        /// <value></value>
+        Campaign Campaign { get; }
 
         /// <summary>
         /// Create a bid for the given impression

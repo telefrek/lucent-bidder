@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Prometheus;
+using Lucent.Common;
 
 namespace Scoring
 {
@@ -32,6 +34,9 @@ namespace Scoring
             {
                 app.UseHsts();
             }
+
+            app.UseMetricServer();
+            app.UseApiLatency();
 
             app.UseHttpsRedirection();
             app.UseMvc();

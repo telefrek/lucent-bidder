@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Security;
 using System.Security.Cryptography;
 using Lucent.Common;
+using Microsoft.AspNetCore.Builder;
+using Prometheus;
 
 /// <summary>
 /// Contains global extension methods that are useful in a variety of scenarios and not scoped to a single
@@ -122,8 +125,24 @@ public static partial class LucentExtensions
     /// <returns>A new instance of the object if it can be created</returns>
     public static T CreateInstance<T>(this IServiceProvider provider, params object[] supplied)
     {
+        return (T)provider.CreateInstance(typeof(T), supplied);
+    }
+
+    /// <summary>
+    /// Creates an instance of the given type, injecting parameters where possible from the provider
+    /// 
+    /// Throws a LucentException
+    /// </summary>
+    /// <param name="provider">The provider to use for parameter resolution</param>
+    /// <param name="t"></param>
+    /// <param name="supplied">The supplied parameters</param>
+    /// <typeparam name="T">The type of object to craete</typeparam>
+    /// <exception cref="Lucent.Common.LucentException">If there is a problem resolving the object</exception>
+    /// <returns>A new instance of the object if it can be created</returns>
+    public static object CreateInstance(this IServiceProvider provider, Type t, params object[] supplied)
+    {
         var types = supplied.Select(s => s.GetType()).ToArray();
-        var cinfo = typeof(T).GetConstructors().Where(c => IsMatch(c, types)).FirstOrDefault();
+        var cinfo = t.GetConstructors().Where(c => IsMatch(c, types)).FirstOrDefault();
 
         if (cinfo != null)
         {
@@ -147,7 +166,7 @@ public static partial class LucentExtensions
                     pMap[i] = provider.GetService(pArr[i].ParameterType);
 
                 // Hope for the best
-                return (T)cinfo.Invoke(pMap);
+                return cinfo.Invoke(pMap);
             }
             catch (Exception e)
             {
@@ -205,5 +224,39 @@ public static partial class LucentExtensions
         {
             return false;
         }
+    }
+
+    /// <summary>
+    /// Add status codes and Api latency tracking
+    /// </summary>
+    /// <param name="app"></param>
+    /// <returns></returns>
+    public static IApplicationBuilder UseApiLatency(this IApplicationBuilder app)
+    {
+        // Track the api latency for each request type
+        var api_latency = Metrics.CreateHistogram("api_latency", "Latency for api calls", new HistogramConfiguration
+        {
+            LabelNames = new string[] { "method", "path" },
+            Buckets = new double[] { 0.005, 0.010, 0.015, 0.025, 0.050, 0.075, 0.100, 0.125, 0.150, 0.200, 0.25, 0.5, 0.75, 1.0 },
+        });
+
+        var status_code = Metrics.CreateCounter("status_codes", "Status codes", new CounterConfiguration
+        {
+            LabelNames = new string[] { "method", "path", "status" },
+        });
+
+        // This should be fun...
+        app.Use(async (context, next) =>
+        {
+            var instance = api_latency.WithLabels(context.Request.Method, context.Request.Path);
+            var sw = Stopwatch.StartNew();
+            await next().ContinueWith(t =>
+            {
+                instance.Observe(sw.ElapsedTicks * 1000d / Stopwatch.Frequency);
+                status_code.WithLabels(context.Request.Method, context.Request.Path, context.Response.StatusCode.ToString()).Inc();
+            });
+        });
+
+        return app;
     }
 }

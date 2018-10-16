@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using Lucent.Common.OpenRTB;
 using Lucent.Common.Storage;
 
 namespace Lucent.Common.Entities
@@ -24,6 +25,10 @@ namespace Lucent.Common.Entities
 
         public string LandingPage { get; set; }
         public string[] AdDomains { get; set; }
+
+        public BidFilter BidFilter { get; set; }
+
+        public Func<BidRequest, bool> IsFiltered { get; set; } = (br) => false;
 
         [Display(Name = "Schedule")]
         public CampaignSchedule Schedule { get; set; } = new CampaignSchedule { };
