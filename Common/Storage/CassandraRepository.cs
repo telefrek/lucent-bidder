@@ -18,7 +18,7 @@ namespace Lucent.Common.Storage
     /// Internal Cassandra storage repository
     /// </summary>
     /// <typeparam name="T">The type of object to store in cassandra</typeparam>
-    internal class CassandraRepository<T> : ILucentRepository<T>
+    public class CassandraRepository<T> : ILucentRepository<T>
         where T : IStorageEntity, new()
     {
         ISession _session;
@@ -33,7 +33,13 @@ namespace Lucent.Common.Storage
         ILogger _log;
         SerializationFormat _format;
 
-        // Need to get table name mapping
+        /// <summary>
+        /// Default constructor
+        /// </summary>
+        /// <param name="session"></param>
+        /// <param name="format"></param>
+        /// <param name="serializationContext"></param>
+        /// <param name="log"></param>
         public CassandraRepository(ISession session, SerializationFormat format, ISerializationContext serializationContext, ILogger log)
         {
             _session = session;
@@ -57,6 +63,7 @@ namespace Lucent.Common.Storage
             _deleteStatement = _session.Prepare("DELETE FROM {0} WHERE id=? IF etag=?".FormatWith(_tableName));
         }
 
+        /// <inheritdoc/>
         public async Task<ICollection<T>> Get()
         {
             var res = new List<T>();
@@ -133,6 +140,7 @@ namespace Lucent.Common.Storage
             return res;
         }
 
+        /// <inheritdoc/>
         public async Task<T> Get(string key)
         {
             try
@@ -206,6 +214,7 @@ namespace Lucent.Common.Storage
             return default(T);
         }
 
+        /// <inheritdoc/>
         public async Task<bool> TryInsert(T obj)
         {
             _log.LogInformation("Inserting new item");
@@ -238,6 +247,7 @@ namespace Lucent.Common.Storage
             return false;
         }
 
+        /// <inheritdoc/>
         public async Task<bool> TryRemove(T obj)
         {
             try
@@ -254,6 +264,7 @@ namespace Lucent.Common.Storage
             return false;
         }
 
+        /// <inheritdoc/>
         public async Task<bool> TryUpdate(T obj)
         {
             var oldEtag = obj.ETag;

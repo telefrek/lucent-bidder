@@ -220,158 +220,183 @@ namespace Lucent.Common.Serialization
         /// <summary>
         /// Writes the value to the stream
         /// </summary>
+        /// <param name="id"></param>
         /// <param name="value"></param>
         void Write<T>(PropertyId id, T value) where T : new();
 
         /// <summary>
         /// Writes the value to the stream
         /// </summary>
+        /// <param name="id"></param>
         /// <param name="value"></param>
         void Write<T>(PropertyId id, T[] value) where T : new();
 
         /// <summary>
         /// Writes the value to the stream
         /// </summary>
+        /// <param name="id"></param>
         /// <param name="value"></param>
         void Write(PropertyId id, bool value);
 
         /// <summary>
         /// Writes the value to the stream
         /// </summary>
+        /// <param name="id"></param>
         /// <param name="value"></param>
         void Write(PropertyId id, double value);
 
         /// <summary>
         /// Writes the value to the stream
         /// </summary>
+        /// <param name="id"></param>
         /// <param name="value"></param>
         void Write(PropertyId id, float value);
 
         /// <summary>
         /// Writes the value to the stream
         /// </summary>
+        /// <param name="id"></param>
         /// <param name="value"></param>
         void Write(PropertyId id, int value);
 
         /// <summary>
         /// Writes the value to the stream
         /// </summary>
+        /// <param name="id"></param>
         /// <param name="value"></param>
         void Write(PropertyId id, uint value);
 
         /// <summary>
         /// Writes the value to the stream
         /// </summary>
+        /// <param name="id"></param>
         /// <param name="value"></param>
         void Write(PropertyId id, long value);
 
         /// <summary>
         /// Writes the value to the stream
         /// </summary>
+        /// <param name="id"></param>
         /// <param name="value"></param>
         void Write(PropertyId id, ulong value);
 
         /// <summary>
         /// Writes the value to the stream
         /// </summary>
+        /// <param name="id"></param>
         /// <param name="value"></param>
         void Write(PropertyId id, string value);
 
         /// <summary>
         /// Writes the value to the stream
         /// </summary>
+        /// <param name="id"></param>
         /// <param name="value"></param>
         void Write(PropertyId id, string[] value);
 
         /// <summary>
         /// Writes the value to the stream
         /// </summary>
+        /// <param name="id"></param>
         /// <param name="value"></param>
         void Write(PropertyId id, DateTime value);
 
         /// <summary>
         /// Writes the value to the stream
         /// </summary>
+        /// <param name="id"></param>
         /// <param name="value"></param>
         void Write(PropertyId id, Guid value);
 
         /// <summary>
         /// Writes the value to the stream asynchronously
         /// </summary>
+        /// <param name="id"></param>
         /// <param name="value"></param>
         Task WriteAsync<T>(PropertyId id, T value) where T : new();
 
         /// <summary>
         /// Writes the value to the stream asynchronously
         /// </summary>
+        /// <param name="id"></param>
         /// <param name="value"></param>
         Task WriteAsync<T>(PropertyId id, T[] value) where T : new();
 
         /// <summary>
         /// Writes the value to the stream asynchronously
         /// </summary>
+        /// <param name="id"></param>
         /// <param name="value"></param>
         Task WriteAsync(PropertyId id, bool value);
 
         /// <summary>
         /// Writes the value to the stream asynchronously
         /// </summary>
+        /// <param name="id"></param>
         /// <param name="value"></param>
         Task WriteAsync(PropertyId id, double value);
 
         /// <summary>
         /// Writes the value to the stream asynchronously
         /// </summary>
+        /// <param name="id"></param>
         /// <param name="value"></param>
         Task WriteAsync(PropertyId id, float value);
 
         /// <summary>
         /// Writes the value to the stream asynchronously
         /// </summary>
+        /// <param name="id"></param>
         /// <param name="value"></param>
         Task WriteAsync(PropertyId id, int value);
 
         /// <summary>
         /// Writes the value to the stream asynchronously
         /// </summary>
+        /// <param name="id"></param>
         /// <param name="value"></param>
         Task WriteAsync(PropertyId id, uint value);
 
         /// <summary>
         /// Writes the value to the stream asynchronously
         /// </summary>
+        /// <param name="id"></param>
         /// <param name="value"></param>
         Task WriteAsync(PropertyId id, long value);
 
         /// <summary>
         /// Writes the value to the stream asynchronously
         /// </summary>
+        /// <param name="id"></param>
         /// <param name="value"></param>
         Task WriteAsync(PropertyId id, ulong value);
 
         /// <summary>
         /// Writes the value to the stream asynchronously
         /// </summary>
+        /// <param name="id"></param>
         /// <param name="value"></param>
         Task WriteAsync(PropertyId id, string value);
 
         /// <summary>
         /// Writes the value to the stream asynchronously
         /// </summary>
+        /// <param name="id"></param>
         /// <param name="value"></param>
         Task WriteAsync(PropertyId id, string[] value);
 
         /// <summary>
         /// Writes the value to the stream asynchronously
         /// </summary>
+        /// <param name="id"></param>
         /// <param name="value"></param>
         Task WriteAsync(PropertyId id, DateTime value);
 
         /// <summary>
         /// Writes the value to the stream asynchronously
         /// </summary>
+        /// <param name="id"></param>
         /// <param name="value"></param>
         Task WriteAsync(PropertyId id, Guid value);
-
     }
 }

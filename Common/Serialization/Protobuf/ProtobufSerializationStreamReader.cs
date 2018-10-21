@@ -446,18 +446,34 @@ namespace Lucent.Common.Serialization.Protobuf
             await _protoReader.SkipAsync();
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
         public bool HasMoreProperties()
         {
             return Interlocked.Exchange(ref _firstFlag, 1) == 0 || HasNext();
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
         public async Task<bool> HasMorePropertiesAsync()
         {
             return Interlocked.Exchange(ref _firstFlag, 1) == 0 || await HasNextAsync();
         }
 
-
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
         public bool StartObject() => _protoReader.Read();
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
         public Task<bool> StartObjectAsync() => _protoReader.ReadAsync();
 
         #region IDisposable

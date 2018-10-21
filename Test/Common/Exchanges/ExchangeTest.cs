@@ -109,8 +109,7 @@ namespace Lucent.Common.Exchanges
 
         protected override void InitializeDI(IServiceCollection services)
         {
-            services.AddSingleton<IStorageManager, InMemoryStorage>();
-            services.AddSingleton<IExchangeRegistry, ExchangeRegistry>().AddBidding(Configuration);
+            services.AddLucentServices(Configuration, localOnly:true, includeBidder:true);
         }
     }
 }

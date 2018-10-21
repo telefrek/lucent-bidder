@@ -59,12 +59,9 @@ namespace Portal
 
             // Add the ldap auth
             services.AddLDAPAuth(Configuration);
-            services.AddMessaging(Configuration);
+            services.AddLucentServices(Configuration, includePortal:true);
             services.AddSignalR();
             services.AddRouting();
-            services.AddSerialization(Configuration);
-            services.AddOpenRTBSerializers();
-            services.AddStorage(Configuration);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

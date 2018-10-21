@@ -44,11 +44,8 @@ namespace Bidder
 
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
             services.ConfigureLoadShedding(Configuration);
-            services.AddMessaging(Configuration);
-            services.AddSerialization(Configuration);
-            services.AddOpenRTBSerializers();
+            services.AddLucentServices(Configuration, includeBidder:true);
             services.AddSingleton<IBidHandler, BidHandler>();
-            services.AddStorage(Configuration);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

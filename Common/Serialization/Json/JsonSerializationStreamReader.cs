@@ -698,6 +698,7 @@ namespace Lucent.Common.Serialization.Json
             }
         }
 
+        /// <inheritdoc />
         public bool HasMoreProperties()
         {
             if (_jsonReader.TokenType == JsonToken.StartObject)
@@ -716,6 +717,7 @@ namespace Lucent.Common.Serialization.Json
             return _jsonReader.TokenType == JsonToken.PropertyName;
         }
 
+        /// <inheritdoc />
         public async Task<bool> HasMorePropertiesAsync()
         {
 
@@ -735,6 +737,7 @@ namespace Lucent.Common.Serialization.Json
             return _jsonReader.TokenType == JsonToken.PropertyName;
         }
 
+        /// <inheritdoc />
         public bool StartObject()
         {
             if(_jsonReader.TokenType == JsonToken.PropertyName)
@@ -743,6 +746,7 @@ namespace Lucent.Common.Serialization.Json
             return _jsonReader.TokenType == JsonToken.StartObject;
         }
 
+        /// <inheritdoc />
         public async Task<bool> StartObjectAsync()
         {
             if(_jsonReader.TokenType == JsonToken.PropertyName)

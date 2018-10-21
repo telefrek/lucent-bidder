@@ -32,8 +32,10 @@ namespace Lucent.Common.Serialization.Json
             _log = log;
         }
 
+        /// <inheritdoc />
         public void Flush() => _jsonWriter.Flush();
 
+        /// <inheritdoc />
         public async Task FlushAsync() => await _jsonWriter.FlushAsync();
 
         /// <summary>
@@ -458,6 +460,7 @@ namespace Lucent.Common.Serialization.Json
         }
         #endregion
 
+        /// <inheritdoc />
         public void Write<T>(PropertyId id, T value) where T : new()
         {
             if(value.IsNullOrDefault())
@@ -467,6 +470,7 @@ namespace Lucent.Common.Serialization.Json
             Write(value);
         }
 
+        /// <inheritdoc />
         public void Write<T>(PropertyId id, T[] value) where T : new()
         {
             if(value.IsNullOrDefault())
@@ -476,48 +480,56 @@ namespace Lucent.Common.Serialization.Json
             Write(value);
         }
 
+        /// <inheritdoc />
         public void Write(PropertyId id, bool value)
         {
             _jsonWriter.WritePropertyName(id.Name);
             Write(value);
         }
 
+        /// <inheritdoc />
         public void Write(PropertyId id, double value)
         {
             _jsonWriter.WritePropertyName(id.Name);
             Write(value);
         }
 
+        /// <inheritdoc />
         public void Write(PropertyId id, float value)
         {
             _jsonWriter.WritePropertyName(id.Name);
             Write(value);
         }
 
+        /// <inheritdoc />
         public void Write(PropertyId id, int value)
         {
             _jsonWriter.WritePropertyName(id.Name);
             Write(value);
         }
 
+        /// <inheritdoc />
         public void Write(PropertyId id, uint value)
         {
             _jsonWriter.WritePropertyName(id.Name);
             Write(value);
         }
 
+        /// <inheritdoc />
         public void Write(PropertyId id, long value)
         {
             _jsonWriter.WritePropertyName(id.Name);
             Write(value);
         }
 
+        /// <inheritdoc />
         public void Write(PropertyId id, ulong value)
         {
             _jsonWriter.WritePropertyName(id.Name);
             Write(value);
         }
 
+        /// <inheritdoc />
         public void Write(PropertyId id, string value)
         {
             if(value.IsNullOrDefault())
@@ -527,6 +539,7 @@ namespace Lucent.Common.Serialization.Json
             Write(value);
         }
 
+        /// <inheritdoc />
         public void Write(PropertyId id, string[] value)
         {
             if(value.IsNullOrDefault())
@@ -536,6 +549,7 @@ namespace Lucent.Common.Serialization.Json
             Write(value);
         }
 
+        /// <inheritdoc />
         public void Write(PropertyId id, DateTime value)
         {
             if(value.IsNullOrDefault())
@@ -545,6 +559,7 @@ namespace Lucent.Common.Serialization.Json
             Write(value);
         }
 
+        /// <inheritdoc />
         public void Write(PropertyId id, Guid value)
         {
             if(value.IsNullOrDefault())
@@ -554,6 +569,7 @@ namespace Lucent.Common.Serialization.Json
             Write(value);
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync<T>(PropertyId id, T value) where T : new()
         {
             if(value.IsNullOrDefault())
@@ -563,6 +579,7 @@ namespace Lucent.Common.Serialization.Json
             await WriteAsync(value);
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync<T>(PropertyId id, T[] value) where T : new()
         {
             if(value.IsNullOrDefault())
@@ -572,48 +589,56 @@ namespace Lucent.Common.Serialization.Json
             await WriteAsync(value);
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync(PropertyId id, bool value)
         {
             await _jsonWriter.WritePropertyNameAsync(id.Name);
             await WriteAsync(value);
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync(PropertyId id, double value)
         {
             await _jsonWriter.WritePropertyNameAsync(id.Name);
             await WriteAsync(value);
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync(PropertyId id, float value)
         {
             await _jsonWriter.WritePropertyNameAsync(id.Name);
             await WriteAsync(value);
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync(PropertyId id, int value)
         {
             await _jsonWriter.WritePropertyNameAsync(id.Name);
             await WriteAsync(value);
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync(PropertyId id, uint value)
         {
             await _jsonWriter.WritePropertyNameAsync(id.Name);
             await WriteAsync(value);
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync(PropertyId id, long value)
         {
             await _jsonWriter.WritePropertyNameAsync(id.Name);
             await WriteAsync(value);
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync(PropertyId id, ulong value)
         {
             await _jsonWriter.WritePropertyNameAsync(id.Name);
             await WriteAsync(value);
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync(PropertyId id, string value)
         {
             if(value.IsNullOrDefault())
@@ -623,6 +648,7 @@ namespace Lucent.Common.Serialization.Json
             await WriteAsync(value);
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync(PropertyId id, string[] value)
         {
             if(value.IsNullOrDefault())
@@ -632,6 +658,7 @@ namespace Lucent.Common.Serialization.Json
             await WriteAsync(value);
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync(PropertyId id, DateTime value)
         {
             if(value.IsNullOrDefault())
@@ -641,6 +668,7 @@ namespace Lucent.Common.Serialization.Json
             await WriteAsync(value);
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync(PropertyId id, Guid value)
         {
             if(value.IsNullOrDefault())
@@ -650,20 +678,28 @@ namespace Lucent.Common.Serialization.Json
             await WriteAsync(value);
         }
 
+        /// <inheritdoc />
         public async Task StartObjectAsync() => await _jsonWriter.WriteStartObjectAsync();
 
+        /// <inheritdoc />
         public async Task EndObjectAsync() => await _jsonWriter.WriteEndObjectAsync();
 
+        /// <inheritdoc />
         public async Task StartArrayAsync() => await _jsonWriter.WriteStartArrayAsync();
 
+        /// <inheritdoc />
         public async Task EndArrayAsync() => await _jsonWriter.WriteEndArrayAsync();
 
+        /// <inheritdoc />
         public void StartObject() => _jsonWriter.WriteStartObject();
 
+        /// <inheritdoc />
         public void EndObject() => _jsonWriter.WriteEndObject();
 
+        /// <inheritdoc />
         public void StartArray() => _jsonWriter.WriteStartArray();
 
+        /// <inheritdoc />
         public void EndArray() => _jsonWriter.WriteEndArray();
     }
 }

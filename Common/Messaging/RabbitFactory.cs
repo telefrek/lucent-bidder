@@ -47,10 +47,6 @@ namespace Lucent.Common.Messaging
         }
 
         /// <inheritdoc/>
-        public IMessage CreateMessage()
-            => new LucentMessage();
-
-        /// <inheritdoc/>
         public T CreateMessage<T>()
             where T : IMessage
         {

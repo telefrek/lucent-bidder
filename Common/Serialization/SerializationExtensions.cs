@@ -16,18 +16,6 @@ namespace Lucent.Common
     public static partial class LucentExtensions
     {
         /// <summary>
-        /// Hook to configure serialization registry creation during runtime
-        /// </summary>
-        /// <param name="services"></param>
-        /// <param name="configuration"></param>
-        /// <returns></returns>
-        public static IServiceCollection AddSerialization(this IServiceCollection services, IConfiguration configuration) =>
-            // Each request should get it's own seriailzation registry, depending on context
-            services.AddSingleton<ISerializationRegistry, SerializationRegistry>()
-            .AddEntitySerializers()
-            .AddSingleton<ISerializationContext, LucentSerializationContext>();
-
-        /// <summary>
         /// Validates if an object is the default for it's type
         /// </summary>
         /// <param name="instance">an instance of the object</param>

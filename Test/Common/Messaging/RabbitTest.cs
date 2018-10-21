@@ -51,7 +51,7 @@ namespace Lucent.Common.Messaging.Test
             Assert.IsTrue(pub.TryPublish(msg));
 
             // Wait for some time
-            Assert.IsTrue(are.WaitOne(50000));
+            Assert.IsTrue(are.WaitOne(5000));
 
             Assert.IsTrue(received, "Failed to retrieve message");
         }
@@ -111,7 +111,7 @@ namespace Lucent.Common.Messaging.Test
         {
             var factory = ServiceProvider.GetRequiredService<IMessageFactory>();
             var pub = factory.CreatePublisher("blah");
-            var sub = factory.CreateSubscriber<LucentMessage>("blah", 0, "goodbye.*");
+            var sub = factory.CreateSubscriber<LucentMessage>("blah", 0, "goodbye.#");
             var received = false;
             var count = 0;
             var are = new AutoResetEvent(false);
@@ -134,14 +134,12 @@ namespace Lucent.Common.Messaging.Test
             Assert.IsTrue(are.WaitOne(5000));
 
             Assert.IsTrue(received, "Failed to retrieve message");
-            Assert.AreEqual(1, count, "Should have only gotten one message");
+            Assert.AreEqual(2, count, "Should have gotten both messages");
         }
 
         protected override void InitializeDI(IServiceCollection services)
         {
-            services.AddMessaging(Configuration);
-            services.AddSerialization(Configuration);
-            services.AddOpenRTBSerializers();
+            services.AddLucentServices(Configuration, localOnly:true);
         }
     }
 }

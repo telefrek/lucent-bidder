@@ -12,7 +12,7 @@ namespace Lucent.Common.Storage
     /// <summary>
     /// Manager for Cassandra storage
     /// </summary>
-    internal class CassandraStorageManager : IStorageManager
+    public class CassandraStorageManager : IStorageManager
     {
         ICluster _cluster;
         ISession _session;
@@ -22,6 +22,12 @@ namespace Lucent.Common.Storage
         ILogger _log;
         ConcurrentDictionary<Type, object> _registry;
 
+        /// <summary>
+        /// Default constructor
+        /// </summary>
+        /// <param name="serializationContext"></param>
+        /// <param name="options"></param>
+        /// <param name="log"></param>
         public CassandraStorageManager(ISerializationContext serializationContext, IOptions<CassandraConfiguration> options, ILogger<CassandraStorageManager> log)
         {
             _serializationContext = serializationContext;
@@ -40,6 +46,11 @@ namespace Lucent.Common.Storage
             _session.ChangeKeyspace(_config.Keyspace);
         }
 
+        /// <summary>
+        /// Creates a repository for the given storage entity type
+        /// </summary>
+        /// <typeparam name="T">The type of entity to manage</typeparam>
+        /// <returns></returns>
         public ILucentRepository<T> GetRepository<T>() where T : IStorageEntity, new() => new CassandraRepository<T>(_session, _config.Format, _serializationContext, _log);
     }
 }

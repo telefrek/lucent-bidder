@@ -29,9 +29,11 @@ namespace Lucent.Common.Serialization.Protobuf
             _registry = registry;
             _log = log;
         }
-
+        
+        /// <inheritdoc />
         public void Flush() => _protoWriter.Flush();
 
+        /// <inheritdoc />
         public async Task FlushAsync() => await _protoWriter.FlushAsync();
 
         /// <summary>
@@ -158,8 +160,10 @@ namespace Lucent.Common.Serialization.Protobuf
             }
         }
 
+        /// <inheritdoc />
         public void Write(DateTime value) => _protoWriter.Write(value.ToFileTimeUtc());
 
+        /// <inheritdoc />
         public void Write(Guid value) => _protoWriter.Write(value.ToString());
 
         /// <summary>
@@ -297,8 +301,10 @@ namespace Lucent.Common.Serialization.Protobuf
             }
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync(DateTime value) => await _protoWriter.WriteAsync(value.ToFileTimeUtc());
 
+        /// <inheritdoc />
         public async Task WriteAsync(Guid value) => await _protoWriter.WriteAsync(value.ToString());
 
         #region IDisposable
@@ -340,6 +346,7 @@ namespace Lucent.Common.Serialization.Protobuf
         }
         #endregion
 
+        /// <inheritdoc />
         public void Write<T>(PropertyId id, T value) where T : new()
         {
             if (!value.IsNullOrDefault())
@@ -349,6 +356,7 @@ namespace Lucent.Common.Serialization.Protobuf
             }
         }
 
+        /// <inheritdoc />
         public void Write<T>(PropertyId id, T[] value) where T : new()
         {
             if (value != null && value.Length > 0)
@@ -358,12 +366,14 @@ namespace Lucent.Common.Serialization.Protobuf
             }
         }
 
+        /// <inheritdoc />
         public void Write(PropertyId id, bool value)
         {
             _protoWriter.WriteField(id.Id, WireType.VARINT);
             Write(value);
         }
 
+        /// <inheritdoc />
         public void Write(PropertyId id, double value)
         {
             if (!value.IsNullOrDefault())
@@ -373,6 +383,7 @@ namespace Lucent.Common.Serialization.Protobuf
             }
         }
 
+        /// <inheritdoc />
         public void Write(PropertyId id, float value)
         {
             if (!value.IsNullOrDefault())
@@ -382,6 +393,7 @@ namespace Lucent.Common.Serialization.Protobuf
             }
         }
 
+        /// <inheritdoc />
         public void Write(PropertyId id, int value)
         {
             if (!value.IsNullOrDefault())
@@ -391,6 +403,7 @@ namespace Lucent.Common.Serialization.Protobuf
             }
         }
 
+        /// <inheritdoc />
         public void Write(PropertyId id, uint value)
         {
             if (!value.IsNullOrDefault())
@@ -400,6 +413,7 @@ namespace Lucent.Common.Serialization.Protobuf
             }
         }
 
+        /// <inheritdoc />
         public void Write(PropertyId id, long value)
         {
             if (!value.IsNullOrDefault())
@@ -409,6 +423,7 @@ namespace Lucent.Common.Serialization.Protobuf
             }
         }
 
+        /// <inheritdoc />
         public void Write(PropertyId id, ulong value)
         {
             if (!value.IsNullOrDefault())
@@ -418,6 +433,7 @@ namespace Lucent.Common.Serialization.Protobuf
             }
         }
 
+        /// <inheritdoc />
         public void Write(PropertyId id, string value)
         {
             if (!value.IsNullOrDefault())
@@ -427,6 +443,7 @@ namespace Lucent.Common.Serialization.Protobuf
             }
         }
 
+        /// <inheritdoc />
         public void Write(PropertyId id, string[] value)
         {
             if (value != null && value.Length > 0)
@@ -436,6 +453,7 @@ namespace Lucent.Common.Serialization.Protobuf
             }
         }
 
+        /// <inheritdoc />
         public void Write(PropertyId id, DateTime value)
         {
             if (!value.IsNullOrDefault())
@@ -445,12 +463,14 @@ namespace Lucent.Common.Serialization.Protobuf
             }
         }
 
+        /// <inheritdoc />
         public void Write(PropertyId id, Guid value)
         {
             _protoWriter.WriteField(id.Id, WireType.LEN_ENCODED);
             Write(value);
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync<T>(PropertyId id, T value) where T : new()
         {
             if (!value.IsNullOrDefault())
@@ -460,6 +480,7 @@ namespace Lucent.Common.Serialization.Protobuf
             }
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync<T>(PropertyId id, T[] value) where T : new()
         {
             if (value != null && value.Length > 0)
@@ -469,12 +490,14 @@ namespace Lucent.Common.Serialization.Protobuf
             }
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync(PropertyId id, bool value)
         {
             await _protoWriter.WriteFieldAsync(id.Id, WireType.VARINT);
             await WriteAsync(value);
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync(PropertyId id, double value)
         {
             if (!value.IsNullOrDefault())
@@ -484,6 +507,7 @@ namespace Lucent.Common.Serialization.Protobuf
             }
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync(PropertyId id, float value)
         {
             if (!value.IsNullOrDefault())
@@ -493,6 +517,7 @@ namespace Lucent.Common.Serialization.Protobuf
             }
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync(PropertyId id, int value)
         {
             if (!value.IsNullOrDefault())
@@ -502,6 +527,7 @@ namespace Lucent.Common.Serialization.Protobuf
             }
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync(PropertyId id, uint value)
         {
             if (!value.IsNullOrDefault())
@@ -511,6 +537,7 @@ namespace Lucent.Common.Serialization.Protobuf
             }
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync(PropertyId id, long value)
         {
             if (!value.IsNullOrDefault())
@@ -520,6 +547,7 @@ namespace Lucent.Common.Serialization.Protobuf
             }
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync(PropertyId id, ulong value)
         {
             if (!value.IsNullOrDefault())
@@ -529,6 +557,7 @@ namespace Lucent.Common.Serialization.Protobuf
             }
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync(PropertyId id, string value)
         {
             if (!value.IsNullOrDefault())
@@ -538,6 +567,7 @@ namespace Lucent.Common.Serialization.Protobuf
             }
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync(PropertyId id, string[] value)
         {
             if (value != null && value.Length > 0)
@@ -547,6 +577,7 @@ namespace Lucent.Common.Serialization.Protobuf
             }
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync(PropertyId id, DateTime value)
         {
             if (!value.IsNullOrDefault())
@@ -556,6 +587,7 @@ namespace Lucent.Common.Serialization.Protobuf
             }
         }
 
+        /// <inheritdoc />
         public async Task WriteAsync(PropertyId id, Guid value)
         {
             if (!value.IsNullOrDefault())
@@ -565,19 +597,28 @@ namespace Lucent.Common.Serialization.Protobuf
             }
         }
 
+        /// <inheritdoc />
         public void StartObject() { }
 
+        /// <inheritdoc />
         public Task StartObjectAsync() => Task.CompletedTask;
 
+        /// <inheritdoc />
         public void EndObject() { }
 
+        /// <inheritdoc />
         public Task EndObjectAsync() => Task.CompletedTask;
 
+        /// <inheritdoc />
         public void StartArray() { }
 
+        /// <inheritdoc />
         public Task StartArrayAsync() => Task.CompletedTask;
 
+        /// <inheritdoc />
         public void EndArray() { }
+
+        /// <inheritdoc />
         public Task EndArrayAsync() => Task.CompletedTask;
     }
 }

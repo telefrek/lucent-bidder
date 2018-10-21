@@ -29,7 +29,6 @@ namespace Lucent.Common.Test
 
             services.AddSingleton<ILoggerFactory>(new LoggerFactory().AddConsole());
             services.AddLogging();
-            services.AddSerialization(null);
 
             InitializeDI(services);
 

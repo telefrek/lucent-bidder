@@ -25,6 +25,7 @@ namespace Lucent.Common.OpenRTB.Test
         public override void TestInitialize() => base.TestInitialize();
 
         [TestMethod]
+        [Ignore]
         public async Task TestNoBid()
         {
             var bid = new BidRequest
@@ -57,6 +58,7 @@ namespace Lucent.Common.OpenRTB.Test
         }
 
         [TestMethod]
+        [Ignore]
         public async Task TestBid()
         {
             var bid = new BidRequest
@@ -132,6 +134,7 @@ namespace Lucent.Common.OpenRTB.Test
         }
 
         [TestMethod]
+        [Ignore]
         public async Task TestThrottling()
         {
             var bid = new BidRequest
@@ -208,10 +211,7 @@ namespace Lucent.Common.OpenRTB.Test
 
         protected override void InitializeDI(IServiceCollection services)
         {
-            services.AddTransient<ISerializationRegistry, SerializationRegistry>();
-            services.AddMessaging(Configuration);
-            services.AddSerialization(Configuration);
-            services.AddOpenRTBSerializers();
+            services.AddLucentServices(Configuration, localOnly:true);
         }
     }
 }

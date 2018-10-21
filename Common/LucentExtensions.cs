@@ -17,22 +17,67 @@ public static partial class LucentExtensions
 {
     static MD5 _md5 = System.Security.Cryptography.MD5.Create();
 
+    /// <summary>
+    /// Calculate the hash of an buffer
+    /// </summary>
+    /// <param name="buffer"></param>
+    /// <returns></returns>
     public static string CalculateETag(this byte[] buffer) => _md5.ComputeHash(buffer).ToHex();
 
+    /// <summary>
+    /// Encode the value with URL safe characters
+    /// </summary>
+    /// <param name="str"></param>
+    /// <returns></returns>
     public static string SafeBase64Encode(this string str) => str.Replace("/", "_").Replace("+", "-");
 
+    /// <summary>
+    /// Decode the safe UR encoding to valid base64
+    /// </summary>
+    /// <param name="str"></param>
+    /// <returns></returns>
     public static string SafeBase64Decode(this string str) => str.Replace("_", "/").Replace("-", "+");
 
+    /// <summary>
+    /// Escape the string for XML safety
+    /// </summary>
+    /// <param name="src"></param>
+    /// <returns></returns>
     public static string Escape(this string src) => SecurityElement.Escape(src);
 
+    /// <summary>
+    /// Escape the value as a CDATA xml block
+    /// </summary>
+    /// <param name="src"></param>
+    /// <returns></returns>
     public static string CDataEscape(this string src) => "<![CDATA[" + SecurityElement.Escape(src) + "]]>";
 
+    /// <summary>
+    /// Wrap the value in a CDATA xml block
+    /// </summary>
+    /// <param name="src"></param>
+    /// <returns></returns>
     public static string CDataWrap(this string src) => "<![CDATA[" + src + "]]>";
 
+    /// <summary>
+    /// Encodes the GUID as a compressed 22 character representation
+    /// </summary>
+    /// <param name="g"></param>
+    /// <returns></returns>
     public static string EncodeGuid(this Guid g) => Convert.ToBase64String(g.ToByteArray()).SafeBase64Encode().Substring(0, 22);
 
+    /// <summary>
+    /// Decode a compressed GUID from it's 22 character representation
+    /// </summary>
+    /// <param name="s"></param>
+    /// <returns></returns>
     public static Guid DecodeGuid(this string s) => new Guid(Convert.FromBase64String(s.SafeBase64Decode() + "=="));
 
+    /// <summary>
+    /// Hex encode a byte array
+    /// </summary>
+    /// <param name="bytes"></param>
+    /// <returns></returns>
     public static string ToHex(this byte[] bytes)
     {
         char[] c = new char[bytes.Length * 2];
@@ -50,6 +95,7 @@ public static partial class LucentExtensions
 
         return new string(c);
     }
+    
     static int[] MSBDeBruijnLookup = new int[]
         {
             0, 9, 1, 10, 13, 21, 2, 29, 11, 14, 16, 18, 22, 25, 3, 30,

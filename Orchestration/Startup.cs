@@ -34,11 +34,8 @@ namespace Orchestration
 
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
             services.ConfigureLoadShedding(Configuration);
-            services.AddMessaging(Configuration);
-            services.AddSerialization(Configuration);
-            services.AddOpenRTBSerializers();
-            services.AddSingleton<ICampaignProcessor, CampaignManager>();            
-            services.AddStorage(Configuration);
+            services.AddLucentServices(Configuration, includeOrchestration:true);
+            services.AddSingleton<ICampaignProcessor, CampaignManager>();  
         }
 
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)

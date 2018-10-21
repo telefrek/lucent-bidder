@@ -30,7 +30,7 @@ namespace Lucent.Common.Storage.Test
 
         protected override void InitializeDI(IServiceCollection services)
         {
-            services.AddSerialization(Configuration);
+            services.AddLucentServices(Configuration, localOnly:true);
         }
 
         bool BaseLine(BidRequest bid)
