@@ -5,8 +5,6 @@ sudo: required
 
 services:
   - docker
-  
+
 script:
-  - dotnet restore
-  - dotnet build
-  - dotnet test ./Test/Common
+  - bash ./build.sh none
