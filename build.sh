@@ -1,5 +1,5 @@
 #!/bin/bash
-set -xe
+set -e
 IMAGE_TAG=$(date '+%Y%m%d%H%M%S')
 LUCENT_VERSION="$(cat VERSION).$IMAGE_TAG"
 
