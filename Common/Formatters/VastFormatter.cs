@@ -7,8 +7,19 @@ using Lucent.Common.OpenRTB;
 
 namespace Lucent.Common.Formatters
 {
+    /// <summary>
+    /// 
+    /// </summary>
     public class VastFormatter
     {
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="campaign"></param>
+        /// <param name="creative"></param>
+        /// <param name="content"></param>
+        /// <param name="bid"></param>
+        /// <returns></returns>
         public static string ToVast4(Campaign campaign, Creative creative, CreativeContent content, Bid bid)
         {
             var xDoc = new XmlDocument();
@@ -64,6 +75,14 @@ namespace Lucent.Common.Formatters
             return vastRoot.OuterXml;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="campaign"></param>
+        /// <param name="creative"></param>
+        /// <param name="content"></param>
+        /// <param name="bid"></param>
+        /// <returns></returns>
         public static string ToVast3(Campaign campaign, Creative creative, CreativeContent content, Bid bid)
         {
             var xDoc = new XmlDocument();
@@ -118,6 +137,14 @@ namespace Lucent.Common.Formatters
             return vastRoot.OuterXml;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="campaign"></param>
+        /// <param name="creative"></param>
+        /// <param name="content"></param>
+        /// <param name="bid"></param>
+        /// <returns></returns>
         public static string ToVast2(Campaign campaign, Creative creative, CreativeContent content, Bid bid)
         {
             var xDoc = new XmlDocument();
@@ -160,10 +187,21 @@ namespace Lucent.Common.Formatters
         }
     }
 
+    /// <summary>
+    /// XML Extensions for VAST formatting
+    /// </summary>
     public static class VastXmlExtensions
     {
+        /// <summary>
+        /// Default POSTBACK_URI
+        /// </summary>
         public static string POSTBACK_URI = "";
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="element"></param>
+        /// <param name="xDoc"></param>
         public static void AddAdSystem(this XmlElement element, XmlDocument xDoc)
         {
             var adSystem = xDoc.CreateElement("AdSystem");
@@ -172,6 +210,12 @@ namespace Lucent.Common.Formatters
             element.AppendChild(adSystem);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="element"></param>
+        /// <param name="xDoc"></param>
+        /// <param name="creative"></param>
         public static void AddAdTitle(this XmlElement element, XmlDocument xDoc, Creative creative)
         {
             var adTitle = xDoc.CreateElement("AdTitle");
@@ -179,6 +223,13 @@ namespace Lucent.Common.Formatters
             element.AppendChild(adTitle);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="element"></param>
+        /// <param name="xDoc"></param>
+        /// <param name="creative"></param>
+        /// <param name="bid"></param>
         public static void AddImpression(this XmlElement element, XmlDocument xDoc, Creative creative, Bid bid)
         {
             var impression = xDoc.CreateElement("Impression");
@@ -187,6 +238,12 @@ namespace Lucent.Common.Formatters
             element.AppendChild(impression);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="element"></param>
+        /// <param name="xDoc"></param>
+        /// <param name="creative"></param>
         public static void AddDescription(this XmlElement element, XmlDocument xDoc, Creative creative)
         {
             var desc = xDoc.CreateElement("Description");
@@ -194,6 +251,12 @@ namespace Lucent.Common.Formatters
             element.AppendChild(desc);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="element"></param>
+        /// <param name="xDoc"></param>
+        /// <param name="campaign"></param>
         public static void AddAdvertiser(this XmlElement element, XmlDocument xDoc, Campaign campaign)
         {
             var adv = xDoc.CreateElement("Advertiser");
@@ -201,6 +264,12 @@ namespace Lucent.Common.Formatters
             element.AppendChild(adv);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="element"></param>
+        /// <param name="xDoc"></param>
+        /// <param name="bid"></param>
         public static void AddPricing(this XmlElement element, XmlDocument xDoc, Bid bid)
         {
             var price = xDoc.CreateElement("Pricing");
@@ -210,6 +279,13 @@ namespace Lucent.Common.Formatters
             element.AppendChild(price);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="element"></param>
+        /// <param name="xDoc"></param>
+        /// <param name="creative"></param>
+        /// <param name="bid"></param>
         public static void AddErrorUri(this XmlElement element, XmlDocument xDoc, Creative creative, Bid bid)
         {
             var err = xDoc.CreateElement("Error");
@@ -217,6 +293,13 @@ namespace Lucent.Common.Formatters
             element.AppendChild(err);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="element"></param>
+        /// <param name="xDoc"></param>
+        /// <param name="creative"></param>
+        /// <param name="bid"></param>
         public static void AddViewableImpression(this XmlElement element, XmlDocument xDoc, Creative creative, Bid bid)
         {
             var viewImp = xDoc.CreateElement("ViewableImpression");
@@ -230,6 +313,12 @@ namespace Lucent.Common.Formatters
             element.AppendChild(viewImp);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="xDoc"></param>
+        /// <param name="creative"></param>
+        /// <returns></returns>
         public static XmlElement CreateCreative(this XmlDocument xDoc, Creative creative)
         {
             var xCreative = xDoc.CreateElement("Creative");
@@ -240,6 +329,12 @@ namespace Lucent.Common.Formatters
             return xCreative;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="xDoc"></param>
+        /// <param name="content"></param>
+        /// <returns></returns>
         public static XmlElement CreateLinear(this XmlDocument xDoc, CreativeContent content)
         {
             var linear = xDoc.CreateElement("Linear");
@@ -249,6 +344,13 @@ namespace Lucent.Common.Formatters
             return linear;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="xDoc"></param>
+        /// <param name="content"></param>
+        /// <param name="version"></param>
+        /// <returns></returns>
         public static XmlElement CreateMediaFiles(this XmlDocument xDoc, CreativeContent content, int version = 4)
         {
             var mediaFiles = xDoc.CreateElement("MediaFiles");
@@ -257,6 +359,12 @@ namespace Lucent.Common.Formatters
             return mediaFiles;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="element"></param>
+        /// <param name="xDoc"></param>
+        /// <param name="content"></param>
         public static void AddDuration(this XmlElement element, XmlDocument xDoc, CreativeContent content)
         {
             var duration = xDoc.CreateElement("Duration");
@@ -264,6 +372,14 @@ namespace Lucent.Common.Formatters
             element.AppendChild(duration);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="element"></param>
+        /// <param name="xDoc"></param>
+        /// <param name="campaign"></param>
+        /// <param name="creative"></param>
+        /// <param name="bid"></param>
         public static void AddVideoClicks(this XmlElement element, XmlDocument xDoc, Campaign campaign, Creative creative, Bid bid)
         {
             var clicks = xDoc.CreateElement("VideoClicks");
@@ -281,6 +397,14 @@ namespace Lucent.Common.Formatters
             element.AppendChild(clicks);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="xDoc"></param>
+        /// <param name="content"></param>
+        /// <param name="creativeUri"></param>
+        /// <param name="version"></param>
+        /// <returns></returns>
         public static XmlElement CreateMediaFile(this XmlDocument xDoc, CreativeContent content, string creativeUri, int version = 4)
         {
             var media = xDoc.CreateElement("MediaFile");
@@ -301,6 +425,13 @@ namespace Lucent.Common.Formatters
             return media;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="xDoc"></param>
+        /// <param name="name"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
         public static XmlAttribute CreateVastAttribute(this XmlDocument xDoc, string name, string value)
         {
             var attr = xDoc.CreateAttribute(name);

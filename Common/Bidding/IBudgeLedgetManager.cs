@@ -26,6 +26,9 @@ namespace Lucent.Common.Bidding
         Task<Budget> RequestBudgetAsync(string campaignId);
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
     public class BudgetLedgerManager : IBudgetLedgerManager
     {
         BudgetLedgerConfig _config;
@@ -34,6 +37,11 @@ namespace Lucent.Common.Bidding
         ILucentRepository<Campaign> _campaigns;
         ILucentRepository<Budget> _budgets;
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="storageManager"></param>
+        /// <param name="options"></param>
         public BudgetLedgerManager(IStorageManager storageManager, IOptions<BudgetLedgerConfig> options)
         {
             _manager = storageManager;
@@ -44,9 +52,19 @@ namespace Lucent.Common.Bidding
             _budgets = _manager.GetRepository<Budget>();
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="campaignId"></param>
+        /// <returns></returns>
         public async Task<Budget> GetBudgetAsync(string campaignId)
             => await _budgets.Get(campaignId);
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="campaignId"></param>
+        /// <returns></returns>
         public async Task<Budget> RequestBudgetAsync(string campaignId)
         {
             var budget = await _budgets.Get(campaignId);
@@ -103,7 +121,16 @@ namespace Lucent.Common.Bidding
     /// </summary>
     public class BudgetLedgerConfig
     {
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
         public string LedgerUri { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
         public double AllocationAmount { get; set; } = 5d; // Amount of budget to request each time
     }
 }

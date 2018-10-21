@@ -5,11 +5,16 @@ using Lucent.Common.Serialization;
 
 namespace Lucent.Common.OpenRTB.Serializers
 {
+    /// <summary>
+    /// 
+    /// </summary>
     public sealed class ProducerEntitySerializer : IEntitySerializer<Producer>
     {
+        /// <inheritdoc />
         public Producer Read(ISerializationStreamReader serializationStreamReader)
             => ReadAsync(serializationStreamReader, CancellationToken.None).Result;
 
+        /// <inheritdoc />
         public async Task<Producer> ReadAsync(ISerializationStreamReader serializationStreamReader, CancellationToken token)
         {
             if(!await serializationStreamReader.StartObjectAsync())
@@ -63,9 +68,11 @@ namespace Lucent.Common.OpenRTB.Serializers
             return instance;
         }
 
+        /// <inheritdoc />
         public void Write(ISerializationStreamWriter serializationStreamWriter, Producer instance)
             => WriteAsync(serializationStreamWriter, instance, CancellationToken.None).Wait();
 
+        /// <inheritdoc />
         public async Task WriteAsync(ISerializationStreamWriter serializationStreamWriter, Producer instance, CancellationToken token)
         {
             if (instance != null)

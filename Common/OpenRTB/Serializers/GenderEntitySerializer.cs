@@ -5,11 +5,16 @@ using Lucent.Common.Serialization;
 
 namespace Lucent.Common.OpenRTB.Serializers
 {
+    /// <summary>
+    /// 
+    /// </summary>
     public sealed class GenderEntitySerializer : IEntitySerializer<Gender>
     {
+        /// <inheritdoc />
         public Gender Read(ISerializationStreamReader serializationStreamReader)
             => ReadAsync(serializationStreamReader, CancellationToken.None).Result;
 
+        /// <inheritdoc />
         public async Task<Gender> ReadAsync(ISerializationStreamReader serializationStreamReader, CancellationToken token)
         {
             switch (await serializationStreamReader.ReadStringAsync())
@@ -20,9 +25,11 @@ namespace Lucent.Common.OpenRTB.Serializers
             }
         }
 
+        /// <inheritdoc />
         public void Write(ISerializationStreamWriter serializationStreamWriter, Gender instance)
             => WriteAsync(serializationStreamWriter, instance, CancellationToken.None).Wait();
 
+        /// <inheritdoc />
         public async Task WriteAsync(ISerializationStreamWriter serializationStreamWriter, Gender instance, CancellationToken token)
         {
             switch (instance)

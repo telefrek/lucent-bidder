@@ -5,11 +5,16 @@ using Lucent.Common.Serialization;
 
 namespace Lucent.Common.Entities.Serializers
 {
+    /// <summary>
+    /// 
+    /// </summary>
     public class BidFilterSerializer : IEntitySerializer<BidFilter>
     {
+        /// <inheritdoc />
         public BidFilter Read(ISerializationStreamReader serializationStreamReader)
             => ReadAsync(serializationStreamReader, CancellationToken.None).Result;
 
+        /// <inheritdoc />
         public async Task<BidFilter> ReadAsync(ISerializationStreamReader serializationStreamReader, CancellationToken token)
         {
             if (serializationStreamReader.Token == SerializationToken.Unknown)
@@ -40,9 +45,11 @@ namespace Lucent.Common.Entities.Serializers
             return filter;
         }
 
+        /// <inheritdoc />
         public void Write(ISerializationStreamWriter serializationStreamWriter, BidFilter instance)
             => WriteAsync(serializationStreamWriter, instance, CancellationToken.None).Wait();
 
+        /// <inheritdoc />
         public Task WriteAsync(ISerializationStreamWriter serializationStreamWriter, BidFilter instance, CancellationToken token)
         {
             throw new System.NotImplementedException();

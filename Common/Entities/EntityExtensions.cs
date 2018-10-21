@@ -13,21 +13,10 @@ namespace Lucent.Common
 {
     public static partial class LucentExtensions
     {
-        public static IServiceCollection AddEntitySerializers(this IServiceCollection provider)
-        {
-            var registry = provider.BuildServiceProvider().GetRequiredService<ISerializationRegistry>();
-            if (!registry.IsSerializerRegisterred<Campaign>())
-            {
-                registry.Register<Campaign>(new CampaignSerializer());
-                registry.Register<CampaignSchedule>(new CampaignScheduleSerializer());
-                registry.Register<Creative>(new CreativeSearializer());
-                registry.Register<CreativeContent>(new CreativeContentSerializer());
-                registry.Register<Filter>(new FilterSerializer());
-                registry.Register<BidFilter>(new BidFilterSerializer());
-            }
-            return provider;
-        }
-
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="content"></param>
         public static void HydrateFilter(this CreativeContent content)
         {
             var impParam = Expression.Parameter(typeof(Impression), "imp");

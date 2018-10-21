@@ -16,7 +16,6 @@ namespace Lucent.Common.Storage
     {
         ICluster _cluster;
         ISession _session;
-        IServiceProvider _provider;
         ISerializationContext _serializationContext;
         CassandraConfiguration _config;
         ILogger _log;

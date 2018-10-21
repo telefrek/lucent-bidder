@@ -8,10 +8,34 @@ namespace Lucent.Common.Entities
     /// </summary>
     public class Budget : IStorageEntity
     {
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
         public string Id { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
         public string ETag { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
         public DateTime Updated { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
         public int Version { get; set; } = 0;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
         public double Remaining { get; set; } = 0d;
     }
 
@@ -20,13 +44,52 @@ namespace Lucent.Common.Entities
     /// </summary>
     public class BudgetLedger : IStorageEntity
     {
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
         public string Id { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
         public string ETag { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
         public DateTime Updated { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
         public int Version { get; set; } = 0;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
         public DateTime LastAllocation { get; set; } = DateTime.Now;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
         public double HourlyTotal { get; set; } = 0d;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
         public double DailyTotal { get; set; } = 0d;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
         public double LifetimeTotal { get; set; } = 0d;
     }
 }

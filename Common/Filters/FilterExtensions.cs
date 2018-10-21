@@ -14,8 +14,18 @@ using Lucent.Common.Serialization;
 
 namespace Lucent.Common
 {
+    /// <summary>
+    /// 
+    /// </summary>
     public static partial class LucentExtensions
     {
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="collection"></param>
+        /// <param name="loopVar"></param>
+        /// <param name="loopContent"></param>
+        /// <returns></returns>
         public static Expression ForEach(Expression collection, ParameterExpression loopVar, Expression loopContent)
         {
             var elementType = loopVar.Type;
@@ -47,6 +57,11 @@ namespace Lucent.Common
             return loop;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="bidFilter"></param>
+        /// <returns></returns>
         public static Func<BidRequest, bool> GenerateCode(this BidFilter bidFilter)
         {
             // Need our input parameter :)
@@ -106,7 +121,12 @@ namespace Lucent.Common
             return (Func<BidRequest, bool>)comp.GetType().GetMethod("Compile", Type.EmptyTypes).Invoke(comp, new object[] { });
         }
 
-
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="filter"></param>
+        /// <param name="p"></param>
+        /// <returns></returns>
         public static Expression CreateExpression(this Filter filter, Expression p)
         {
             var prop = Expression.Property(p, filter.Property);
@@ -156,6 +176,12 @@ namespace Lucent.Common
             return exp;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="filters"></param>
+        /// <param name="target"></param>
+        /// <returns></returns>
         public static Expression CombineFilters(this ICollection<Filter> filters, Expression target)
         {
             Expression exp = null;

@@ -109,7 +109,6 @@ namespace Lucent.Common.Middleware
 
         volatile int _head, _tail, _size;
         volatile LoadSheddableItem[] _buffer;
-        volatile bool _isOpen, _isClosed;
 
         int _capacity;
         object _syncLock;
@@ -137,8 +136,6 @@ namespace Lucent.Common.Middleware
                 BUFFER_MASK = (BUFFER_MASK << 1) | 0x1;
 
             _buffer = new LoadSheddableItem[_capacity];
-            _isOpen = false;
-            _isClosed = false;
 
             _head = 0;
             _tail = 0;

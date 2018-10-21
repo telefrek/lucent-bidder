@@ -17,7 +17,7 @@ namespace Lucent.Common.Bidding
         /// <summary>
         /// Gets a new budget ledger manager
         /// </summary>
-        /// <returns><A new budget ledger manager/returns>
+        /// <returns>A new budget ledger manager</returns>
         IBudgetLedgerManager CreateBudgetManager();
     }
 }

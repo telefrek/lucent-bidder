@@ -26,6 +26,7 @@ namespace Lucent.Common.OpenRTB.Serializers
         /// Reads the next enum of type T from the stream asynchronously
         /// </summary>
         /// <param name="serializationStreamReader">The current stream</param>
+        /// <param name="token"></param>
         /// <returns>The next enum value from the stream</returns>
         public async Task<T> ReadAsync(ISerializationStreamReader serializationStreamReader, CancellationToken token)
         {
@@ -45,6 +46,7 @@ namespace Lucent.Common.OpenRTB.Serializers
         /// </summary>
         /// <param name="serializationStreamWriter">The stream to write to</param>
         /// <param name="instance">The value to write</param>
+        /// <param name="token"></param>
         public async Task WriteAsync(ISerializationStreamWriter serializationStreamWriter, T instance, CancellationToken token) => await serializationStreamWriter.WriteAsync(Convert.ToInt32(instance));
     }
 }

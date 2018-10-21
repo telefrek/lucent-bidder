@@ -182,7 +182,6 @@ public static partial class LucentExtensions
     /// <param name="provider">The provider to use for parameter resolution</param>
     /// <param name="t"></param>
     /// <param name="supplied">The supplied parameters</param>
-    /// <typeparam name="T">The type of object to craete</typeparam>
     /// <exception cref="Lucent.Common.LucentException">If there is a problem resolving the object</exception>
     /// <returns>A new instance of the object if it can be created</returns>
     public static object CreateInstance(this IServiceProvider provider, Type t, params object[] supplied)

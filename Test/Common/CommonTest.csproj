@@ -16,6 +16,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="2.1.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.1.1" />
     <None Include="$(ProjectDir)resources\**" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="$(ProjectDir)appsettings.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 

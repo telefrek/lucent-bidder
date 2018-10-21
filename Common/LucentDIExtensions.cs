@@ -5,6 +5,10 @@ using Lucent.Common.Bidding;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Lucent.Common.Exchanges;
+using Lucent.Common.Entities;
+using Lucent.Common.Entities.Serializers;
+using Lucent.Common.Filters;
+using Lucent.Common.Filters.Serializers;
 
 namespace Lucent.Common
 {
@@ -28,9 +32,19 @@ namespace Lucent.Common
         {
             // Add serialization
             services.AddSingleton<ISerializationRegistry, SerializationRegistry>()
-                .AddSingleton<ISerializationContext, LucentSerializationContext>()  
-                .AddEntitySerializers()          
+                .AddSingleton<ISerializationContext, LucentSerializationContext>() 
                 .AddOpenRTBSerializers();
+            
+            var registry = services.BuildServiceProvider().GetRequiredService<ISerializationRegistry>();
+            if (!registry.IsSerializerRegisterred<Campaign>())
+            {
+                registry.Register<Campaign>(new CampaignSerializer());
+                registry.Register<CampaignSchedule>(new CampaignScheduleSerializer());
+                registry.Register<Creative>(new CreativeSearializer());
+                registry.Register<CreativeContent>(new CreativeContentSerializer());
+                registry.Register<Filter>(new FilterSerializer());
+                registry.Register<BidFilter>(new BidFilterSerializer());
+            }
 
             // Setup storage, messaging options for local vs distributed cluster
             if (localOnly)
