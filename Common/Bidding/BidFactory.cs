@@ -22,7 +22,7 @@ namespace Lucent.Common.Bidding
         /// <inheritdoc />
         public ICampaignBidder CreateBidder(Campaign campaign)
         {
-            return _provider.CreateInstance<ICampaignBidder>(campaign);
+            return _provider.CreateInstance<CampaignBidder>(campaign);
         }
 
         /// <inheritdoc />

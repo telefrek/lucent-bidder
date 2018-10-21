@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Lucent.Common;
 using Lucent.Common.Bidding;
+using Lucent.Common.Entities;
 using Lucent.Common.Exchanges;
 using Lucent.Common.Messaging;
 using Lucent.Common.OpenRTB;
@@ -22,12 +25,17 @@ namespace Lucent.Samples.SimpleExchange
         ISerializationRegistry _serializationRegistry;
         IBidFactory _bidFactory;
 
+        List<ICampaignBidder> _bidders = new List<ICampaignBidder>();
+
         public void Initialize(IServiceProvider provider)
         {
             _storageManager = provider.GetService<IStorageManager>();
             _messageFactory = provider.GetService<IMessageFactory>();
             _serializationRegistry = provider.GetService<ISerializationRegistry>();
             _bidFactory = provider.GetService<IBidFactory>();
+
+            // Get the current campaign bidders
+            _bidders.AddRange(_storageManager.GetRepository<Campaign>().Get().Result.Select(c => _bidFactory.CreateBidder(c)));
         }
 
         /// <inheritdoc/>
@@ -47,6 +55,7 @@ namespace Lucent.Samples.SimpleExchange
                 NoBidReason = NoBidReason.SuspectedNonHuman,
                 Id = request.Id,
                 CorrelationId = SequentialGuid.NextGuid().ToString(),
+                Bids = _bidders.Select(b => new SeatBid { Bids = b.FilterImpressions(request).Select(i => b.BidAsync(i).Result).ToArray() }).ToArray()
             });
         }
 

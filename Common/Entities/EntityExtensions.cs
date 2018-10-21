@@ -53,10 +53,10 @@ namespace Lucent.Common
                 var wMax = Expression.Property(bValue, "WMax");
 
                 // If H < hMin || H > hMax
-                bannerExpressions.Add(Expression.IfThen(Expression.OrElse(Expression.GreaterThan(hMax, Expression.Constant(content.H)), Expression.LessThan(hMin, Expression.Constant(content.H))), Expression.Label(ret, Expression.Constant(true))));
+                bannerExpressions.Add(Expression.IfThen(Expression.OrElse(Expression.AndAlso(Expression.GreaterThan(hMax, Expression.Constant(0)), Expression.LessThan(hMax, Expression.Constant(content.H))), Expression.GreaterThan(hMin, Expression.Constant(content.H))), Expression.Return(ret, Expression.Constant(true))));
 
                 // If W < wMin || W > wMax
-                bannerExpressions.Add(Expression.IfThen(Expression.OrElse(Expression.GreaterThan(wMax, Expression.Constant(content.W)), Expression.LessThan(wMin, Expression.Constant(content.W))), Expression.Label(ret, Expression.Constant(true))));
+                bannerExpressions.Add(Expression.IfThen(Expression.OrElse(Expression.AndAlso(Expression.GreaterThan(wMax, Expression.Constant(0)), Expression.LessThan(wMax, Expression.Constant(content.W))), Expression.GreaterThan(wMin, Expression.Constant(content.W))), Expression.Return(ret, Expression.Constant(true))));
 
                 if (content.CanScale)
                 {
@@ -71,7 +71,7 @@ namespace Lucent.Common
                             ),
                             Expression.Constant((content.H * 1.0d) / (content.W * 1.0d))
                         ),
-                        Expression.Label(ret, Expression.Constant(true))));
+                        Expression.Return(ret, Expression.Constant(true))));
                 }
                 else
                 {
@@ -82,7 +82,7 @@ namespace Lucent.Common
                                 hProp, Expression.Constant(content.H)),
                             Expression.NotEqual(
                                 wProp, Expression.Constant(content.W))
-                        ), Expression.Label(ret, Expression.Constant(true))));
+                        ), Expression.Return(ret, Expression.Constant(true))));
                 }
 
                 // Create a block
@@ -92,19 +92,21 @@ namespace Lucent.Common
                 expressions.Add(Expression.IfThen(Expression.NotEqual(bValue, Expression.Constant(null)), bannerBlock));
 
                 // Add the default return false for the end
-                expressions.Add(Expression.Label(ret, Expression.Constant(false)));
+                expressions.Add(Expression.Return(ret, Expression.Constant(false)));
             }
             else if (content.ContentType == ContentType.Video)
             {
                 // Video Filters
                 var vValue = Expression.Property(impParam, "Video");
 
-                expressions.Add(Expression.Label(ret, Expression.Constant(false)));
+                expressions.Add(Expression.Return(ret, Expression.Constant(false)));
             }
             else
             {
-                expressions.Add(Expression.Label(ret, Expression.Constant(true)));
+                expressions.Add(Expression.Return(ret, Expression.Constant(true)));
             }
+
+            expressions.Add(Expression.Label(ret, Expression.Constant(false)));
 
             // Compile the expression block
             var final = Expression.Block(expressions);
