@@ -5,8 +5,9 @@ FROM microsoft/dotnet:latest AS build-env
 WORKDIR /opt/lucent
 LABEL component=lucentbuild
 COPY . ./
-RUN dotnet restore
-RUN dotnet publish -c Release
+RUN dotnet restore && \
+    dotnet test ./Test/Common/CommonTest.csproj && \
+    dotnet publish -c Release
 
 ########################
 # Create runtime images

@@ -1,6 +1,11 @@
 language: csharp
 mono: none
 dotnet: 2.1.403
+sudo: required
+
+services:
+  - docker
+  
 script:
   - dotnet restore
   - dotnet build

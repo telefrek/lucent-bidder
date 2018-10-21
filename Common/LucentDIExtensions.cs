@@ -9,6 +9,7 @@ using Lucent.Common.Entities;
 using Lucent.Common.Entities.Serializers;
 using Lucent.Common.Filters;
 using Lucent.Common.Filters.Serializers;
+using Lucent.Common.Media;
 
 namespace Lucent.Common
 {
@@ -64,7 +65,8 @@ namespace Lucent.Common
 
             if (includePortal)
             {
-
+                services.Configure<MediaConfig>(configuration.GetSection("media"))
+                    .AddSingleton<IMediaScanner, MediaScanner>();
             }
 
             if (includeBidder)

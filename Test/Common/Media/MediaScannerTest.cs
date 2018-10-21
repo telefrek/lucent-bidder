@@ -7,6 +7,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Lucent.Common.Media.Test
 {
     [TestClass]
+    [Ignore]
     public class MediaScannerTests : BaseTestClass
     {
         [TestInitialize]
@@ -17,7 +18,7 @@ namespace Lucent.Common.Media.Test
 
         protected override void InitializeDI(IServiceCollection services)
         {
-            services.AddMediaScanner(Configuration);
+            services.AddLucentServices(Configuration, localOnly:true, includePortal:true);
         }
 
         [TestMethod]
