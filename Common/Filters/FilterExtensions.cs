@@ -12,6 +12,8 @@ using Lucent.Common.Filters.Serializers;
 using Lucent.Common.OpenRTB;
 using Lucent.Common.Serialization;
 
+// Enumerable
+
 namespace Lucent.Common
 {
     /// <summary>
@@ -112,6 +114,19 @@ namespace Lucent.Common
                     Expression.AndAlso(Expression.NotEqual(userProp, Expression.Constant(null)), Expression.OrElse(userFilter, Expression.AndAlso(Expression.NotEqual(geoProp, Expression.Constant(null)), geoFilter))), Expression.Return(ret, Expression.Constant(true))));
             }
 
+            // Process the site filters
+            if (bidFilter.SiteFilters != null)
+            {
+                // Get the impressions
+                var siteProp = Expression.Property(bidParam, "Site");
+                var siteType = typeof(Site);
+                var siteTest = CombineFilters(bidFilter.SiteFilters, siteProp);
+
+                // Create the loop and add it to this block
+                expList.Add(Expression.IfThen(Expression.AndAlso(Expression.NotEqual(siteProp, Expression.Constant(null)),
+                    siteTest), Expression.Return(ret, Expression.Constant(true))));
+            }
+
             expList.Add(Expression.Label(ret, Expression.Constant(false)));
 
             var final = Expression.Block(expList);
@@ -155,13 +170,30 @@ namespace Lucent.Common
                     // if prop is string, contains
                     // else if prop is array, for blah in Length...
                     // else if prop is collection, Linq.Contains
-                    if (filter.Values != null)
-                    {
 
+                    var ptype = (prop.Member as PropertyInfo).PropertyType;
+                    if (ptype.IsArray)
+                    {
+                        if (filter.Values != null)
+                        {
+                            // Hahahaha...this is ugly
+                            exp = Expression.Call(null,
+                                typeof(Enumerable).GetMethods().Single(m => m.Name.Equals("Intersect") && m.IsGenericMethod && m.GetParameters().Length == 2)
+                                    .MakeGenericMethod(ptype.GetElementType()),
+                                        prop,
+                                        Expression.Constant(typeof(LucentExtensions).GetMethods()
+                                            .Single(m => m.IsGenericMethod && m.Name == "CastTo").MakeGenericMethod(ptype.GetElementType()).Invoke(null, new object[] { filter.Values })));
+
+                            var m1 = typeof(Enumerable).GetMethods().Single(m => m.Name.Equals("Count") && m.IsGenericMethod && m.GetParameters().Length == 1).MakeGenericMethod(ptype.GetElementType());
+                            exp = Expression.GreaterThan(Expression.Call(null, m1, exp), Expression.Constant(0));
+                        }
+                        else
+                        {
+
+                        }
                     }
-                    else
+                    else if (ptype.GetInterface(nameof(IEnumerable)) != null)
                     {
-
                     }
 
                     // Not in is just assert in != true
@@ -198,6 +230,14 @@ namespace Lucent.Common
 
             return exp;
         }
+
+        /// <summary>
+        /// Cast the object array to the correct type
+        /// </summary>
+        /// <param name="original"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public static T[] CastTo<T>(object[] original) => original.Select(o => (T)o).ToArray();
 
         static readonly MethodInfo makeLambda = typeof(Expression).GetMethods().Where(m =>
                 m.Name == "Lambda" && m.IsGenericMethod && m.GetGenericArguments().Length == 1

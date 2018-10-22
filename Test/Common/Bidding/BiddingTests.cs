@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucent.Common.Entities;
+using Lucent.Common.Exchanges;
 using Lucent.Common.Filters;
 using Lucent.Common.Messaging;
 using Lucent.Common.Middleware;
@@ -18,7 +19,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Lucent.Common.Exchanges
+namespace Lucent.Common.Bidding
 {
     [TestClass]
     public class BiddingTests : BaseTestClass

@@ -30,7 +30,7 @@ namespace Lucent.Common.Storage.Test
 
         protected override void InitializeDI(IServiceCollection services)
         {
-            services.AddLucentServices(Configuration, localOnly:true);
+            services.AddLucentServices(Configuration, localOnly: true);
         }
 
         bool BaseLine(BidRequest bid)
@@ -63,7 +63,7 @@ namespace Lucent.Common.Storage.Test
 
             var bFilter = new BidFilter
             {
-                ImpressionFilters = new[] { new Filter{ Property = "BidCurrency", Value = "CAN" } },
+                ImpressionFilters = new[] { new Filter { Property = "BidCurrency", Value = "CAN" } },
                 UserFilters = new[] { new Filter { Property = "Gender", Value = Gender.Unknown } },
                 GeoFilters = new[] { new Filter { Property = "Country", Value = "CAN" } }
             };
@@ -76,6 +76,29 @@ namespace Lucent.Common.Storage.Test
             req.User.Geo = new Geo { Country = "CAN" };
 
             Assert.IsTrue(f.Invoke(req), "Filter should have matched");
+        }
+
+        [TestMethod]
+        public void TestInFilter()
+        {
+            var req = new BidRequest
+            {
+                Impressions = new Impression[] { new Impression { ImpressionId = "test" } },
+                User = new User { Gender = Gender.Male },
+                Site = new Site { SiteCategories = new string[] { "BCAT1" } }
+            };
+
+            var bFilter = new BidFilter
+            {
+                SiteFilters = new[] { new Filter { FilterType = FilterType.IN, Property = "SiteCategories", Values = new object[] { "BCAT1" } } },
+            };
+
+            var f = bFilter.GenerateCode();
+
+            Assert.IsTrue(f.Invoke(req), "Bid should have been filtered");
+
+            req.Site.SiteCategories = new string[] { "BCAT2" };
+            Assert.IsFalse(f.Invoke(req), "Bid should not have been filtered");
         }
     }
 }
