@@ -44,5 +44,11 @@ namespace Lucent.Common.Exchanges
         /// Gets the exchange name
         /// </summary>
         string Name { get; }
+
+        /// <summary>
+        /// Gets the load order
+        /// </summary>
+        /// <value></value>
+        int Order { get; }
     }
 }

@@ -271,6 +271,10 @@ namespace Lucent.Common.Serialization.Json
                 var serializer = _registry.GetSerializer<T>();
                 var array = new List<T>();
 
+                // Advance if still on the property
+                if(_jsonReader.TokenType == JsonToken.PropertyName)
+                    await _jsonReader.ReadAsync();
+
                 // Check if we are at the start of an array
                 if (_jsonReader.TokenType == JsonToken.StartArray)
                     await _jsonReader.ReadAsync();

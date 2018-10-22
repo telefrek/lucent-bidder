@@ -39,7 +39,11 @@ namespace Lucent.Common.Bidding
         public Task<Bid> BidAsync(Impression impression)
         {
             // Need to generate the bid at some point...
-            return Task.FromResult((Bid)null);
+            return Task.FromResult(new Bid
+            {
+                CPM = 1.0,
+                BidExpiresSeconds = 5,
+            });
         }
 
         static readonly Impression[] EMPTY_IMPRESSION = new Impression[0];
@@ -62,7 +66,7 @@ namespace Lucent.Common.Bidding
                     impList.Add(imp);
 
             // Ensure if sold as a bundle, we have all impressions, otherwise return matched or none
-            return request.AllImpressions && impList.Count == request.Impressions.Length ? impList.ToArray() : EMPTY_IMPRESSION;
+            return request.AllImpressions ? impList.Count == request.Impressions.Length ? impList.ToArray() : EMPTY_IMPRESSION : impList.ToArray();
         }
     }
 }

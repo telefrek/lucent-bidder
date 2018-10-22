@@ -7,6 +7,7 @@ using System.Security;
 using System.Security.Cryptography;
 using Lucent.Common;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Prometheus;
 
 /// <summary>
@@ -95,7 +96,7 @@ public static partial class LucentExtensions
 
         return new string(c);
     }
-    
+
     static int[] MSBDeBruijnLookup = new int[]
         {
             0, 9, 1, 10, 13, 21, 2, 29, 11, 14, 16, 18, 22, 25, 3, 30,
@@ -170,9 +171,7 @@ public static partial class LucentExtensions
     /// <exception cref="Lucent.Common.LucentException">If there is a problem resolving the object</exception>
     /// <returns>A new instance of the object if it can be created</returns>
     public static T CreateInstance<T>(this IServiceProvider provider, params object[] supplied)
-    {
-        return (T)provider.CreateInstance(typeof(T), supplied);
-    }
+        => (T)provider.CreateInstance(typeof(T), supplied);
 
     /// <summary>
     /// Creates an instance of the given type, injecting parameters where possible from the provider

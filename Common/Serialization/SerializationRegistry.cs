@@ -11,7 +11,7 @@ namespace Lucent.Common.Serialization
     /// </summary>
     public class SerializationRegistry : ISerializationRegistry
     {
-        readonly ConcurrentDictionary<Type, object> _registry = new ConcurrentDictionary<Type, object>();
+        static readonly ConcurrentDictionary<Type, object> _registry = new ConcurrentDictionary<Type, object>();
 
         ILogger _log;
 

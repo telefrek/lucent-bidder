@@ -228,15 +228,6 @@ namespace Lucent.Common.Middleware
                 return _capacity - _size - 1;
             }
         }
-
-        public int Count
-        {
-            get
-            {
-                lock (_syncLock)
-                    return Size;
-            }
-        }
     }
 
     /// <summary>

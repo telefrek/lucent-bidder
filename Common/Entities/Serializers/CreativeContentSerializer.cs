@@ -114,6 +114,8 @@ namespace Lucent.Common.Entities.Serializers
 
                 }
             }
+
+            instance.HydrateFilter();
             return instance;
         }
 

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
 namespace Lucent.Common.Exchanges
@@ -80,7 +81,7 @@ namespace Lucent.Common.Exchanges
                             exchg.Initialize(_provider);
                             _exchangeMap.Remove(exchangePath);
                             _exchangeMap.Add(exchangePath, exchg);
-                            _exchanges = _exchangeMap.Values.ToList();
+                            _exchanges = _exchangeMap.Values.OrderByDescending(e => e.Order).ToList();
                         }
                     }
                 }
