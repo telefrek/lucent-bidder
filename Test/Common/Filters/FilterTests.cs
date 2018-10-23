@@ -85,12 +85,13 @@ namespace Lucent.Common.Storage.Test
             {
                 Impressions = new Impression[] { new Impression { ImpressionId = "test" } },
                 User = new User { Gender = Gender.Male },
-                Site = new Site { SiteCategories = new string[] { "BCAT1" } }
+                Site = new Site { SiteCategories = new string[] { "BCAT1" }, Domain = "lucentbid.com" }
             };
 
             var bFilter = new BidFilter
             {
-                SiteFilters = new[] { new Filter { FilterType = FilterType.IN, Property = "SiteCategories", Values = new object[] { "BCAT1" } } },
+                SiteFilters = new[] { new Filter { FilterType = FilterType.IN, Property = "SiteCategories", Values = new object[] { "BCAT1" } },
+                    new Filter { FilterType = FilterType.IN, Property = "SiteCategories", Value = "BCAT3" }, new Filter { FilterType = FilterType.IN, Property = "Domain", Values = new object[]{"telefrek.com", "telefrek.co", "bad" }} },
             };
 
             var f = bFilter.GenerateCode();
@@ -99,6 +100,23 @@ namespace Lucent.Common.Storage.Test
 
             req.Site.SiteCategories = new string[] { "BCAT2" };
             Assert.IsFalse(f.Invoke(req), "Bid should not have been filtered");
+
+            req.Site.SiteCategories = new string[] { "BCAT2", "BCAT3" };
+            Assert.IsTrue(f.Invoke(req), "Bid should have been filtered");
+
+
+            req.Site.SiteCategories = new string[] { "BCAT2" };
+            req.Site.Domain = "telefrek.co";
+            Assert.IsTrue(f.Invoke(req), "Bid should have been filtered");
+
+            req.Site.Domain = "adobada";
+            Assert.IsTrue(f.Invoke(req), "Bid should have been filtered");
+
+            req.Site.Domain = null;
+            Assert.IsFalse(f.Invoke(req), "Bid should not have been filtered");
+
+            req.Site.SiteCategories = new string[] { "BCAT1" };
+            Assert.IsTrue(f.Invoke(req), "Bid should have been filtered");
         }
     }
 }

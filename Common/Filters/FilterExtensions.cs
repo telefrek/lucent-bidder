@@ -146,7 +146,7 @@ namespace Lucent.Common
         {
             var prop = Expression.Property(p, filter.Property);
 
-            Expression exp = null;
+            Expression exp = Expression.Constant(true);
             switch (filter.FilterType)
             {
                 case FilterType.NEQ:
@@ -187,14 +187,68 @@ namespace Lucent.Common
                             var m1 = typeof(Enumerable).GetMethods().Single(m => m.Name.Equals("Count") && m.IsGenericMethod && m.GetParameters().Length == 1).MakeGenericMethod(ptype.GetElementType());
                             exp = Expression.GreaterThan(Expression.Call(null, m1, exp), Expression.Constant(0));
                         }
-                        else
+                        else if (filter.Value != null)
                         {
-
+                            exp = Expression.Call(null,
+                                typeof(Enumerable).GetMethods().Single(m => m.Name.Equals("Contains") && m.IsGenericMethod && m.GetParameters().Length == 2)
+                                    .MakeGenericMethod(ptype.GetElementType()), prop,
+                                        Expression.Convert(Expression.Constant(filter.Value), ptype.GetElementType()));
                         }
                     }
-                    else if (ptype.GetInterface(nameof(IEnumerable)) != null)
+                    else if (ptype.IsAssignableFrom(typeof(string)))
                     {
+                        if (filter.Values != null)
+                        {
+                            var lamRet = Expression.Label(typeof(bool));
+                            var lamParam = Expression.Parameter(typeof(string), "s");
+                            var expList = new List<Expression>();
+                            expList.Add(Expression.IfThen(Expression.Call(prop, typeof(string).GetMethods().First(m => m.Name == "Contains" && m.GetParameters().Length == 1 && m.GetParameters().First().ParameterType == typeof(string)), lamParam), Expression.Return(lamRet, Expression.Constant(true))));
+
+                            expList.Add(Expression.Label(lamRet, Expression.Constant(false)));
+
+                            var final = Expression.Block(expList);
+                            var ftype = typeof(Func<,>).MakeGenericType(typeof(string), typeof(bool));
+
+
+                            var castValues = Expression.Constant(typeof(LucentExtensions).GetMethods()
+                                            .Single(m => m.IsGenericMethod && m.Name == "CastTo").MakeGenericMethod(typeof(string)).Invoke(null, new object[] { filter.Values }));
+
+                            exp = Expression.Call(null, typeof(Enumerable).GetMethods().Single(m => m.Name.Equals("Any") && m.IsGenericMethod && m.GetParameters().Length == 2).MakeGenericMethod(typeof(string)), castValues, Expression.Lambda(final, false, new ParameterExpression[] { lamParam }));
+
+                        }
+                        else if (filter.Value != null)
+                        {
+                            exp = Expression.Call(null,
+                                typeof(string).GetMethods().Single(m => m.Name.Equals("Contains") && m.GetParameters().Length == 1)
+                                    .MakeGenericMethod(ptype.GetElementType()), prop, Expression.Convert(Expression.Constant(filter.Value), typeof(string)));
+                        }
                     }
+                    else if (ptype.GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>)) != null)
+                    {
+                        // This never gets used right now, depends on definition
+                        if (filter.Values != null)
+                        {
+                            // Hahahaha...this is ugly
+                            exp = Expression.Call(null,
+                                typeof(Enumerable).GetMethods().Single(m => m.Name.Equals("Intersect") && m.IsGenericMethod && m.GetParameters().Length == 2)
+                                    .MakeGenericMethod(ptype.GetGenericArguments()[0]),
+                                        prop,
+                                        Expression.Constant(typeof(LucentExtensions).GetMethods()
+                                            .Single(m => m.IsGenericMethod && m.Name == "CastTo").MakeGenericMethod(ptype.GetGenericArguments()[0]).Invoke(null, new object[] { filter.Values })));
+
+                            var m1 = typeof(Enumerable).GetMethods().Single(m => m.Name.Equals("Count") && m.IsGenericMethod && m.GetParameters().Length == 1).MakeGenericMethod(ptype.GetGenericArguments()[0]);
+                            exp = Expression.GreaterThan(Expression.Call(null, m1, exp), Expression.Constant(0));
+                        }
+                        else if (filter.Value != null)
+                        {
+                            exp = Expression.Call(null,
+                                typeof(Enumerable).GetMethods().Single(m => m.Name.Equals("Contains") && m.IsGenericMethod && m.GetParameters().Length == 2)
+                                    .MakeGenericMethod(ptype.GetElementType()), prop,
+                                        Expression.Convert(Expression.Constant(filter.Value), ptype.GetElementType()));
+                        }
+                    }
+                    else
+                        return exp; // Don't evaluate the not in
 
                     // Not in is just assert in != true
                     if (filter.FilterType == FilterType.NOTIN)
@@ -205,7 +259,7 @@ namespace Lucent.Common
                     break;
             }
 
-            return exp;
+            return Expression.AndAlso(Expression.NotEqual(prop, Expression.Constant(null)), exp);
         }
 
         /// <summary>
