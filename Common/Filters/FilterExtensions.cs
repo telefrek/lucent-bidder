@@ -218,9 +218,7 @@ namespace Lucent.Common
                         }
                         else if (filter.Value != null)
                         {
-                            exp = Expression.Call(null,
-                                typeof(string).GetMethods().Single(m => m.Name.Equals("Contains") && m.GetParameters().Length == 1)
-                                    .MakeGenericMethod(ptype.GetElementType()), prop, Expression.Convert(Expression.Constant(filter.Value), typeof(string)));
+                            exp = Expression.Call(prop, typeof(string).GetMethods().First(m => m.Name == "Contains" && m.GetParameters().Length == 1 && m.GetParameters().First().ParameterType == typeof(string)), Expression.Constant(filter.Value));
                         }
                     }
                     else if (ptype.GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>)) != null)

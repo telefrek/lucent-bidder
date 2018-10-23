@@ -46,6 +46,7 @@ namespace Lucent.Common
                 registry.Register<CreativeContent>(new CreativeContentSerializer());
                 registry.Register<Filter>(new FilterSerializer());
                 registry.Register<BidFilter>(new BidFilterSerializer());
+                registry.Register<BidderFilter>(new BidderFilterSerializer());
 
                 // Register the enums
                 registry.Register<AdPosition>(new EnumEntitySerializer<AdPosition>());

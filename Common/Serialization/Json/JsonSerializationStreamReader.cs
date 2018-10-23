@@ -17,8 +17,6 @@ namespace Lucent.Common.Serialization.Json
         readonly ILogger _log;
         readonly ISerializationRegistry _registry;
 
-        volatile SerializationToken _token;
-
 
         /// <summary>
         /// Default constructor for the stream reader
@@ -29,15 +27,9 @@ namespace Lucent.Common.Serialization.Json
         public JsonSerializationStreamReader(JsonReader jsonReader, ISerializationRegistry registry, ILogger log)
         {
             _jsonReader = jsonReader;
-            _token = SerializationToken.Unknown;
             _registry = registry;
             _log = log;
         }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public SerializationToken Token => _token;
 
         /// <summary>
         /// 
@@ -48,157 +40,31 @@ namespace Lucent.Common.Serialization.Json
         /// 
         /// </summary>
         /// <returns></returns>
-        async Task updateTokenAsync()
-        {
-            // reset the token
-            switch (_jsonReader.TokenType)
-            {
-                case JsonToken.Boolean:
-                case JsonToken.Float:
-                case JsonToken.String:
-                case JsonToken.Integer:
-                case JsonToken.Bytes:
-                case JsonToken.Date:
-                    _token = SerializationToken.Value;
-                    break;
-                case JsonToken.StartObject:
-                    _token = SerializationToken.Object;
-                    break;
-                case JsonToken.StartArray:
-                    _token = SerializationToken.Array;
-                    break;
-                case JsonToken.PropertyName:
-                    _token = SerializationToken.Property;
-                    break;
-                case JsonToken.EndArray:
-                case JsonToken.EndObject:
-                    if (await _jsonReader.ReadAsync())
-                        await updateTokenAsync();
-                    else
-                        _token = SerializationToken.EndOfStream;
-                    break;
-                default:
-                    _token = SerializationToken.Unknown;
-                    break;
-            }
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        void updateToken()
-        {
-            // reset the token
-            switch (_jsonReader.TokenType)
-            {
-                case JsonToken.Boolean:
-                case JsonToken.Float:
-                case JsonToken.String:
-                case JsonToken.Integer:
-                case JsonToken.Bytes:
-                case JsonToken.Date:
-                    _token = SerializationToken.Value;
-                    break;
-                case JsonToken.StartObject:
-                    _token = SerializationToken.Object;
-                    break;
-                case JsonToken.StartArray:
-                    _token = SerializationToken.Array;
-                    break;
-                case JsonToken.PropertyName:
-                    _token = SerializationToken.Property;
-                    break;
-                case JsonToken.EndArray:
-                case JsonToken.EndObject:
-                    if (_jsonReader.Read())
-                        updateToken();
-                    else
-                        _token = SerializationToken.EndOfStream;
-                    break;
-                default:
-                    _token = SerializationToken.Unknown;
-                    break;
-            }
-        }
+        public bool HasNext() => HasNextAsync().Result;
 
         /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
-        public bool HasNext()
-        {
-            if (_jsonReader.Read())
-            {
-                updateToken();
-                return true;
-            }
-
-            _token = SerializationToken.EndOfStream;
-            return false;
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <returns></returns>
-        public async Task<bool> HasNextAsync()
-        {
-            if (await _jsonReader.ReadAsync())
-            {
-                updateToken();
-                return true;
-            }
-
-            return false;
-        }
+        public async Task<bool> HasNextAsync() => await _jsonReader.ReadAsync();
 
         /// <summary>
         ///
         /// </summary>
-        public void Skip()
-        {
-            try
-            {
-                _jsonReader.Skip();
-            }
-            finally
-            {
-                updateToken();
-            }
-        }
+        public void Skip() => SkipAsync().Wait();
 
         /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
-        public async Task SkipAsync()
-        {
-            try
-            {
-                await _jsonReader.SkipAsync();
-            }
-            finally
-            {
-                await updateTokenAsync();
-            }
-        }
+        public async Task SkipAsync() => await _jsonReader.SkipAsync();
 
         /// <summary>
         /// 
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public T ReadAs<T>() where T : new()
-        {
-            try
-            {
-                return _registry.GetSerializer<T>().Read(this);
-            }
-            finally
-            {
-                updateToken();
-            }
-        }
+        public T ReadAs<T>() where T : new() => ReadAsAsync<T>().Result;
 
         /// <summary>
         /// 
@@ -206,57 +72,15 @@ namespace Lucent.Common.Serialization.Json
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
         public async Task<T> ReadAsAsync<T>() where T : new()
-        {
-            try
-            {
-                return await _registry.GetSerializer<T>().ReadAsync(this, CancellationToken.None);
-            }
-            finally
-            {
-                await updateTokenAsync();
-            }
-        }
+            => await _registry.GetSerializer<T>().ReadAsync(this, CancellationToken.None);
+
 
         /// <summary>
         /// 
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public T[] ReadAsArray<T>() where T : new()
-        {
-            try
-            {
-                // Get the serializer and a place to store the values
-                var serializer = _registry.GetSerializer<T>();
-                var array = new List<T>();
-
-                // Check if we are at the start of an array
-                if (_jsonReader.TokenType == JsonToken.StartArray)
-                    _jsonReader.Read();
-
-                do
-                {
-                    // Only deserialize started objects
-                    if (_jsonReader.TokenType == JsonToken.StartObject)
-                        array.Add(serializer.Read(this));
-
-                    // Get out of the loop
-                    else if (_jsonReader.TokenType == JsonToken.EndArray)
-                        break;
-
-                    // Might even want to toss an exception here...
-                    else
-                        _jsonReader.Skip();
-
-                } while (_jsonReader.Read());
-
-                return array.ToArray();
-            }
-            finally
-            {
-                updateToken();
-            }
-        }
+        public T[] ReadAsArray<T>() where T : new() => ReadAsArrayAsync<T>().Result;
 
         /// <summary>
         /// 
@@ -265,339 +89,139 @@ namespace Lucent.Common.Serialization.Json
         /// <returns></returns>
         public async Task<T[]> ReadAsArrayAsync<T>() where T : new()
         {
-            try
+            // Get the serializer and a place to store the values
+            var serializer = _registry.GetSerializer<T>();
+            var array = new List<T>();
+
+            // Advance if still on the property
+            if (_jsonReader.TokenType == JsonToken.PropertyName)
+                await _jsonReader.ReadAsync();
+
+            // Check if we are at the start of an array
+            if (_jsonReader.TokenType == JsonToken.StartArray)
+                await _jsonReader.ReadAsync();
+
+            do
             {
-                // Get the serializer and a place to store the values
-                var serializer = _registry.GetSerializer<T>();
-                var array = new List<T>();
+                // Only deserialize started objects
+                if (_jsonReader.TokenType == JsonToken.StartObject)
+                    array.Add(await serializer.ReadAsync(this, CancellationToken.None));
 
-                // Advance if still on the property
-                if(_jsonReader.TokenType == JsonToken.PropertyName)
-                    await _jsonReader.ReadAsync();
+                // Get out of the loop
+                else if (_jsonReader.TokenType == JsonToken.EndArray)
+                    break;
 
-                // Check if we are at the start of an array
-                if (_jsonReader.TokenType == JsonToken.StartArray)
-                    await _jsonReader.ReadAsync();
+                // Might even want to toss an exception here...
+                else
+                    await _jsonReader.SkipAsync();
 
-                do
-                {
-                    // Only deserialize started objects
-                    if (_jsonReader.TokenType == JsonToken.StartObject)
-                        array.Add(await serializer.ReadAsync(this, CancellationToken.None));
+            } while (_jsonReader.TokenType != JsonToken.EndArray && await _jsonReader.ReadAsync());
 
-                    // Get out of the loop
-                    else if (_jsonReader.TokenType == JsonToken.EndArray)
-                        break;
-
-                    // Might even want to toss an exception here...
-                    else
-                        await _jsonReader.SkipAsync();
-
-                } while (await _jsonReader.ReadAsync());
-
-                return array.ToArray();
-            }
-            finally
-            {
-                await updateTokenAsync();
-            }
+            return array.ToArray();
         }
 
         /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
-        public bool ReadBoolean()
-        {
-            try
-            {
-                return _jsonReader.ReadAsBoolean().GetValueOrDefault();
-            }
-            finally
-            {
-                updateToken();
-            }
-        }
+        public bool ReadBoolean() => ReadBooleanAsync().Result;
 
         /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
-        public async Task<bool> ReadBooleanAsync()
-        {
-            try
-            {
-                return (await _jsonReader.ReadAsBooleanAsync()).GetValueOrDefault();
-            }
-            finally
-            {
-                await updateTokenAsync();
-            }
-        }
+        public async Task<bool> ReadBooleanAsync() => (await _jsonReader.ReadAsBooleanAsync()).GetValueOrDefault();
 
         /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
-        public double ReadDouble()
-        {
-            try
-            {
-                return _jsonReader.ReadAsDouble().GetValueOrDefault();
-            }
-            finally
-            {
-                updateToken();
-            }
-        }
+        public double ReadDouble() => ReadDoubleAsync().Result;
 
         /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
-        public async Task<double> ReadDoubleAsync()
-        {
-            try
-            {
-                return (await _jsonReader.ReadAsDoubleAsync()).GetValueOrDefault();
-            }
-            finally
-            {
-                await updateTokenAsync();
-            }
-        }
+        public async Task<double> ReadDoubleAsync() => (await _jsonReader.ReadAsDoubleAsync()).GetValueOrDefault();
 
         /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
-        public int ReadInt()
-        {
-            try
-            {
-                return _jsonReader.ReadAsInt32().GetValueOrDefault();
-            }
-            finally
-            {
-                updateToken();
-            }
-        }
+        public int ReadInt() => ReadIntAsync().Result;
 
         /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
-        public async Task<int> ReadIntAsync()
-        {
-            try
-            {
-                return (await _jsonReader.ReadAsInt32Async()).GetValueOrDefault();
-            }
-            finally
-            {
-                await updateTokenAsync();
-            }
-        }
+        public async Task<int> ReadIntAsync() => (await _jsonReader.ReadAsInt32Async()).GetValueOrDefault();
 
         /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
-        public long ReadLong()
-        {
-            try
-            {
-                return _jsonReader.ReadAsInt32().GetValueOrDefault();
-            }
-            finally
-            {
-                updateToken();
-            }
-        }
+        public long ReadLong() => ReadLongAsync().Result;
 
         /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
-        public async Task<long> ReadLongAsync()
-        {
-            try
-            {
-                return (await _jsonReader.ReadAsInt32Async()).GetValueOrDefault();
-            }
-            finally
-            {
-                await updateTokenAsync();
-            }
-        }
+        public async Task<long> ReadLongAsync() => (await _jsonReader.ReadAsInt32Async()).GetValueOrDefault();
 
         /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
-        public float ReadSingle()
-        {
-            try
-            {
-                return (float)_jsonReader.ReadAsDouble().GetValueOrDefault();
-            }
-            finally
-            {
-                updateToken();
-            }
-        }
+        public float ReadSingle() => ReadSingleAsync().Result;
 
         /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
-        public async Task<float> ReadSingleAsync()
-        {
-            try
-            {
-                return (float)(await _jsonReader.ReadAsDoubleAsync()).GetValueOrDefault();
-            }
-            finally
-            {
-                await updateTokenAsync();
-            }
-        }
+        public async Task<float> ReadSingleAsync() => (float)(await _jsonReader.ReadAsDoubleAsync()).GetValueOrDefault();
 
         /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
-        public string ReadString()
-        {
-            try
-            {
-                return _jsonReader.ReadAsString();
-            }
-            finally
-            {
-                updateToken();
-            }
-        }
+        public string ReadString() => ReadStringAsync().Result;
 
         /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
-        public async Task<string> ReadStringAsync()
-        {
-            try
-            {
-                return await _jsonReader.ReadAsStringAsync();
-            }
-            finally
-            {
-                await updateTokenAsync();
-            }
-        }
+        public async Task<string> ReadStringAsync() => await _jsonReader.ReadAsStringAsync();
 
         /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
-        public DateTime ReadDateTime()
-        {
-            try
-            {
-                return DateTime.Parse(_jsonReader.ReadAsString());
-            }
-            finally
-            {
-                updateToken();
-            }
-        }
+        public DateTime ReadDateTime() => ReadDateTimeAsync().Result;
 
         /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
-        public async Task<DateTime> ReadDateTimeAsync()
-        {
-            try
-            {
-                return DateTime.Parse(await _jsonReader.ReadAsStringAsync());
-            }
-            finally
-            {
-                await updateTokenAsync();
-            }
-        }
+        public async Task<DateTime> ReadDateTimeAsync() => DateTime.Parse(await _jsonReader.ReadAsStringAsync());
 
         /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
-        public Guid ReadGuid()
-        {
-            try
-            {
-                return Guid.Parse(_jsonReader.ReadAsString());
-            }
-            finally
-            {
-                updateToken();
-            }
-        }
+        public Guid ReadGuid() => ReadGuidAsync().Result;
 
 
         /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
-        public async Task<Guid> ReadGuidAsync()
-        {
-            try
-            {
-                return Guid.Parse(await _jsonReader.ReadAsStringAsync());
-            }
-            finally
-            {
-                updateToken();
-            }
-        }
+        public async Task<Guid> ReadGuidAsync() => Guid.Parse(await _jsonReader.ReadAsStringAsync());
 
         /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
-        public string[] ReadStringArray()
-        {
-            try
-            {
-                // Create the temp storage for the array
-                var array = new List<string>();
-
-                // Check if we are at the start of an array
-                if (_jsonReader.TokenType == JsonToken.StartArray)
-                    _jsonReader.Read();
-
-                do
-                {
-                    // Only deserialize string objects
-                    if (_jsonReader.TokenType == JsonToken.String)
-                        array.Add(ReadString());
-
-                    // Get out of the loop
-                    else if (_jsonReader.TokenType == JsonToken.EndArray)
-                        break;
-
-                    // Might even want to toss an exception here...
-                    else
-                        _jsonReader.Skip();
-
-                } while (_jsonReader.Read());
-
-                return array.ToArray();
-            }
-            finally
-            {
-                updateToken();
-            }
-        }
+        public string[] ReadStringArray() => ReadStringArrayAsync().Result;
 
         /// <summary>
         /// 
@@ -605,126 +229,65 @@ namespace Lucent.Common.Serialization.Json
         /// <returns></returns>
         public async Task<string[]> ReadStringArrayAsync()
         {
-            try
+            // Create the temp storage for the array
+            var array = new List<string>();
+
+            if (_jsonReader.TokenType == JsonToken.PropertyName)
+                await _jsonReader.ReadAsync();
+
+            // Check if we are at the start of an array
+            if (_jsonReader.TokenType == JsonToken.StartArray)
+                await _jsonReader.ReadAsync();
+
+            do
             {
-                // Create the temp storage for the array
-                var array = new List<string>();
+                // Only deserialize string objects
+                if (_jsonReader.TokenType == JsonToken.String)
+                    array.Add(_jsonReader.Value as string);
 
-                // Check if we are at the start of an array
-                if (_jsonReader.TokenType == JsonToken.StartArray)
-                    await _jsonReader.ReadAsync();
+                // Get out of the loop
+                else if (_jsonReader.TokenType == JsonToken.EndArray)
+                    break;
 
-                do
-                {
-                    // Only deserialize string objects
-                    if (_jsonReader.TokenType == JsonToken.String)
-                        array.Add(await ReadStringAsync());
+                // Might even want to toss an exception here...
+                else
+                    await _jsonReader.SkipAsync();
 
-                    // Get out of the loop
-                    else if (_jsonReader.TokenType == JsonToken.EndArray)
-                        break;
+            } while (await _jsonReader.ReadAsync());
 
-                    // Might even want to toss an exception here...
-                    else
-                        await _jsonReader.SkipAsync();
-
-                } while (await _jsonReader.ReadAsync());
-
-                return array.ToArray();
-            }
-            finally
-            {
-                await updateTokenAsync();
-            }
+            return array.ToArray();
         }
 
         /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
-        public uint ReadUInt()
-        {
-            try
-            {
-                return (uint)_jsonReader.ReadAsInt32().GetValueOrDefault();
-            }
-            finally
-            {
-                updateToken();
-            }
-        }
+        public uint ReadUInt() => ReadUIntAsync().Result;
 
         /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
-        public async Task<uint> ReadUIntAsync()
-        {
-            try
-            {
-                return (uint)(await _jsonReader.ReadAsInt32Async()).GetValueOrDefault();
-            }
-            finally
-            {
-                await updateTokenAsync();
-            }
-        }
+        public async Task<uint> ReadUIntAsync() => (uint)(await _jsonReader.ReadAsInt32Async()).GetValueOrDefault();
 
         /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
-        public ulong ReadULong()
-        {
-            try
-            {
-                return (ulong)_jsonReader.ReadAsInt32().GetValueOrDefault();
-            }
-            finally
-            {
-                updateToken();
-            }
-        }
+        public ulong ReadULong() => ReadULongAsync().Result;
 
         /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
-        public async Task<ulong> ReadULongAsync()
-        {
-            try
-            {
-                return (ulong)(await _jsonReader.ReadAsInt32Async()).GetValueOrDefault();
-            }
-            finally
-            {
-                await updateTokenAsync();
-            }
-        }
+        public async Task<ulong> ReadULongAsync() => (ulong)(await _jsonReader.ReadAsInt32Async()).GetValueOrDefault();
 
         /// <inheritdoc />
-        public bool HasMoreProperties()
-        {
-            if (_jsonReader.TokenType == JsonToken.StartObject)
-            {
-                if (!HasNext())
-                    return false;
-                return _jsonReader.TokenType == JsonToken.PropertyName;
-            }
-
-            if (_jsonReader.TokenType == JsonToken.EndObject)
-                return false;
-
-            if (_jsonReader.TokenType != JsonToken.PropertyName)
-                _jsonReader.Read();
-
-            return _jsonReader.TokenType == JsonToken.PropertyName;
-        }
+        public bool HasMoreProperties() => HasMorePropertiesAsync().Result;
 
         /// <inheritdoc />
         public async Task<bool> HasMorePropertiesAsync()
         {
-
             if (_jsonReader.TokenType == JsonToken.StartObject)
             {
                 if (!await HasNextAsync())
@@ -742,21 +305,30 @@ namespace Lucent.Common.Serialization.Json
         }
 
         /// <inheritdoc />
-        public bool StartObject()
+        public bool StartObject() => StartObjectAsync().Result;
+
+        /// <inheritdoc />
+        public async Task<bool> StartObjectAsync()
         {
-            if(_jsonReader.TokenType == JsonToken.PropertyName)
-                return HasNext() && _jsonReader.TokenType == JsonToken.StartObject;;
+            if (_jsonReader.TokenType == JsonToken.PropertyName)
+                return await HasNextAsync() && _jsonReader.TokenType == JsonToken.StartObject; ;
 
             return _jsonReader.TokenType == JsonToken.StartObject;
         }
 
         /// <inheritdoc />
-        public async Task<bool> StartObjectAsync()
-        {
-            if(_jsonReader.TokenType == JsonToken.PropertyName)
-                return await HasNextAsync() && _jsonReader.TokenType == JsonToken.StartObject;;
+        public bool EndObject() => EndObjectAsync().Result;
 
-            return _jsonReader.TokenType == JsonToken.StartObject;
+        /// <inheritdoc />
+        public async Task<bool> EndObjectAsync()
+        {
+            if (_jsonReader.TokenType == JsonToken.EndObject)
+            {
+                await _jsonReader.ReadAsync();
+                return true;
+            }
+
+            return false;
         }
 
         #region IDisposable

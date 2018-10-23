@@ -9,12 +9,6 @@ namespace Lucent.Common.Serialization
     public interface ISerializationStreamReader : IDisposable
     {
         /// <summary>
-        /// Gets the current SerializationToken
-        /// </summary>
-        /// <returns>The type of token currently available</returns>
-        SerializationToken Token { get; }
-
-        /// <summary>
         /// Gets the current value at this position
         /// </summary>
         /// <returns>An object representing the current value at the position</returns>
@@ -36,6 +30,17 @@ namespace Lucent.Common.Serialization
         /// </summary>
         /// <returns></returns>
         Task<bool> StartObjectAsync();
+
+        /// <summary>
+        /// 
+        /// </summary>
+        bool EndObject();
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        Task<bool> EndObjectAsync();
 
         /// <summary>
         /// Skips the next token

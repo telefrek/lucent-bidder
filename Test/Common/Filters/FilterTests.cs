@@ -65,7 +65,7 @@ namespace Lucent.Common.Storage.Test
             {
                 ImpressionFilters = new[] { new Filter { Property = "BidCurrency", Value = "CAN" } },
                 UserFilters = new[] { new Filter { Property = "Gender", Value = Gender.Unknown } },
-                GeoFilters = new[] { new Filter { Property = "Country", Value = "CAN" } }
+                GeoFilters = new[] { new Filter { FilterType = FilterType.EQ, Property = "Country", Value = "CAN" } }
             };
 
 

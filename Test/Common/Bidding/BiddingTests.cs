@@ -38,6 +38,7 @@ namespace Lucent.Common.Bidding
         [TestMethod]
         public async Task TestSuccessfulBid()
         {
+            await SetupBidderFilters();
             await SetupExchange();
 
             var bid = BidGenerator.GenerateBid();
@@ -86,6 +87,28 @@ namespace Lucent.Common.Bidding
             await middleware.HandleAsync(httpContext);
             Assert.AreEqual(204, httpContext.Response.StatusCode, "Invalid status code");
             Assert.IsFalse(httpContext.Request.Body.CanRead, "Request body should have been read and closed");
+
+
+            // Ensure we filter out a blobal bid
+            bid.Impressions.First().Banner.H = 100;
+            bid.Site = new Site { Domain = "telefrek.com" };
+            httpContext = await SetupContext(bid);
+            await middleware.HandleAsync(httpContext);
+            Assert.AreEqual(204, httpContext.Response.StatusCode, "Invalid status code");
+            Assert.IsFalse(httpContext.Request.Body.CanRead, "Request body should have been read and closed");
+        }
+
+        async Task SetupBidderFilters()
+        {
+            var fiters = ServiceProvider.GetRequiredService<IStorageManager>().GetRepository<BidderFilter>();
+            Assert.IsTrue(await fiters.TryInsert(new BidderFilter
+            {
+                Id = SequentialGuid.NextGuid().ToString(),
+                BidFilter = new BidFilter
+                {
+                    SiteFilters = new[] { new Filter { FilterType = FilterType.IN, Property = "Domain", Value = "telefrek" } }
+                }
+            }));
         }
 
         async Task<HttpContext> SetupContext(BidRequest bid)

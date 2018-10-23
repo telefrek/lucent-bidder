@@ -102,7 +102,7 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public bool HasNext()
         {
-            if(_protoReader.Position == 0 && !_protoReader.IsEmpty())
+            if (_protoReader.Position == 0 && !_protoReader.IsEmpty())
                 return true;
 
             if (!_protoReader.IsEmpty() && _protoReader.Read())
@@ -121,7 +121,7 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <returns></returns>
         public async Task<bool> HasNextAsync()
         {
-            if(_protoReader.Position == 0 && !_protoReader.IsEmpty())
+            if (_protoReader.Position == 0 && !_protoReader.IsEmpty())
                 return true;
 
             if (!_protoReader.IsEmpty() && await _protoReader.ReadAsync())
@@ -475,6 +475,19 @@ namespace Lucent.Common.Serialization.Protobuf
         /// </summary>
         /// <returns></returns>
         public Task<bool> StartObjectAsync() => _protoReader.ReadAsync();
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public bool EndObject() => EndObjectAsync().Result;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public Task<bool> EndObjectAsync() => Task.FromResult(true);
 
         #region IDisposable
         bool _disposed = false;

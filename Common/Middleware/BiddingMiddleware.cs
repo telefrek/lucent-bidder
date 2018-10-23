@@ -1,10 +1,14 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Lucent.Common.Entities;
 using Lucent.Common.Exchanges;
 using Lucent.Common.Messaging;
 using Lucent.Common.OpenRTB;
 using Lucent.Common.Serialization;
+using Lucent.Common.Storage;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
@@ -17,9 +21,11 @@ namespace Lucent.Common.Middleware
     public class BiddingMiddleware
     {
         ILogger<BiddingMiddleware> _log;
-        IMessageSubscriber<LucentMessage> _subscriber;
         ISerializationContext _serializationContext;
         IExchangeRegistry _exchangeRegistry;
+        IStorageManager _storageManager;
+        List<Func<BidRequest, bool>> _bidFilters;
+
         int _next = 0;
 
         /// <summary>
@@ -30,20 +36,15 @@ namespace Lucent.Common.Middleware
         /// <param name="factory"></param>
         /// <param name="serializationContext"></param>
         /// <param name="exchangeRegistry"></param>
-        public BiddingMiddleware(RequestDelegate next, ILogger<BiddingMiddleware> log, IMessageFactory factory, ISerializationContext serializationContext, IExchangeRegistry exchangeRegistry)
+        /// <param name="storageManager"></param>
+        public BiddingMiddleware(RequestDelegate next, ILogger<BiddingMiddleware> log, IMessageFactory factory, ISerializationContext serializationContext, IExchangeRegistry exchangeRegistry, IStorageManager storageManager)
         {
             _log = log;
             _serializationContext = serializationContext;
             _exchangeRegistry = exchangeRegistry;
-            _subscriber = factory.CreateSubscriber<LucentMessage>("campaigns", 0);
-            _subscriber.OnReceive = (m) =>
-           {
-               if (m != null)
-               {
-                   _log.LogInformation("Received message: {0}", m.Body);
-                   Interlocked.Exchange(ref _next, 1);
-               }
-           };
+            _storageManager = storageManager;
+            _bidFilters = _storageManager.GetRepository<BidderFilter>().Get().Result.Where(f => f.BidFilter != null).Select(f => f.BidFilter.GenerateCode()).ToList();
+
         }
 
         /// <summary>
@@ -57,7 +58,7 @@ namespace Lucent.Common.Middleware
             var exchange = _exchangeRegistry.Exchanges.FirstOrDefault(e => e.IsMatch(context));
             if (exchange == null)
             {
-                context.Response.StatusCode = 400;
+                context.Response.StatusCode = 204;
                 return;
             }
 
@@ -74,7 +75,7 @@ namespace Lucent.Common.Middleware
                 {
                     var request = await serializationReader.ReadAsAsync<BidRequest>();
 
-                    if (request != null)
+                    if (request != null && !_bidFilters.Any(f => f.Invoke(request)))
                     {
                         var response = await exchange.Bid(request);
                         if (response != null && (response.Bids ?? new SeatBid[0]).Length > 0)

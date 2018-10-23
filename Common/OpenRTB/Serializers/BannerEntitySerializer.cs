@@ -137,6 +137,10 @@ namespace Lucent.Common.OpenRTB.Serializers
 
                 }
             }
+
+            if(!await serializationStreamReader.EndObjectAsync())
+                return null;
+                
             return instance;
         }
 

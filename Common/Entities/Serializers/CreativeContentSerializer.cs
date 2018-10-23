@@ -116,6 +116,10 @@ namespace Lucent.Common.Entities.Serializers
             }
 
             instance.HydrateFilter();
+            
+            if(!await serializationStreamReader.EndObjectAsync())
+                return null;
+                
             return instance;
         }
 

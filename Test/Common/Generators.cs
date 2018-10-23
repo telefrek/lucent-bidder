@@ -81,6 +81,13 @@ namespace Lucent.Common.Test
                             MimeTypes = new string[]{"image/png"}
                         }
                     }
+                },
+                User = new User
+                {
+                    Geo = new Geo
+                    {
+                        Country = "USA",
+                    }
                 }
             };
         }

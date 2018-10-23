@@ -12,9 +12,8 @@ namespace Lucent.Common.Filters.Serializers
 
         public async Task<Filter> ReadAsync(ISerializationStreamReader serializationStreamReader, CancellationToken token)
         {
-            if (serializationStreamReader.Token == SerializationToken.Unknown)
-                if (!await serializationStreamReader.HasNextAsync())
-                    return null;
+            if (!await serializationStreamReader.StartObjectAsync())
+                return null;
 
             var filter = new Filter();
 
