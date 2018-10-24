@@ -12,7 +12,7 @@ namespace Lucent.Common.Entities
         /// 
         /// </summary>
         /// <value></value>
-        public string SecondaryId { get; set; }
+        public Guid SecondaryId { get; set; }
 
         /// <summary>
         /// 

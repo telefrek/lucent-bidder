@@ -1,3 +1,5 @@
+using System;
+
 namespace Lucent.Common.Storage
 {
     /// <summary>
@@ -9,6 +11,6 @@ namespace Lucent.Common.Storage
         /// 
         /// </summary>
         /// <value></value>
-        string SecondaryId { get; set; }
+        Guid SecondaryId { get; set; }
     }
 }

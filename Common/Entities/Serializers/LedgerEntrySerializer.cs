@@ -35,7 +35,7 @@ namespace Lucent.Common.Entities.Serializers
                                 entry.Id = await serializationStreamReader.ReadStringAsync();
                                 break;
                             case 2:
-                                entry.SecondaryId = await serializationStreamReader.ReadStringAsync();
+                                entry.SecondaryId = await serializationStreamReader.ReadGuidAsync();
                                 break;
                             case 3:
                                 entry.EntryType = await serializationStreamReader.ReadAsAsync<LedgerEntryType>();
@@ -55,7 +55,7 @@ namespace Lucent.Common.Entities.Serializers
                         entry.Id = await serializationStreamReader.ReadStringAsync();
                         break;
                     case "secondary":
-                        entry.SecondaryId = await serializationStreamReader.ReadStringAsync();
+                        entry.SecondaryId = await serializationStreamReader.ReadGuidAsync();
                         break;
                     case "entrytype":
                         entry.EntryType = await serializationStreamReader.ReadAsAsync<LedgerEntryType>();

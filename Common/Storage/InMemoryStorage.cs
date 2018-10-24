@@ -100,6 +100,12 @@ namespace Lucent.Common.Storage
             public Task<T> Get(string key) => Task.FromResult(Entities.FirstOrDefault(e => e.Id.Equals(key)));
 
             /// <inheritdoc />
+            public Task<T> Get(string id, Guid secondaryId)=> Task.FromResult(Entities.FirstOrDefault(e => e.Id.Equals(id) && e.SecondaryId == secondaryId));
+
+            /// <inheritdoc />
+            public Task<List<T>> GetCluster(string id) => Task.FromResult(Entities.Where(e => e.Id.Equals(id)).ToList());
+
+            /// <inheritdoc />
             public Task<bool> TryInsert(T obj)
             {
                 if (!Entities.Exists(e => e.Id == obj.Id))
