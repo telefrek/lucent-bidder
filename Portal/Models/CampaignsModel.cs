@@ -15,7 +15,7 @@ namespace Lucent.Portal.Models
 {
     public class CampaignsModel : PageModel
     {
-        private readonly ILucentRepository<Campaign> _db;
+        private readonly IStorageRepostory<Campaign> _db;
         private readonly ILogger<CampaignsModel> _log;
         readonly IMessageFactory _factory;
 

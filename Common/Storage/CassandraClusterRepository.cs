@@ -18,8 +18,8 @@ namespace Lucent.Common.Storage
     /// Internal Cassandra storage repository
     /// </summary>
     /// <typeparam name="T">The type of object to store in cassandra</typeparam>
-    public class CassandraRepository<T> : IStorageRepostory<T>
-        where T : IStorageEntity, new()
+    public class CassandraClusterRepository<T> : IClusteredRepository<T>
+        where T : IClusteredStorageEntity, new()
     {
         ISession _session;
         string _tableName;
@@ -40,7 +40,7 @@ namespace Lucent.Common.Storage
         /// <param name="format"></param>
         /// <param name="serializationContext"></param>
         /// <param name="log"></param>
-        public CassandraRepository(ISession session, SerializationFormat format, ISerializationContext serializationContext, ILogger log)
+        public CassandraClusterRepository(ISession session, SerializationFormat format, ISerializationContext serializationContext, ILogger log)
         {
             _session = session;
             _tableName = typeof(T).Name.ToLowerInvariant();

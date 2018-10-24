@@ -12,7 +12,7 @@ namespace Lucent.Portal.Models
 {
     public class CreativesModel : PageModel
     {
-        private readonly ILucentRepository<Creative> _db;
+        private readonly IStorageRepostory<Creative> _db;
         private readonly ILogger<CreativesModel> _log;
         readonly IMessageFactory _factory;
         readonly string _contentRoot;

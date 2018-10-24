@@ -14,7 +14,7 @@ namespace Lucent.Common.Storage
         object _syncLock = new object();
 
         /// <inheritdoc />
-        public ILucentRepository<T> GetRepository<T>() where T : IStorageEntity, new()
+        public IStorageRepostory<T> GetRepository<T>() where T : IStorageEntity, new()
         {
             lock (_syncLock)
             {
@@ -28,11 +28,64 @@ namespace Lucent.Common.Storage
             }
         }
 
+        /// <inheritdoc />
+        public IClusteredRepository<T> GetClusterRepository<T>() where T : IClusteredStorageEntity, new()
+        {
+            lock (_syncLock)
+            {
+                if (!_entities.ContainsKey(typeof(T)))
+                    _entities.Add(typeof(T), new List<T>());
+
+                return new InMemoryClusterRepository<T>
+                {
+                    Entities = _entities[typeof(T)] as List<T>,
+                };
+            }
+        }
+
         /// <summary>
         /// In memory repository
         /// </summary>
         /// <typeparam name="T">The type of object to store</typeparam>
-        public class InMemoryRepository<T> : ILucentRepository<T> where T : IStorageEntity
+        public class InMemoryRepository<T> : IStorageRepostory<T> where T : IStorageEntity
+        {
+            /// <summary>
+            /// List of entities available
+            /// </summary>
+            /// <value></value>
+            public List<T> Entities { get; set; }
+
+            /// <inheritdoc />
+            public Task<ICollection<T>> Get() => Task.FromResult((ICollection<T>)Entities);
+
+            /// <inheritdoc />
+            public Task<T> Get(string key) => Task.FromResult(Entities.FirstOrDefault(e => e.Id.Equals(key)));
+
+            /// <inheritdoc />
+            public Task<bool> TryInsert(T obj)
+            {
+                if (!Entities.Exists(e => e.Id == obj.Id))
+                {
+                    Entities.Add(obj);
+                    return Task.FromResult(true);
+                }
+
+                return Task.FromResult(false);
+            }
+
+            /// <inheritdoc />
+            public Task<bool> TryRemove(T obj) => Task.FromResult(Entities.Exists(e => e.Id == obj.Id && e.ETag == obj.ETag) ? Entities.Remove(obj) : false);
+
+            /// <inheritdoc />
+            public async Task<bool> TryUpdate(T obj) => await TryRemove(obj) ? await TryInsert(obj) : false;
+        }
+
+
+        /// <summary>
+        /// In memory repository
+        /// </summary>
+        /// <typeparam name="T">The type of object to store</typeparam>
+        public class InMemoryClusterRepository<T> : IClusteredRepository<T> where T : IClusteredStorageEntity
         {
             /// <summary>
             /// List of entities available

@@ -21,7 +21,7 @@ namespace Lucent.Portal.Models
 {
     public class CreateCreativeModel : PageModel
     {
-        private readonly ILucentRepository<Creative> _db;
+        private readonly IStorageRepostory<Creative> _db;
         private readonly ILogger<CreateCreativeModel> _log;
         readonly IMessageFactory _factory;
         readonly IMediaScanner _scanner;

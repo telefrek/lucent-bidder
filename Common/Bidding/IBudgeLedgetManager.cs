@@ -33,9 +33,9 @@ namespace Lucent.Common.Bidding
     {
         BudgetLedgerConfig _config;
         IStorageManager _manager;
-        ILucentRepository<BudgetLedger> _ledger;
-        ILucentRepository<Campaign> _campaigns;
-        ILucentRepository<Budget> _budgets;
+        IStorageRepostory<BudgetLedger> _ledger;
+        IStorageRepostory<Campaign> _campaigns;
+        IStorageRepostory<Budget> _budgets;
 
         /// <summary>
         /// 

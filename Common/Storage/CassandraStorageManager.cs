@@ -50,6 +50,13 @@ namespace Lucent.Common.Storage
         /// </summary>
         /// <typeparam name="T">The type of entity to manage</typeparam>
         /// <returns></returns>
-        public ILucentRepository<T> GetRepository<T>() where T : IStorageEntity, new() => new CassandraRepository<T>(_session, _config.Format, _serializationContext, _log);
+        public IStorageRepostory<T> GetRepository<T>() where T : IStorageEntity, new() => new CassandraRepository<T>(_session, _config.Format, _serializationContext, _log);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public IClusteredRepository<T> GetClusterRepository<T>() where T : IClusteredStorageEntity, new() => new CassandraClusterRepository<T>(_session, _config.Format, _serializationContext, _log);
     }
 }
