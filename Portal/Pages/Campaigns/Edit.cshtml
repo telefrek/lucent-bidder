@@ -1,5 +1,6 @@
 @page "{id:Guid}"
 @using Lucent.Common.Entities
+@using Lucent.Portal.Entities
 @model Lucent.Portal.Models.EditCampaignModel
 @{
     Layout = "~/Pages/Shared/_Layout.cshtml";
@@ -24,5 +25,7 @@
 
     <partial name="CampaignSchedule"
         for="Campaign.Schedule" />
+
+    <partial name="BidFilters" for="CampaignFilters"/>
     <input class="btn btn-secondary" type="submit"/>
 </form>

@@ -1,0 +1,7 @@
+@using Lucent.Common.Filters
+@model Lucent.Common.Entities.BidFilter
+<h2>BidFilters</h2>
+
+@Html.DropDownList("FilterType", 
+    Html.GetEnumSelectList<FilterType>(),
+    "--Filter Type--", new { @class = "form-control" })

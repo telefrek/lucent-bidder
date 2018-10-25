@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Lucent.Common.Messaging;
 using Microsoft.Extensions.Logging;
 using System.Linq;
+using Lucent.Portal.Entities;
 
 namespace Lucent.Portal.Models
 {
@@ -32,6 +33,11 @@ namespace Lucent.Portal.Models
         [BindProperty]
         public Campaign Campaign { get; set; }
 
+        [BindProperty]
+        public BidFilter CampaignFilters { get; set; }
+
+        public string FilterTypeValue { get; set; }
+
         public async Task<IActionResult> OnGetAsync(string id)
         {
             _log.LogInformation("Geting campaign {id}", id);
@@ -40,6 +46,7 @@ namespace Lucent.Portal.Models
             if (c != null)
             {
                 Campaign = c;
+                CampaignFilters = new BidFilter();
                 return Page();
             }
 
@@ -49,6 +56,8 @@ namespace Lucent.Portal.Models
         public async Task<IActionResult> OnPostAsync()
         {
             _log.LogInformation("Validating post");
+            foreach (var key in Request.Form.Keys)
+                _log.LogInformation("Key : {0}", key);
             if (!ModelState.IsValid || Campaign == null)
             {
                 return Page();
