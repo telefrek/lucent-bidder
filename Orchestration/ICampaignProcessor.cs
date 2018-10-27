@@ -17,7 +17,7 @@ namespace Lucent.Orchestration
         IMessageSubscriber<LucentMessage<Campaign>> _campaignUpdateSubscriber;
         ILogger<CampaignManager> _log;
         IStorageManager _storage;
-        IStorageRepostory<Campaign> _campaignRepo;
+        IStorageRepository<Campaign> _campaignRepo;
 
         public CampaignManager(IMessageFactory factory,
             IStorageManager storage, ILogger<CampaignManager> log)

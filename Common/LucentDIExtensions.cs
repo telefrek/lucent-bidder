@@ -109,6 +109,8 @@ namespace Lucent.Common
             {
                 services.AddSingleton<IStorageManager, InMemoryStorage>();
                 services.AddSingleton<IMessageFactory, InMemoryMessageFactory>();
+                services.Configure<BudgetLedgerConfig>(configuration.GetSection("ledger"))
+                    .AddSingleton<IBudgetLedgerManager, InMemoryBudgetLedgerManager>();
             }
             else
             {

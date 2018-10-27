@@ -14,16 +14,19 @@ namespace Lucent.Common.Bidding
     {
         Campaign _campaign;
         ILogger<CampaignBidder> _log;
+        ICampaignLedger _ledger;
 
         /// <summary>
         /// Default constructor
         /// </summary>
         /// <param name="c"></param>
         /// <param name="logger"></param>
-        public CampaignBidder(Campaign c, ILogger<CampaignBidder> logger)
+        /// <param name="ledgerManager"></param>
+        public CampaignBidder(Campaign c, ILogger<CampaignBidder> logger, IBudgetLedgerManager ledgerManager)
         {
             _campaign = c;
             _log = logger;
+            _ledger = ledgerManager.GetLedger(c);
         }
 
         /// <summary>
@@ -36,14 +39,17 @@ namespace Lucent.Common.Bidding
         /// </summary>
         /// <param name="impression">The pre-screened impression to bid on</param>
         /// <returns>A bid for the impression</returns>
-        public Task<Bid> BidAsync(Impression impression)
+        public async Task<Bid> BidAsync(Impression impression)
         {
-            // Need to generate the bid at some point...
-            return Task.FromResult(new Bid
-            {
-                CPM = 1.0,
-                BidExpiresSeconds = 5,
-            });
+            if (await _ledger.CheckSpend(impression.BidFloor))
+                // Need to generate the bid at some point...
+                return new Bid
+                {
+                    CPM = impression.BidFloor,
+                    BidExpiresSeconds = 5,
+                };
+
+            return null;
         }
 
         static readonly Impression[] EMPTY_IMPRESSION = new Impression[0];

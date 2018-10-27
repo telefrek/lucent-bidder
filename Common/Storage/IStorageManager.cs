@@ -10,7 +10,7 @@ namespace Lucent.Common.Storage
         /// </summary>
         /// <typeparam name="T">The type of object to store</typeparam>
         /// <returns>A storage repository for that type</returns>
-        IStorageRepostory<T> GetRepository<T>() where T : IStorageEntity, new();
+        IStorageRepository<T> GetRepository<T>() where T : IStorageEntity, new();
 
         /// <summary>
         /// Gets a typed repository

@@ -8,7 +8,7 @@ namespace Lucent.Common.Storage
     /// 
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public interface IClusteredRepository<T> : IStorageRepostory<T>
+    public interface IClusteredRepository<T> : IStorageRepository<T>
         where T : IClusteredStorageEntity
     {
         /// <summary>

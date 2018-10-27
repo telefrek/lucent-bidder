@@ -46,6 +46,9 @@ namespace Lucent.Common.Entities.Serializers
                             case 5:
                                 entry.RemainingAmount = await serializationStreamReader.ReadDoubleAsync();
                                 break;
+                            case 6:
+                                entry.Created = await serializationStreamReader.ReadDateTimeAsync();
+                                break;
                             default:
                                 await serializationStreamReader.SkipAsync();
                                 break;
@@ -65,6 +68,9 @@ namespace Lucent.Common.Entities.Serializers
                         break;
                     case "remaining":
                         entry.RemainingAmount = await serializationStreamReader.ReadDoubleAsync();
+                        break;
+                    case "created":
+                        entry.Created = await serializationStreamReader.ReadDateTimeAsync();
                         break;
                     default:
                         await serializationStreamReader.SkipAsync();
@@ -90,6 +96,7 @@ namespace Lucent.Common.Entities.Serializers
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 3, Name = "entrytype" }, instance.EntryType);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 4, Name = "original" }, instance.OriginalAmount);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 5, Name = "remaining" }, instance.RemainingAmount);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 6, Name = "created" }, instance.Created);
                 await serializationStreamWriter.EndObjectAsync();
                 await serializationStreamWriter.FlushAsync();
             }

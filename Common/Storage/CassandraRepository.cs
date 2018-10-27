@@ -18,7 +18,7 @@ namespace Lucent.Common.Storage
     /// Internal Cassandra storage repository
     /// </summary>
     /// <typeparam name="T">The type of object to store in cassandra</typeparam>
-    public class CassandraRepository<T> : IStorageRepostory<T>
+    public class CassandraRepository<T> : IStorageRepository<T>
         where T : IStorageEntity, new()
     {
         ISession _session;

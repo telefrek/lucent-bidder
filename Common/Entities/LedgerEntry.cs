@@ -18,7 +18,7 @@ namespace Lucent.Common.Entities
         /// 
         /// </summary>
         /// <value></value>
-        public LedgerEntryType EntryType {get;set;}
+        public LedgerEntryType EntryType { get; set; }
 
         /// <summary>
         /// 
@@ -49,5 +49,11 @@ namespace Lucent.Common.Entities
         /// </summary>
         /// <value></value>
         public DateTime Updated { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
+        public DateTime Created { get; set; } = DateTime.UtcNow;
     }
 }

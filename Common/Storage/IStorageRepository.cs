@@ -8,7 +8,7 @@ namespace Lucent.Common.Storage
     /// Representation of a generic data repository
     /// </summary>
     /// <typeparam name="T">The type of object managed by the repository</typeparam>
-    public interface IStorageRepostory<T>
+    public interface IStorageRepository<T>
     where T : IStorageEntity
     {
         /// <summary>

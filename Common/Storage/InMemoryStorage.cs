@@ -14,7 +14,7 @@ namespace Lucent.Common.Storage
         object _syncLock = new object();
 
         /// <inheritdoc />
-        public IStorageRepostory<T> GetRepository<T>() where T : IStorageEntity, new()
+        public IStorageRepository<T> GetRepository<T>() where T : IStorageEntity, new()
         {
             lock (_syncLock)
             {
@@ -47,7 +47,7 @@ namespace Lucent.Common.Storage
         /// In memory repository
         /// </summary>
         /// <typeparam name="T">The type of object to store</typeparam>
-        public class InMemoryRepository<T> : IStorageRepostory<T> where T : IStorageEntity
+        public class InMemoryRepository<T> : IStorageRepository<T> where T : IStorageEntity
         {
             /// <summary>
             /// List of entities available
