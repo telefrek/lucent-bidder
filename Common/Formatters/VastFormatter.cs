@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Security;
 using System.Xml;
+using Lucent.Common.Bidding;
 using Lucent.Common.Entities;
 using Lucent.Common.OpenRTB;
 
@@ -10,17 +11,38 @@ namespace Lucent.Common.Formatters
     /// <summary>
     /// 
     /// </summary>
-    public class VastFormatter
+    public static class VastFormatter
     {
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="campaign"></param>
-        /// <param name="creative"></param>
-        /// <param name="content"></param>
-        /// <param name="bid"></param>
+        /// <param name="match"></param>
         /// <returns></returns>
-        public static string ToVast4(Campaign campaign, Creative creative, CreativeContent content, Bid bid)
+        public static string ToVast(this BidMatch match)
+        {
+            // Format the video in VAST protocol
+            if (match.Impression.Video != null)
+            {
+                var proto = match.Impression.Video.Protocols ?? new VideoProtocol[] { match.Impression.Video.Protocol };
+                if (proto.Contains(VideoProtocol.VAST_4))
+                    return match.ToVast4();
+                else if (proto.Contains(VideoProtocol.VAST_3))
+                    return match.ToVast3();
+                else if (proto.Contains(VideoProtocol.VAST_2))
+                    return match.ToVast2();
+
+                return null;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Format as VAST 4
+        /// </summary>
+        /// <param name="match"></param>
+        /// <returns></returns>
+        public static string ToVast4(this BidMatch match)
         {
             var xDoc = new XmlDocument();
 
@@ -32,36 +54,36 @@ namespace Lucent.Common.Formatters
 
             var inline = xDoc.CreateElement("InLine");
             inline.AddAdSystem(xDoc);
-            inline.AddAdTitle(xDoc, creative);
-            inline.AddDescription(xDoc, creative);
-            inline.AddErrorUri(xDoc, creative, bid);
-            inline.AddImpression(xDoc, creative, bid);
-            inline.AddAdvertiser(xDoc, campaign);
-            inline.AddPricing(xDoc, bid);
+            inline.AddAdTitle(xDoc, match.Creative);
+            inline.AddDescription(xDoc, match.Creative);
+            inline.AddErrorUri(xDoc, match.Creative, match.RawBid);
+            inline.AddImpression(xDoc, match.Creative, match.RawBid);
+            inline.AddAdvertiser(xDoc, match.Campaign);
+            inline.AddPricing(xDoc, match.RawBid);
 
             inline.AppendChild(xDoc.CreateElement("Extensions"));
-            inline.AddViewableImpression(xDoc, creative, bid);
+            inline.AddViewableImpression(xDoc, match.Creative, match.RawBid);
 
             var creatives = xDoc.CreateElement("Creatives");
-            var xCreative = xDoc.CreateCreative(creative);
+            var xCreative = xDoc.CreateCreative(match.Creative);
 
             var uId = xDoc.CreateElement("UniversalAdId");
             uId.Attributes.Append(xDoc.CreateVastAttribute("idRegistry", "lucentbid.com"));
-            uId.Attributes.Append(xDoc.CreateVastAttribute("idValue", creative.Id));
-            uId.InnerText = creative.Id;
+            uId.Attributes.Append(xDoc.CreateVastAttribute("idValue", match.Creative.Id));
+            uId.InnerText = match.Creative.Id;
             xCreative.AppendChild(uId);
 
-            var linear = xDoc.CreateLinear(content);
-            linear.AddDuration(xDoc, content);
+            var linear = xDoc.CreateLinear(match.Content);
+            linear.AddDuration(xDoc, match.Content);
 
-            var mediaFiles = xDoc.CreateMediaFiles(content, 4);
+            var mediaFiles = xDoc.CreateMediaFiles(match.Content, 4);
 
             var mez = xDoc.CreateElement("Mezzanine");
-            mez.AppendChild(xDoc.CreateCDataSection(content.RawUri));
+            mez.AppendChild(xDoc.CreateCDataSection(match.Content.RawUri));
             mediaFiles.AppendChild(mez);
 
             linear.AppendChild(mediaFiles);
-            linear.AddVideoClicks(xDoc, campaign, creative, bid);
+            linear.AddVideoClicks(xDoc, match.Campaign, match.Creative, match.RawBid);
 
             xCreative.AppendChild(linear);
 
@@ -76,14 +98,11 @@ namespace Lucent.Common.Formatters
         }
 
         /// <summary>
-        /// 
+        /// Format as VAST 3
         /// </summary>
-        /// <param name="campaign"></param>
-        /// <param name="creative"></param>
-        /// <param name="content"></param>
-        /// <param name="bid"></param>
+        /// <param name="match"></param>
         /// <returns></returns>
-        public static string ToVast3(Campaign campaign, Creative creative, CreativeContent content, Bid bid)
+        public static string ToVast3(this BidMatch match)
         {
             var xDoc = new XmlDocument();
 
@@ -95,35 +114,35 @@ namespace Lucent.Common.Formatters
 
             var inline = xDoc.CreateElement("InLine");
             inline.AddAdSystem(xDoc);
-            inline.AddAdTitle(xDoc, creative);
-            inline.AddDescription(xDoc, creative);
-            inline.AddErrorUri(xDoc, creative, bid);
-            inline.AddImpression(xDoc, creative, bid);
-            inline.AddAdvertiser(xDoc, campaign);
-            inline.AddPricing(xDoc, bid);
+            inline.AddAdTitle(xDoc, match.Creative);
+            inline.AddDescription(xDoc, match.Creative);
+            inline.AddErrorUri(xDoc, match.Creative, match.RawBid);
+            inline.AddImpression(xDoc, match.Creative, match.RawBid);
+            inline.AddAdvertiser(xDoc, match.Campaign);
+            inline.AddPricing(xDoc, match.RawBid);
 
             inline.AppendChild(xDoc.CreateElement("Extensions"));
 
             var creatives = xDoc.CreateElement("Creatives");
-            var xCreative = xDoc.CreateCreative(creative);
+            var xCreative = xDoc.CreateCreative(match.Creative);
 
             var uId = xDoc.CreateElement("UniversalAdId");
             uId.Attributes.Append(xDoc.CreateVastAttribute("idRegistry", "lucentbid.com"));
-            uId.Attributes.Append(xDoc.CreateVastAttribute("idValue", creative.Id));
-            uId.InnerText = creative.Id;
+            uId.Attributes.Append(xDoc.CreateVastAttribute("idValue", match.Creative.Id));
+            uId.InnerText = match.Creative.Id;
             xCreative.AppendChild(uId);
 
-            var linear = xDoc.CreateLinear(content);
-            linear.AddDuration(xDoc, content);
+            var linear = xDoc.CreateLinear(match.Content);
+            linear.AddDuration(xDoc, match.Content);
 
-            var mediaFiles = xDoc.CreateMediaFiles(content, 4);
+            var mediaFiles = xDoc.CreateMediaFiles(match.Content, 4);
 
             var mez = xDoc.CreateElement("Mezzanine");
-            mez.AppendChild(xDoc.CreateCDataSection(content.RawUri));
+            mez.AppendChild(xDoc.CreateCDataSection(match.Content.RawUri));
             mediaFiles.AppendChild(mez);
 
             linear.AppendChild(mediaFiles);
-            linear.AddVideoClicks(xDoc, campaign, creative, bid);
+            linear.AddVideoClicks(xDoc, match.Campaign, match.Creative, match.RawBid);
 
             xCreative.AppendChild(linear);
 
@@ -138,14 +157,11 @@ namespace Lucent.Common.Formatters
         }
 
         /// <summary>
-        /// 
+        /// Format as VAST 2
         /// </summary>
-        /// <param name="campaign"></param>
-        /// <param name="creative"></param>
-        /// <param name="content"></param>
-        /// <param name="bid"></param>
+        /// <param name="match"></param>
         /// <returns></returns>
-        public static string ToVast2(Campaign campaign, Creative creative, CreativeContent content, Bid bid)
+        public static string ToVast2(this BidMatch match)
         {
             var xDoc = new XmlDocument();
 
@@ -157,22 +173,22 @@ namespace Lucent.Common.Formatters
 
             var inline = xDoc.CreateElement("InLine");
             inline.AddAdSystem(xDoc);
-            inline.AddAdTitle(xDoc, creative);
-            inline.AddDescription(xDoc, creative);
-            inline.AddErrorUri(xDoc, creative, bid);
-            inline.AddImpression(xDoc, creative, bid);
+            inline.AddAdTitle(xDoc, match.Creative);
+            inline.AddDescription(xDoc, match.Creative);
+            inline.AddErrorUri(xDoc, match.Creative, match.RawBid);
+            inline.AddImpression(xDoc, match.Creative, match.RawBid);
             inline.AppendChild(xDoc.CreateElement("Extensions"));
 
             var creatives = xDoc.CreateElement("Creatives");
-            var xCreative = xDoc.CreateCreative(creative);
+            var xCreative = xDoc.CreateCreative(match.Creative);
 
-            var linear = xDoc.CreateLinear(content);
-            linear.AddDuration(xDoc, content);
+            var linear = xDoc.CreateLinear(match.Content);
+            linear.AddDuration(xDoc, match.Content);
 
-            var mediaFiles = xDoc.CreateMediaFiles(content, 2);
+            var mediaFiles = xDoc.CreateMediaFiles(match.Content, 2);
 
             linear.AppendChild(mediaFiles);
-            linear.AddVideoClicks(xDoc, campaign, creative, bid);
+            linear.AddVideoClicks(xDoc, match.Campaign, match.Creative, match.RawBid);
 
             xCreative.AppendChild(linear);
 

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Lucent.Common;
 using Lucent.Common.Bidding;
 using Lucent.Common.Entities;
+using Lucent.Common.Formatters;
 using Lucent.Common.Exchanges;
 using Lucent.Common.Messaging;
 using Lucent.Common.OpenRTB;
@@ -94,12 +95,51 @@ namespace Lucent.Samples.SimpleExchange
 
             // Probably make this not wait on everything...
             await Task.WhenAll(bids);
-            resp.Bids = bids.Select(b => b.Result).Where(b => b != null).ToArray();
+            var seats = new List<SeatBid>();
 
-            return resp.Bids.Length > 0 ? resp : null;
+            foreach (var bid in bids.Where(b => b.Result.Length > 0).Select(b => b.Result))
+            {
+                var c = bid.First().Campaign;
+
+                var seat = new SeatBid
+                {
+                    BuyerId = c.BuyerId,
+                    Bids = bid.Select(b => FormatBid(b)).ToArray()
+                };
+
+                if (seat.Bids.Length > 0)
+                    seats.Add(seat);
+            }
+
+            if (seats.Count > 0)
+            {
+                resp.Bids = seats.ToArray();
+                return resp;
+            }
+
+            return null;
         }
 
         /// <inheritdoc/>
         public bool IsMatch(HttpContext context) => true;
+
+        /// <inheritdoc/>
+        public Bid FormatBid(BidMatch match)
+        {
+            // Format and stash/attach markup
+            switch (match.Content.ContentType)
+            {
+                case ContentType.Banner:
+                    match.RawBid.AdMarkup = match.ToImageLinkMarkup();
+                    break;
+                case ContentType.Video:
+                    match.RawBid.AdMarkup = match.ToVast();
+                    break;
+                default:
+                    return null;
+            }
+
+            return match.RawBid;
+        }
     }
 }

@@ -31,5 +31,11 @@ namespace Lucent.Common.Bidding
         /// </summary>
         /// <value></value>
         public Creative Creative { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
+        public Bid RawBid { get; set; }
     }
 }

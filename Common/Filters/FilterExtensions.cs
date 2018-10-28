@@ -145,6 +145,7 @@ namespace Lucent.Common
         public static Expression CreateExpression(this Filter filter, Expression p)
         {
             var prop = Expression.Property(p, filter.Property);
+            var ptype = (prop.Member as PropertyInfo).PropertyType;
 
             Expression exp = Expression.Constant(true);
             switch (filter.FilterType)
@@ -166,12 +167,6 @@ namespace Lucent.Common
                     break;
                 case FilterType.IN:
                 case FilterType.NOTIN:
-                    // Need to check types to do this efficiently ?
-                    // if prop is string, contains
-                    // else if prop is array, for blah in Length...
-                    // else if prop is collection, Linq.Contains
-
-                    var ptype = (prop.Member as PropertyInfo).PropertyType;
                     if (ptype.IsArray)
                     {
                         if (filter.Values != null)
@@ -257,7 +252,7 @@ namespace Lucent.Common
                     break;
             }
 
-            return Expression.AndAlso(Expression.NotEqual(prop, Expression.Constant(null)), exp);
+            return Expression.AndAlso(Expression.NotEqual(prop, Expression.Constant(ptype.IsValueType ? Activator.CreateInstance(ptype) : null)), exp);
         }
 
         /// <summary>

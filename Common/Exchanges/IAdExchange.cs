@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Lucent.Common.Bidding;
 using Lucent.Common.OpenRTB;
 using Microsoft.AspNetCore.Http;
 
@@ -51,5 +52,12 @@ namespace Lucent.Common.Exchanges
         /// </summary>
         /// <value></value>
         int Order { get; }
+
+        /// <summary>
+        /// Format the OpenRTB Bid object
+        /// </summary>
+        /// <param name="bid"></param>
+        /// <returns></returns>
+        Bid FormatBid(BidMatch bid);
     }
 }

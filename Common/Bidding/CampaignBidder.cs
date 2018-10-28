@@ -35,17 +35,19 @@ namespace Lucent.Common.Bidding
         /// </summary>
         public Campaign Campaign => _campaign;
 
+        static BidMatch[] NO_MATCHES = new BidMatch[0];
+
         /// <summary>
         /// Filters the bid request to get the set of Impressions that can be bid on
         /// </summary>
         /// <param name="request">The request to filder</param>
         /// <param name="httpContext"></param>
         /// <returns>The set of impressions that weren't filtered</returns>
-        public async Task<SeatBid> BidAsync(BidRequest request, HttpContext httpContext)
+        public async Task<BidMatch[]> BidAsync(BidRequest request, HttpContext httpContext)
         {
             // Apply campaign filters
             if (_campaign.IsFiltered(request))
-                return null;
+                return NO_MATCHES;
 
             var impList = new List<BidMatch>();
             var allMatched = true;
@@ -62,15 +64,14 @@ namespace Lucent.Common.Bidding
 
             // Ensure if sold as a bundle, we have all impressions, otherwise return matched or none
             if (request.AllImpressions && !allMatched)
-                return null;
+                return NO_MATCHES;
 
             // Scoring to make async stop complaining
             await Task.Delay(10);
 
-            var seat = new SeatBid
+            return impList.Select(bm =>
             {
-                BuyerId = Campaign.BuyerId,
-                Bids = impList.Select(bm => new Bid
+                bm.RawBid = new Bid
                 {
                     ImpressionId = bm.Impression.ImpressionId,
                     Id = SequentialGuid.NextGuid().ToString(),
@@ -88,10 +89,9 @@ namespace Lucent.Common.Bidding
                     AdId = bm.Creative.Id,
                     CreativeId = bm.Creative.Id,
                     CampaignId = bm.Campaign.Id,
-                }).ToArray(),
-            };
-
-            return seat.Bids.Length > 0 ? seat : null;
+                };
+                return bm;
+            }).ToArray();
         }
     }
 }
