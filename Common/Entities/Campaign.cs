@@ -55,7 +55,8 @@ namespace Lucent.Common.Entities
         /// <summary>
         /// 
         /// </summary>
-        /// <value></value>
+        /// <value></value> 
+        [Display(Name = "Domains")]
         public string[] AdDomains { get; set; }
 
         /// <summary>
@@ -83,6 +84,20 @@ namespace Lucent.Common.Entities
         /// <value></value>
         [Display(Name = "Caps")]
         public CampaignSpendCaps SpendCaps { get; set; } = new CampaignSpendCaps { };
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
+        [Display(Name = "BuyerId")]
+        public string BuyerId { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
+        [Display(Name = "BundleId")]
+        public string BundleId { get; set; }
 
         /// <summary>
         /// 

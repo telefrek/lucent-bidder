@@ -64,6 +64,9 @@ namespace Lucent.Common.Entities.Serializers
                             case 13:
                                 instance.ContentType = await serializationStreamReader.ReadAsAsync<ContentType>();
                                 break;
+                            case 14:
+                                instance.Categories = await serializationStreamReader.ReadStringArrayAsync();
+                                break;
                             default:
                                 await serializationStreamReader.SkipAsync();
                                 break;
@@ -108,6 +111,9 @@ namespace Lucent.Common.Entities.Serializers
                     case "content_type":
                         instance.ContentType = await serializationStreamReader.ReadAsAsync<ContentType>();
                         break;
+                    case "categories":
+                        instance.Categories = await serializationStreamReader.ReadStringArrayAsync();
+                        break;
                     default:
                         await serializationStreamReader.SkipAsync();
                         break;
@@ -116,10 +122,10 @@ namespace Lucent.Common.Entities.Serializers
             }
 
             instance.HydrateFilter();
-            
-            if(!await serializationStreamReader.EndObjectAsync())
+
+            if (!await serializationStreamReader.EndObjectAsync())
                 return null;
-                
+
             return instance;
         }
 
@@ -143,6 +149,7 @@ namespace Lucent.Common.Entities.Serializers
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 11, Name = "creative_uri" }, instance.CreativeUri);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 12, Name = "raw_uri" }, instance.ContentLocation);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 13, Name = "content_type" }, instance.ContentType);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 14, Name = "categories" }, instance.ContentType);
                 await serializationStreamWriter.EndObjectAsync();
                 await serializationStreamWriter.FlushAsync();
             }

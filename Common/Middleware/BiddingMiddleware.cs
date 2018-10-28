@@ -50,26 +50,26 @@ namespace Lucent.Common.Middleware
         /// <summary>
         /// Handle the request asynchronously
         /// </summary>
-        /// <param name="context">The current http context</param>
+        /// <param name="httpContext">The current http context</param>
         /// <returns>A completed pipeline step</returns>
-        public async Task HandleAsync(HttpContext context)
+        public async Task HandleAsync(HttpContext httpContext)
         {
             // Validate we can find a matching exchange
-            var exchange = _exchangeRegistry.Exchanges.FirstOrDefault(e => e.IsMatch(context));
+            var exchange = _exchangeRegistry.Exchanges.FirstOrDefault(e => e.IsMatch(httpContext));
             if (exchange == null)
             {
-                context.Response.StatusCode = 204;
+                httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
                 return;
             }
 
-            var format = (context.Request.ContentType ?? "").Contains("protobuf") ? SerializationFormat.PROTOBUF : SerializationFormat.JSON;
+            var format = (httpContext.Request.ContentType ?? "").Contains("protobuf") ? SerializationFormat.PROTOBUF : SerializationFormat.JSON;
 
             var encoding = StringValues.Empty;
-            if (context.Request.Headers.TryGetValue("Content-Encoding", out encoding))
+            if (httpContext.Request.Headers.TryGetValue("Content-Encoding", out encoding))
                 if (encoding.Any(e => e.Contains("gzip")))
                     format |= SerializationFormat.COMPRESSED;
 
-            using (var serializationReader = _serializationContext.CreateReader(context.Request.Body, false, format))
+            using (var serializationReader = _serializationContext.CreateReader(httpContext.Request.Body, false, format))
             {
                 if (await serializationReader.HasNextAsync())
                 {
@@ -77,20 +77,27 @@ namespace Lucent.Common.Middleware
 
                     if (request != null && !_bidFilters.Any(f => f.Invoke(request)))
                     {
-                        var response = await exchange.Bid(request);
+                        var response = await exchange.Bid(request, httpContext);
+                        
+                        // Clear the compression flag and re-validate the accept header
+                        format &= ~SerializationFormat.COMPRESSED;
+                        if(httpContext.Request.Headers.TryGetValue("Accept-Encoding", out encoding))
+                            if(encoding.Any(e=>e.Contains("gzip")))
+                                format |= SerializationFormat.COMPRESSED;
+
                         if (response != null && (response.Bids ?? new SeatBid[0]).Length > 0)
                         {
-                            using (var serializationWriter = _serializationContext.CreateWriter(context.Response.Body, true, format))
+                            using (var serializationWriter = _serializationContext.CreateWriter(httpContext.Response.Body, true, format))
                                 await serializationWriter.WriteAsync(response);
-                            context.Response.StatusCode = 200;
+                            httpContext.Response.StatusCode = StatusCodes.Status200OK;
                         }
                         else
-                            context.Response.StatusCode = 204;
+                            httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
                     }
                     else
-                        context.Response.StatusCode = request == null ? 400 : 204;
+                        httpContext.Response.StatusCode = request == null ? StatusCodes.Status400BadRequest : StatusCodes.Status204NoContent;
                 }
-                else context.Response.StatusCode = 400;
+                else httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
             }
         }
     }

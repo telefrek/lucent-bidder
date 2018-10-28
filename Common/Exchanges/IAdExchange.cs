@@ -19,16 +19,17 @@ namespace Lucent.Common.Exchanges
         /// <summary>
         /// Determines if the context is a match for the given exchange
         /// </summary>
-        /// <param name="context">The current request context</param>
+        /// <param name="httpContext">The current request context</param>
         /// <returns>True if the request is from the exchange</returns>
-        bool IsMatch(HttpContext context);
+        bool IsMatch(HttpContext httpContext);
 
         /// <summary>
         /// Bids on the given request
         /// </summary>
         /// <param name="request">The bid to process</param>
+        /// <param name="httpContext"></param>
         /// <returns>A fully formed response</returns>
-        Task<BidResponse> Bid(BidRequest request);
+        Task<BidResponse> Bid(BidRequest request, HttpContext httpContext);
 
         /// <summary>
         /// Gets the flag for suppressing the byte order marks during serialization

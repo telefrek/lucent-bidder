@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Lucent.Common.Entities;
 using Lucent.Common.OpenRTB;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
 namespace Lucent.Common.Bidding
@@ -35,44 +36,62 @@ namespace Lucent.Common.Bidding
         public Campaign Campaign => _campaign;
 
         /// <summary>
-        /// Bid on the given impression
-        /// </summary>
-        /// <param name="impression">The pre-screened impression to bid on</param>
-        /// <returns>A bid for the impression</returns>
-        public async Task<Bid> BidAsync(Impression impression)
-        {
-            if (await _ledger.CheckSpend(impression.BidFloor))
-                // Need to generate the bid at some point...
-                return new Bid
-                {
-                    CPM = impression.BidFloor,
-                    BidExpiresSeconds = 5,
-                };
-
-            return null;
-        }
-
-        static readonly Impression[] EMPTY_IMPRESSION = new Impression[0];
-
-        /// <summary>
         /// Filters the bid request to get the set of Impressions that can be bid on
         /// </summary>
         /// <param name="request">The request to filder</param>
+        /// <param name="httpContext"></param>
         /// <returns>The set of impressions that weren't filtered</returns>
-        public Impression[] FilterImpressions(BidRequest request)
+        public async Task<SeatBid> BidAsync(BidRequest request, HttpContext httpContext)
         {
+            // Apply campaign filters
             if (_campaign.IsFiltered(request))
-                return EMPTY_IMPRESSION;
+                return null;
 
-            var impList = new List<Impression>();
+            var impList = new List<BidMatch>();
+            var allMatched = true;
 
             // Make sure there is at least one content per impression
             foreach (var imp in request.Impressions)
-                if (_campaign.Creatives.Any(c => c.Contents.Any(cc => !cc.Filter(imp))))
-                    impList.Add(imp);
+            {
+                // Get the potential matches
+                var matches = _campaign.Creatives.SelectMany(c => c.Contents.Where(cc => !cc.Filter(imp)).Select(cc => new BidMatch { Impression = imp, Campaign = _campaign, Creative = c, Content = cc })).ToList();
+
+                allMatched &= matches.Count > 0;
+                impList.AddRange(matches);
+            }
 
             // Ensure if sold as a bundle, we have all impressions, otherwise return matched or none
-            return request.AllImpressions ? impList.Count == request.Impressions.Length ? impList.ToArray() : EMPTY_IMPRESSION : impList.ToArray();
+            if (request.AllImpressions && !allMatched)
+                return null;
+
+            // Scoring to make async stop complaining
+            await Task.Delay(10);
+
+            var seat = new SeatBid
+            {
+                BuyerId = Campaign.BuyerId,
+                Bids = impList.Select(bm => new Bid
+                {
+                    ImpressionId = bm.Impression.ImpressionId,
+                    Id = SequentialGuid.NextGuid().ToString(),
+                    CPM = bm.Impression.BidFloor,
+                    WinUrl = httpContext.Request.Host.Value + "/v1/win",
+                    LossUrl = httpContext.Request.Host.Value + "/v1/loss",
+                    BillingUrl = httpContext.Request.Host.Value + "/v1/bill",
+                    H = bm.Content.H,
+                    W = bm.Content.W,
+                    AdDomain = bm.Campaign.AdDomains,
+                    BidExpiresSeconds = 300,
+                    Bundle = bm.Campaign.BundleId,
+                    ContentCategories = bm.Content.Categories,
+                    ImageUrl = bm.Content.RawUri,
+                    AdId = bm.Creative.Id,
+                    CreativeId = bm.Creative.Id,
+                    CampaignId = bm.Campaign.Id,
+                }).ToArray(),
+            };
+
+            return seat.Bids.Length > 0 ? seat : null;
         }
     }
 }

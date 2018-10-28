@@ -78,7 +78,7 @@ namespace Lucent.Samples.SimpleExchange
         public Guid ExchangeId => Guid.Parse("9363aae4-a305-43e6-b0be-a2f5cda1edff");
 
         /// <inheritdoc/>
-        public async Task<BidResponse> Bid(BidRequest request)
+        public async Task<BidResponse> Bid(BidRequest request, HttpContext httpContext)
         {
             if (_bidders.Count == 0)
                 return null;
@@ -90,16 +90,13 @@ namespace Lucent.Samples.SimpleExchange
                 CorrelationId = SequentialGuid.NextGuid().ToString(),
             };
 
-            var bids = _bidders.Select(b => new { Bidder = b, Imp = b.FilterImpressions(request) })
-                .Where(b => (b.Imp ?? new Impression[0]).Length > 0)
-                .Select(b => new { Bids = b.Imp.Select(i => b.Bidder.BidAsync(i)).ToArray(), Bidder = b.Bidder });
+            var bids = _bidders.Select(b => b.BidAsync(request, httpContext));
 
-            foreach (var b in bids)
-                await Task.WhenAll(b.Bids);
+            // Probably make this not wait on everything...
+            await Task.WhenAll(bids);
+            resp.Bids = bids.Select(b => b.Result).Where(b => b != null).ToArray();
 
-            resp.Bids = bids.Select(b => new SeatBid { BuyerId = b.Bidder.Campaign.Id, Bids = b.Bids.Select(t => t.Result).ToArray() }).ToArray();
-
-            return resp;
+            return resp.Bids.Length > 0 ? resp : null;
         }
 
         /// <inheritdoc/>

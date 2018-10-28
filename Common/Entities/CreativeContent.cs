@@ -92,5 +92,11 @@ namespace Lucent.Common.Entities
         /// </summary>
         /// <value></value>
         public Func<Impression, bool> Filter { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
+        public string[] Categories { get; set; }
     }
 }

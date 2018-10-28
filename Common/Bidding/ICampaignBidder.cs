@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using Lucent.Common.Entities;
 using Lucent.Common.OpenRTB;
+using Microsoft.AspNetCore.Http;
 
 namespace Lucent.Common.Bidding
 {
@@ -15,18 +16,13 @@ namespace Lucent.Common.Bidding
         /// <value></value>
         Campaign Campaign { get; }
 
-        /// <summary>
-        /// Create a bid for the given impression
-        /// </summary>
-        /// <param name="impression"></param>
-        /// <returns>A bid on the given impression</returns>
-        Task<Bid> BidAsync(Impression impression);
 
         /// <summary>
         /// Check to see if the bidder wants to bid on part/all of this request
         /// </summary>
         /// <param name="request"></param>
+        /// <param name="httpContext"></param>
         /// <returns>The set of impressions this bidder wants</returns>
-        Impression[] FilterImpressions(BidRequest request);
+        Task<SeatBid> BidAsync(BidRequest request, HttpContext httpContext);
     }
 }

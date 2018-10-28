@@ -44,12 +44,15 @@ namespace Lucent.Common.Bidding
             var bid = BidGenerator.GenerateBid();
 
             RequestDelegate rd = (hc) => { return Task.CompletedTask; };
-            var middleware = ServiceProvider.CreateInstance<BiddingMiddleware>(rd);
-            Assert.IsNotNull(middleware, "Failed to create middleware");
+            var biddingMiddleware = ServiceProvider.CreateInstance<BiddingMiddleware>(rd);
+            Assert.IsNotNull(biddingMiddleware, "Failed to create bidding middleware");
+
+            var postbackMiddleware = ServiceProvider.CreateInstance<PostbackMiddleware>(rd);
+            Assert.IsNotNull(postbackMiddleware, "Failed to create postback middleware");
 
             // No campaigns, should fail
             var httpContext = await SetupContext(bid);
-            await middleware.HandleAsync(httpContext);
+            await biddingMiddleware.HandleAsync(httpContext);
             Assert.AreEqual(204, httpContext.Response.StatusCode, "Invalid status code");
             Assert.IsFalse(httpContext.Request.Body.CanRead, "Body should have been read and closed");
 
@@ -57,7 +60,7 @@ namespace Lucent.Common.Bidding
 
             // Campaign setup, but no notification yet
             httpContext = await SetupContext(bid);
-            await middleware.HandleAsync(httpContext);
+            await biddingMiddleware.HandleAsync(httpContext);
             Assert.AreEqual(204, httpContext.Response.StatusCode, "Invalid status code");
             Assert.IsFalse(httpContext.Request.Body.CanRead, "Body should have been read and closed");
 
@@ -76,7 +79,7 @@ namespace Lucent.Common.Bidding
 
             // Now we should get a bid
             httpContext = await SetupContext(bid);
-            await middleware.HandleAsync(httpContext);
+            await biddingMiddleware.HandleAsync(httpContext);
             Assert.AreEqual(200, httpContext.Response.StatusCode, "Invalid status code");
             Assert.IsFalse(httpContext.Request.Body.CanRead, "Request body should have been read and closed");
             Assert.IsTrue(httpContext.Response.Body.CanRead, "Response body should be readable");
@@ -84,7 +87,7 @@ namespace Lucent.Common.Bidding
             // Ensure we filter out an invalid bid
             bid.Impressions.First().Banner.H = 101;
             httpContext = await SetupContext(bid);
-            await middleware.HandleAsync(httpContext);
+            await biddingMiddleware.HandleAsync(httpContext);
             Assert.AreEqual(204, httpContext.Response.StatusCode, "Invalid status code");
             Assert.IsFalse(httpContext.Request.Body.CanRead, "Request body should have been read and closed");
 
@@ -93,7 +96,7 @@ namespace Lucent.Common.Bidding
             bid.Impressions.First().Banner.H = 100;
             bid.Site = new Site { Domain = "telefrek.com" };
             httpContext = await SetupContext(bid);
-            await middleware.HandleAsync(httpContext);
+            await biddingMiddleware.HandleAsync(httpContext);
             Assert.AreEqual(204, httpContext.Response.StatusCode, "Invalid status code");
             Assert.IsFalse(httpContext.Request.Body.CanRead, "Request body should have been read and closed");
         }

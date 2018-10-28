@@ -41,6 +41,18 @@ namespace Lucent.Common.Entities.Serializers
                                 if (instance.BidFilter != null)
                                     instance.IsFiltered = instance.BidFilter.GenerateCode();
                                 break;
+                            case 6:
+                                instance.LandingPage = await serializationStreamReader.ReadStringAsync();
+                                break;
+                            case 7:
+                                instance.BuyerId = await serializationStreamReader.ReadStringAsync();
+                                break;
+                            case 8:
+                                instance.BundleId = await serializationStreamReader.ReadStringAsync();
+                                break;
+                            case 9:
+                                instance.AdDomains = await serializationStreamReader.ReadStringArrayAsync();
+                                break;
                             default:
                                 await serializationStreamReader.SkipAsync();
                                 break;
@@ -63,16 +75,28 @@ namespace Lucent.Common.Entities.Serializers
                         if (instance.BidFilter != null)
                             instance.IsFiltered = instance.BidFilter.GenerateCode();
                         break;
+                    case "landing":
+                        instance.LandingPage = await serializationStreamReader.ReadStringAsync();
+                        break;
+                    case "buyerid":
+                        instance.BuyerId = await serializationStreamReader.ReadStringAsync();
+                        break;
+                    case "bundleid":
+                        instance.BundleId = await serializationStreamReader.ReadStringAsync();
+                        break;
+                    case "domains":
+                        instance.AdDomains = await serializationStreamReader.ReadStringArrayAsync();
+                        break;
                     default:
                         await serializationStreamReader.SkipAsync();
                         break;
 
                 }
             }
-            
-            if(!await serializationStreamReader.EndObjectAsync())
+
+            if (!await serializationStreamReader.EndObjectAsync())
                 return null;
-                
+
             return instance;
         }
 
@@ -88,6 +112,10 @@ namespace Lucent.Common.Entities.Serializers
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 3, Name = "spend" }, instance.Spend);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 4, Name = "schedule" }, instance.Schedule);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 5, Name = "filters" }, instance.BidFilter);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 6, Name = "landing" }, instance.LandingPage);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 7, Name = "buyerid" }, instance.BuyerId);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 8, Name = "bundleid" }, instance.BundleId);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 9, Name = "domains" }, instance.AdDomains);
                 await serializationStreamWriter.EndObjectAsync();
                 await serializationStreamWriter.FlushAsync();
             }
