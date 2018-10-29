@@ -1,7 +1,10 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Lucent.Common.Entities;
+using Lucent.Common.Exchanges;
+using Lucent.Common.Middleware;
 using Lucent.Common.OpenRTB;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -69,16 +72,32 @@ namespace Lucent.Common.Bidding
             // Scoring to make async stop complaining
             await Task.Delay(10);
 
+            var baseUri = new UriBuilder
+            {
+                Scheme = httpContext.Request.Scheme,
+                Host = httpContext.Request.Host.Value,
+            };
+
             return impList.Select(bm =>
             {
+                var bidContext = new BidContext
+                {
+                    BidDate = DateTime.UtcNow,
+                    BidId = SequentialGuid.NextGuid(),
+                    CampaignId = Guid.Parse(bm.Campaign.Id),
+                    ExchangeId = (httpContext.Items["exchange"] as IAdExchange).ExchangeId,
+                    CPM = bm.Impression.BidFloor,
+                };
+
+                // This is ugly...
                 bm.RawBid = new Bid
                 {
                     ImpressionId = bm.Impression.ImpressionId,
-                    Id = SequentialGuid.NextGuid().ToString(),
+                    Id = bidContext.BidId.ToString(),
                     CPM = bm.Impression.BidFloor,
-                    WinUrl = httpContext.Request.Host.Value + "/v1/win",
-                    LossUrl = httpContext.Request.Host.Value + "/v1/loss",
-                    BillingUrl = httpContext.Request.Host.Value + "/v1/bill",
+                    WinUrl = new Uri(baseUri.Uri, "/v1/postback?" + QueryParameters.LUCENT_BID_CONTEXT_PARAMETER + "=" + bidContext.GetOperationString(BidOperation.Win)).AbsoluteUri,
+                    LossUrl = new Uri(baseUri.Uri, "/v1/postback?" + QueryParameters.LUCENT_BID_CONTEXT_PARAMETER + "=" + bidContext.GetOperationString(BidOperation.Loss)).AbsoluteUri,
+                    BillingUrl = new Uri(baseUri.Uri, "/v1/postback?" + QueryParameters.LUCENT_BID_CONTEXT_PARAMETER + "=" + bidContext.GetOperationString(BidOperation.Impression)).AbsoluteUri,
                     H = bm.Content.H,
                     W = bm.Content.W,
                     AdDomain = bm.Campaign.AdDomains,

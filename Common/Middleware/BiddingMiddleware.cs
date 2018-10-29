@@ -62,6 +62,8 @@ namespace Lucent.Common.Middleware
                 return;
             }
 
+            httpContext.Items.Add("exchange", exchange);
+
             var format = (httpContext.Request.ContentType ?? "").Contains("protobuf") ? SerializationFormat.PROTOBUF : SerializationFormat.JSON;
 
             var encoding = StringValues.Empty;

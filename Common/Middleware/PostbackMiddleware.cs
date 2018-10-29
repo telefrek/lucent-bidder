@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Lucent.Common.Bidding;
 using Lucent.Common.Entities;
 using Lucent.Common.Exchanges;
 using Lucent.Common.Messaging;
@@ -53,26 +54,36 @@ namespace Lucent.Common.Middleware
 
             try
             {
-                if (query.ContainsKey("lbrdl"))
+                BidContext bidContext = new BidContext();
+
+                if (query.ContainsKey(QueryParameters.LUCENT_REDIRECT_PARAMETER))
+                    context.Response.Redirect(query[QueryParameters.LUCENT_REDIRECT_PARAMETER].First().SafeBase64Decode());
+
+                if (query.ContainsKey(QueryParameters.LUCENT_BID_CONTEXT_PARAMETER))
+                    bidContext = BidContext.Parse(query[QueryParameters.LUCENT_BID_CONTEXT_PARAMETER]);
+
+                switch (bidContext.Operation)
                 {
-                    context.Response.Redirect(query["lbrdl"].First().SafeBase64Decode());
-                    return;
+                    case BidOperation.Clicked:
+                        // Start the rest of the tracking async
+                        break;
+                    case BidOperation.Loss:
+                        context.Response.StatusCode = StatusCodes.Status200OK;
+                        break;
+                    case BidOperation.Win:
+                        context.Response.StatusCode = StatusCodes.Status200OK;
+                        break;
+                    case BidOperation.Impression:
+                        await Task.Delay(10);
+                        context.Response.StatusCode = StatusCodes.Status200OK;
+                        break;
+                    case BidOperation.Action:
+                        context.Response.StatusCode = StatusCodes.Status200OK;
+                        break;
+                    default:
+                        context.Response.StatusCode = StatusCodes.Status404NotFound;
+                        break;
                 }
-
-                if (query.ContainsKey("lbctx"))
-                {
-                    var lucentContext = query["lbctx"].First().SafeBase64Decode();
-                    var campaignId = lucentContext.Substring(0, 22).DecodeGuid().ToString();
-                    var camp = await _storageManager.GetRepository<Campaign>().Get(campaignId);
-
-                    if (camp != null)
-                    {
-                        context.Response.StatusCode = StatusCodes.Status202Accepted;
-                        return;
-                    }
-                }
-
-                context.Response.StatusCode = StatusCodes.Status200OK;
             }
             catch (Exception e)
             {

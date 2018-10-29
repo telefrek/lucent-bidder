@@ -50,6 +50,8 @@ namespace Lucent.Common.Entities
         /// 
         /// </summary>
         /// <value></value>
+        [Display(Name = "Landing Page")]
+        [Required, StringLength(1024)]
         public string LandingPage { get; set; }
 
         /// <summary>

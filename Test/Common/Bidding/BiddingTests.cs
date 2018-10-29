@@ -38,6 +38,7 @@ namespace Lucent.Common.Bidding
         [TestMethod]
         public async Task TestSuccessfulBid()
         {
+            var serializationContext = ServiceProvider.GetRequiredService<ISerializationContext>();
             await SetupBidderFilters();
             await SetupExchange();
 
@@ -56,7 +57,7 @@ namespace Lucent.Common.Bidding
             Assert.AreEqual(204, httpContext.Response.StatusCode, "Invalid status code");
             Assert.IsFalse(httpContext.Request.Body.CanRead, "Body should have been read and closed");
 
-            var camp = await SetupCampaign();
+            var campaign = await SetupCampaign();
 
             // Campaign setup, but no notification yet
             httpContext = await SetupContext(bid);
@@ -68,7 +69,7 @@ namespace Lucent.Common.Bidding
             var publisher = messageFactory.CreatePublisher("bidstate");
 
             var msg = messageFactory.CreateMessage<LucentMessage<Campaign>>();
-            msg.Body = camp;
+            msg.Body = campaign;
             msg.Route = "campaign.create";
             msg.ContentType = "application/x-protobuf";
 
@@ -84,6 +85,16 @@ namespace Lucent.Common.Bidding
             Assert.IsFalse(httpContext.Request.Body.CanRead, "Request body should have been read and closed");
             Assert.IsTrue(httpContext.Response.Body.CanRead, "Response body should be readable");
 
+            // Verify the response
+            var bidResponse = await VerifyBidResponse(httpContext, serializationContext, campaign);
+
+            // Simulate win/loss
+            var winBid = bidResponse.Bids.First().Bids.First();
+            var billContext = await SetupBillContext(winBid);
+
+            await postbackMiddleware.HandleAsync(billContext);
+            Assert.AreEqual(200, httpContext.Response.StatusCode);
+
             // Ensure we filter out an invalid bid
             bid.Impressions.First().Banner.H = 101;
             httpContext = await SetupContext(bid);
@@ -91,14 +102,33 @@ namespace Lucent.Common.Bidding
             Assert.AreEqual(204, httpContext.Response.StatusCode, "Invalid status code");
             Assert.IsFalse(httpContext.Request.Body.CanRead, "Request body should have been read and closed");
 
-
-            // Ensure we filter out a blobal bid
+            // Ensure we filter out a global bid
             bid.Impressions.First().Banner.H = 100;
             bid.Site = new Site { Domain = "telefrek.com" };
             httpContext = await SetupContext(bid);
             await biddingMiddleware.HandleAsync(httpContext);
             Assert.AreEqual(204, httpContext.Response.StatusCode, "Invalid status code");
             Assert.IsFalse(httpContext.Request.Body.CanRead, "Request body should have been read and closed");
+        }
+
+        async Task<BidResponse> VerifyBidResponse(HttpContext httpContext, ISerializationContext serializationContext, Campaign campaign)
+        {
+            httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
+
+            using (var reader = serializationContext.WrapStream(httpContext.Response.Body, false, SerializationFormat.JSON).Reader)
+            {
+                Assert.IsTrue(reader.HasNext(), "Failed to ready body from stream");
+                var response = await reader.ReadAsAsync<BidResponse>();
+                Assert.IsNotNull(response, "Bid response should not be null");
+                Assert.IsNotNull(response.Bids, "Bids should be present");
+                var seatBid = response.Bids.First();
+                Assert.IsNotNull(seatBid.Bids, "Bids must be part of seatbid");
+                var campaignBid = seatBid.Bids.First();
+                Assert.IsNotNull(campaignBid);
+                Assert.AreEqual(campaign.Id, campaignBid.CampaignId, "Only one campaign should exist");
+
+                return response;
+            }
         }
 
         async Task SetupBidderFilters()
@@ -118,9 +148,11 @@ namespace Lucent.Common.Bidding
         {
             var httpContext = new DefaultHttpContext();
             httpContext.Request.Body = new MemoryStream();
+            httpContext.Request.Host = new HostString("localhost");
+            httpContext.Request.Scheme = "https";
 
-            var serializationCtx = ServiceProvider.GetRequiredService<ISerializationContext>();
-            await serializationCtx.WrapStream(httpContext.Request.Body, true, SerializationFormat.JSON).Writer.WriteAsync(bid);
+            var serializationContext = ServiceProvider.GetRequiredService<ISerializationContext>();
+            await serializationContext.WrapStream(httpContext.Request.Body, true, SerializationFormat.JSON).Writer.WriteAsync(bid);
             httpContext.Request.Body.Seek(0, SeekOrigin.Begin);
             httpContext.Request.ContentType = MediaTypeNames.Application.Json;
 
@@ -129,6 +161,54 @@ namespace Lucent.Common.Bidding
             httpContext.Response.Body = new MemoryStream();
 
             return httpContext;
+        }
+
+        async Task<HttpContext> SetupWinContext(Bid bid)
+        {
+            Uri uri;
+            Uri.TryCreate(bid.WinUrl, UriKind.Absolute, out uri);
+
+            var httpContext = new DefaultHttpContext();
+            httpContext.Request.ContentType = MediaTypeNames.Application.Json;
+
+            httpContext.Request.Host = new HostString(uri.Host);
+            httpContext.Request.Scheme = uri.Scheme;
+            httpContext.Request.Path = uri.AbsolutePath;
+            httpContext.Request.QueryString = new QueryString(uri.Query);
+
+            return await Task.FromResult(httpContext);
+        }
+
+        async Task<HttpContext> SetupBillContext(Bid bid)
+        {
+            Uri uri;
+            Uri.TryCreate(bid.BillingUrl, UriKind.Absolute, out uri);
+
+            var httpContext = new DefaultHttpContext();
+            httpContext.Request.ContentType = MediaTypeNames.Application.Json;
+
+            httpContext.Request.Host = new HostString(uri.Host);
+            httpContext.Request.Scheme = uri.Scheme;
+            httpContext.Request.Path = uri.AbsolutePath;
+            httpContext.Request.QueryString = new QueryString(uri.Query);
+
+            return await Task.FromResult(httpContext);
+        }
+
+        async Task<HttpContext> SetupLossContext(Bid bid)
+        {
+            Uri uri;
+            Uri.TryCreate(bid.LossUrl, UriKind.Absolute, out uri);
+
+            var httpContext = new DefaultHttpContext();
+            httpContext.Request.ContentType = MediaTypeNames.Application.Json;
+
+            httpContext.Request.Host = new HostString(uri.Host);
+            httpContext.Request.Scheme = uri.Scheme;
+            httpContext.Request.Path = uri.AbsolutePath;
+            httpContext.Request.QueryString = new QueryString(uri.Query);
+
+            return await Task.FromResult(httpContext);
         }
 
         async Task SetupExchange()

@@ -13,6 +13,10 @@ namespace Lucent.Common.Test
             {
                 Id = SequentialGuid.NextGuid().ToString(),
                 Name = "Test Campaign",
+                LandingPage = "https://www.lucentbid.com",
+                AdDomains = new string[] { "lucentbid.com", "lucentbid.co" },
+                BuyerId = "buyerid",
+                BundleId = "bundle_1",
                 BidFilter = new BidFilter
                 {
                     GeoFilters = new Filters.Filter[]

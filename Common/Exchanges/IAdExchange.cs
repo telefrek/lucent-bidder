@@ -57,7 +57,8 @@ namespace Lucent.Common.Exchanges
         /// Format the OpenRTB Bid object
         /// </summary>
         /// <param name="bid"></param>
+        /// <param name="httpContext"></param>
         /// <returns></returns>
-        Bid FormatBid(BidMatch bid);
+        Bid FormatBid(BidMatch bid, HttpContext httpContext);
     }
 }

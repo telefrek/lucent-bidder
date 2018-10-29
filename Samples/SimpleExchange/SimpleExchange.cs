@@ -104,7 +104,7 @@ namespace Lucent.Samples.SimpleExchange
                 var seat = new SeatBid
                 {
                     BuyerId = c.BuyerId,
-                    Bids = bid.Select(b => FormatBid(b)).ToArray()
+                    Bids = bid.Select(b => FormatBid(b, httpContext)).ToArray()
                 };
 
                 if (seat.Bids.Length > 0)
@@ -124,13 +124,26 @@ namespace Lucent.Samples.SimpleExchange
         public bool IsMatch(HttpContext context) => true;
 
         /// <inheritdoc/>
-        public Bid FormatBid(BidMatch match)
+        public Bid FormatBid(BidMatch match, HttpContext httpContext)
         {
+            var bidContext = new BidContext
+            {
+                BidDate = DateTime.UtcNow,
+                BidId = Guid.Parse(match.RawBid.Id),
+                CampaignId = Guid.Parse(match.Campaign.Id),
+                ExchangeId = ExchangeId,
+                CPM = match.RawBid.CPM,
+            };
+
             // Format and stash/attach markup
             switch (match.Content.ContentType)
             {
                 case ContentType.Banner:
-                    match.RawBid.AdMarkup = match.ToImageLinkMarkup();
+                    match.RawBid.AdMarkup = match.ToImageLinkMarkup(bidContext, new UriBuilder
+                    {
+                        Scheme = httpContext.Request.Scheme,
+                        Host = httpContext.Request.Host.Value,
+                    }.Uri);
                     break;
                 case ContentType.Video:
                     match.RawBid.AdMarkup = match.ToVast();
