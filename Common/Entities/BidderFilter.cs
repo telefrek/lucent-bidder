@@ -6,7 +6,7 @@ namespace Lucent.Common.Entities
     /// <summary>
     /// Represents Bidder global rules
     /// </summary>
-    public class BidderFilter : IStorageEntity
+    public class BidderFilter : IBasicStorageEntity
     {
         /// <summary>
         /// Filters for incoming bids before exchange evaluation

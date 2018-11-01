@@ -9,14 +9,17 @@ namespace Lucent.Common.Storage
         /// Gets a typed repository
         /// </summary>
         /// <typeparam name="T">The type of object to store</typeparam>
+        /// <typeparam name="K">The type of key used to retrieve the object</typeparam>
         /// <returns>A storage repository for that type</returns>
-        IStorageRepository<T> GetRepository<T>() where T : IStorageEntity, new();
+        IStorageRepository<T, K> GetRepository<T, K>() where T : IStorageEntity<K>, new();
 
         /// <summary>
-        /// Gets a typed repository
+        /// Register a custom repository
         /// </summary>
-        /// <typeparam name="T">The type of object to store</typeparam>
-        /// <returns>A storage repository for that type</returns>
-        IClusteredRepository<T> GetClusterRepository<T>() where T : IClusteredStorageEntity, new();
+        /// <param name="repository"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="K"></typeparam>
+        /// <returns></returns>
+        void RegisterRepository<T, K>(IStorageRepository<T, K> repository) where T : IStorageEntity<K>, new();
     }
 }

@@ -40,7 +40,7 @@ namespace Lucent.Samples.SimpleExchange
             _log = provider.GetService<ILogger<SimpleExchange>>();
 
             // Get the current campaign bidders
-            _bidders.AddRange(_storageManager.GetRepository<Campaign>().Get().Result.Select(c => _bidFactory.CreateBidder(c)));
+            _bidders.AddRange(_storageManager.GetRepository<Campaign, string>().Get().Result.Select(c => _bidFactory.CreateBidder(c)));
 
             // Setup the bid state update
             _campaignSub = _messageFactory.CreateSubscriber<LucentMessage<Campaign>>("bidstate", 0, "campaign.#");
@@ -60,7 +60,7 @@ namespace Lucent.Samples.SimpleExchange
                     if (bidder != null)
                         _bidders.Remove(bidder);
 
-                    var newCamp = await _storageManager.GetRepository<Campaign>().Get(camp.Id);
+                    var newCamp = await _storageManager.GetRepository<Campaign, string>().Get(camp.Id);
                     _bidders.Add(_bidFactory.CreateBidder(newCamp));
                 }).Unwrap();
             }

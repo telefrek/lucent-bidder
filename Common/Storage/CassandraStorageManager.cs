@@ -14,6 +14,7 @@ namespace Lucent.Common.Storage
     /// </summary>
     public class CassandraStorageManager : IStorageManager
     {
+        IServiceProvider _provider;
         ICluster _cluster;
         ISession _session;
         ISerializationContext _serializationContext;
@@ -24,11 +25,13 @@ namespace Lucent.Common.Storage
         /// <summary>
         /// Default constructor
         /// </summary>
+        /// <param name="provider"></param>
         /// <param name="serializationContext"></param>
         /// <param name="options"></param>
         /// <param name="log"></param>
-        public CassandraStorageManager(ISerializationContext serializationContext, IOptions<CassandraConfiguration> options, ILogger<CassandraStorageManager> log)
+        public CassandraStorageManager(IServiceProvider provider, ISerializationContext serializationContext, IOptions<CassandraConfiguration> options, ILogger<CassandraStorageManager> log)
         {
+            _provider = provider;
             _serializationContext = serializationContext;
             _log = log;
             _registry = new ConcurrentDictionary<Type, object>();
@@ -45,18 +48,21 @@ namespace Lucent.Common.Storage
             _session.ChangeKeyspace(_config.Keyspace);
         }
 
-        /// <summary>
-        /// Creates a repository for the given storage entity type
-        /// </summary>
-        /// <typeparam name="T">The type of entity to manage</typeparam>
-        /// <returns></returns>
-        public IStorageRepository<T> GetRepository<T>() where T : IStorageEntity, new() => new CassandraRepository<T>(_session, _config.Format, _serializationContext, _log);
+        /// <inheritdoc/>
+        public IStorageRepository<T, K> GetRepository<T, K>() where T : IStorageEntity<K>, new()
+        {
+            if (typeof(T).IsAssignableFrom(typeof(IBasicStorageEntity)))
+            {
+                return _provider.CreateInstance(typeof(CassandraRepository<>).MakeGenericType(typeof(T)), _session, _config.Format, _serializationContext, _log) as IStorageRepository<T, K>;
+            }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        public IClusteredRepository<T> GetClusterRepository<T>() where T : IClusteredStorageEntity, new() => new CassandraClusterRepository<T>(_session, _config.Format, _serializationContext, _log);
+            return _registry.GetValueOrDefault(typeof(T), null) as IStorageRepository<T, K>;
+        }
+
+        /// <inheritdoc/>
+        public void RegisterRepository<T, K>(IStorageRepository<T, K> repository) where T : IStorageEntity<K>, new()
+        {
+            _registry.AddOrUpdate(typeof(T), repository, (t, oldRepo) => repository);
+        }
     }
 }

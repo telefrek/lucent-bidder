@@ -9,7 +9,7 @@ namespace Lucent.Common.Entities
     /// <summary>
     /// 
     /// </summary>
-    public class Creative : IStorageEntity
+    public class Creative : IBasicStorageEntity
     {
         /// <summary>
         /// 
@@ -46,12 +46,12 @@ namespace Lucent.Common.Entities
         /// 
         /// </summary>
         /// <value></value>
-        string IStorageEntity.ETag { get; set; }
+        public string ETag { get; set; }
 
         /// <summary>
         /// 
         /// </summary>
         /// <value></value>
-        DateTime IStorageEntity.Updated { get; set; }
+        public DateTime Updated { get; set; }
     }
 }

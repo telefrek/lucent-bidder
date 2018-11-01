@@ -6,7 +6,7 @@ namespace Lucent.Common.Entities
     /// <summary>
     /// Tracking for a campaign budget
     /// </summary>
-    public class Budget : IStorageEntity
+    public class Budget : IBasicStorageEntity
     {
         /// <summary>
         /// 

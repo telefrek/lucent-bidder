@@ -21,7 +21,7 @@ namespace Lucent.Common.Storage.Test
             var manager = ServiceProvider.GetRequiredService<IStorageManager>();
             Assert.IsNotNull(manager, "Failed to create manager");
 
-            var testRepo = manager.GetRepository<Creative>();
+            var testRepo = manager.GetRepository<Creative, string>();
             Assert.IsNotNull(testRepo, "Failed to create repo");
 
             foreach (var entry in testRepo.Get().Result)
@@ -39,7 +39,7 @@ namespace Lucent.Common.Storage.Test
             var manager = ServiceProvider.GetRequiredService<IStorageManager>();
             Assert.IsNotNull(manager, "Failed to create manager");
 
-            var testRepo = manager.GetRepository<Creative>();
+            var testRepo = manager.GetRepository<Creative, string>();
             Assert.IsNotNull(testRepo, "Failed to create repo");
 
             var res = await testRepo.Get(Guid.NewGuid().ToString());

@@ -8,8 +8,9 @@ namespace Lucent.Common.Storage
     /// Representation of a generic data repository
     /// </summary>
     /// <typeparam name="T">The type of object managed by the repository</typeparam>
-    public interface IStorageRepository<T>
-    where T : IStorageEntity
+    /// <typeparam name="K">The type of key used by the entity</typeparam>
+    public interface IStorageRepository<T, K>
+    where T : IStorageEntity<K>
     {
         /// <summary>
         /// Gets all the objects in the collection
@@ -22,7 +23,14 @@ namespace Lucent.Common.Storage
         /// </summary>
         /// <param name="id">The object id to search for</param>
         /// <returns></returns>
-        Task<T> Get(string id);
+        Task<T> Get(K id);
+
+
+        /// <summary>
+        /// Gets all the objects in the collection that match the key
+        /// </summary>
+        /// <returns></returns>
+        Task<ICollection<T>> GetAll(K id);
 
         /// <summary>
         /// Tries to insert the object into the collection

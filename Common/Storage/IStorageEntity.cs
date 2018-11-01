@@ -3,15 +3,16 @@ using System;
 namespace Lucent.Common.Storage
 {
     /// <summary>
-    /// Represents a storage compliant entity
+    /// Represents a storage entity
     /// </summary>
-    public interface IStorageEntity
+    /// <typeparam name="K">The type of key</typeparam>
+    public interface IStorageEntity<K>
     {
         /// <summary>
         /// The unique identifier for the object
         /// </summary>
         /// <value></value>
-        string Id { get; set; }
+        K Id { get; set; }
         
         /// <summary>
         /// The object ETag for detecting invalid changes

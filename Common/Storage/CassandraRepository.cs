@@ -18,8 +18,8 @@ namespace Lucent.Common.Storage
     /// Internal Cassandra storage repository
     /// </summary>
     /// <typeparam name="T">The type of object to store in cassandra</typeparam>
-    public class CassandraRepository<T> : IStorageRepository<T>
-        where T : IStorageEntity, new()
+    public class CassandraRepository<T> : IStorageRepository<T, string>
+        where T : IBasicStorageEntity, new()
     {
         ISession _session;
         string _tableName;
@@ -212,6 +212,13 @@ namespace Lucent.Common.Storage
             }
 
             return default(T);
+        }
+
+        /// <inheritdoc/>
+        public async Task<ICollection<T>> GetAll(string key)
+        {
+            var target = await Get(key);
+            return target != null ? new List<T>() { target } : new List<T>();
         }
 
         /// <inheritdoc/>

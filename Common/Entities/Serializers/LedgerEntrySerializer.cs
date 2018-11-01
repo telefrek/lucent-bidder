@@ -32,10 +32,10 @@ namespace Lucent.Common.Entities.Serializers
                         switch (propId.Id)
                         {
                             case 1:
-                                entry.Id = await serializationStreamReader.ReadStringAsync();
+                                entry.Id.TargetId = await serializationStreamReader.ReadStringAsync();
                                 break;
                             case 2:
-                                entry.SecondaryId = await serializationStreamReader.ReadGuidAsync();
+                                entry.Id.LedgerTimeId = await serializationStreamReader.ReadGuidAsync();
                                 break;
                             case 3:
                                 entry.EntryType = await serializationStreamReader.ReadAsAsync<LedgerEntryType>();
@@ -55,10 +55,10 @@ namespace Lucent.Common.Entities.Serializers
                         }
                         break;
                     case "id":
-                        entry.Id = await serializationStreamReader.ReadStringAsync();
+                        entry.Id.TargetId = await serializationStreamReader.ReadStringAsync();
                         break;
                     case "secondary":
-                        entry.SecondaryId = await serializationStreamReader.ReadGuidAsync();
+                        entry.Id.LedgerTimeId = await serializationStreamReader.ReadGuidAsync();
                         break;
                     case "entrytype":
                         entry.EntryType = await serializationStreamReader.ReadAsAsync<LedgerEntryType>();
@@ -91,8 +91,8 @@ namespace Lucent.Common.Entities.Serializers
             if (instance != null)
             {
                 await serializationStreamWriter.StartObjectAsync();
-                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 1, Name = "id" }, instance.Id);
-                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 2, Name = "secondary" }, instance.SecondaryId);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 1, Name = "id" }, instance.Id.TargetId);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 2, Name = "secondary" }, instance.Id.LedgerTimeId);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 3, Name = "entrytype" }, instance.EntryType);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 4, Name = "original" }, instance.OriginalAmount);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 5, Name = "remaining" }, instance.RemainingAmount);

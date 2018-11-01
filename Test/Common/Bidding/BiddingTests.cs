@@ -133,7 +133,7 @@ namespace Lucent.Common.Bidding
 
         async Task SetupBidderFilters()
         {
-            var fiters = ServiceProvider.GetRequiredService<IStorageManager>().GetRepository<BidderFilter>();
+            var fiters = ServiceProvider.GetRequiredService<IStorageManager>().GetRepository<BidderFilter, string>();
             Assert.IsTrue(await fiters.TryInsert(new BidderFilter
             {
                 Id = SequentialGuid.NextGuid().ToString(),
@@ -227,7 +227,7 @@ namespace Lucent.Common.Bidding
 
         async Task<Campaign> SetupCampaign()
         {
-            var campaigns = ServiceProvider.GetRequiredService<IStorageManager>().GetRepository<Campaign>();
+            var campaigns = ServiceProvider.GetRequiredService<IStorageManager>().GetRepository<Campaign, string>();
             var camp = CampaignGenerator.GenerateCampaign();
             Assert.IsTrue(await campaigns.TryInsert(camp), "Failed to insert campaign");
 

@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Cassandra;
 using Lucent.Common.Entities;
 using Lucent.Common.Storage;
 using Microsoft.Extensions.Logging;
@@ -13,8 +14,8 @@ namespace Lucent.Common.Bidding
     /// </summary>
     public class InMemoryBudgetLedgerManager : IBudgetLedgerManager
     {
-        IStorageRepository<Campaign> _campaignRepo;
-        IClusteredRepository<LedgerEntry> _ledger;
+        IStorageRepository<Campaign, string> _campaignRepo;
+        IStorageRepository<LedgerEntry, LedgerCompositeEntryKey> _ledger;
         ILogger<InMemoryBudgetLedgerManager> _log;
         BudgetLedgerConfig _config;
         IServiceProvider _provider;
@@ -29,8 +30,8 @@ namespace Lucent.Common.Bidding
         public InMemoryBudgetLedgerManager(IServiceProvider provider, ILogger<InMemoryBudgetLedgerManager> logger, IStorageManager storageManager, IOptions<BudgetLedgerConfig> config)
         {
             _log = logger;
-            _campaignRepo = storageManager.GetRepository<Campaign>();
-            _ledger = storageManager.GetClusterRepository<LedgerEntry>();
+            _campaignRepo = storageManager.GetRepository<Campaign, string>();
+            _ledger = storageManager.GetRepository<LedgerEntry, LedgerCompositeEntryKey>();
             _config = config.Value;
             _provider = provider;
         }
@@ -48,7 +49,7 @@ namespace Lucent.Common.Bidding
             if (c == null)
                 return null;
 
-            var current = (await _ledger.GetCluster(campaignId)).Where(e => e.Created > DateTime.Now.Subtract(TimeSpan.FromDays(1)));
+            var current = (await _ledger.GetAll(new LedgerCompositeEntryKey { TargetId = c.Id })).Where(e => e.Created > DateTime.Now.Subtract(TimeSpan.FromDays(1)));
 
             if (current.Sum(e => e.OriginalAmount) > c.SpendCaps.DailySpendCap)
                 return null;
@@ -60,7 +61,7 @@ namespace Lucent.Common.Bidding
 
             var entry = new LedgerEntry
             {
-                Id = campaignId,
+                Id = new LedgerCompositeEntryKey { TargetId = campaignId, LedgerTimeId = TimeUuid.NewId() },
                 OriginalAmount = amt,
                 RemainingAmount = amt,
             };

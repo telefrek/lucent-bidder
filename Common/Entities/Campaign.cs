@@ -9,7 +9,7 @@ namespace Lucent.Common.Entities
     /// <summary>
     /// 
     /// </summary>
-    public class Campaign : IStorageEntity
+    public class Campaign : IBasicStorageEntity
     {
         /// <summary>
         /// 
@@ -105,13 +105,13 @@ namespace Lucent.Common.Entities
         /// 
         /// </summary>
         /// <value></value>
-        string IStorageEntity.ETag { get; set; }
+        public string ETag { get; set; }
 
         /// <summary>
         /// 
         /// </summary>
         /// <value></value>
-        DateTime IStorageEntity.Updated { get; set; }
+        public DateTime Updated { get; set; }
     }
 
     /// <summary>

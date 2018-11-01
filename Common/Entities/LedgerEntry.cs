@@ -1,4 +1,5 @@
 using System;
+using Cassandra;
 using Lucent.Common.Storage;
 
 namespace Lucent.Common.Entities
@@ -6,13 +7,13 @@ namespace Lucent.Common.Entities
     /// <summary>
     /// Individual ledger entry
     /// </summary>
-    public class LedgerEntry : IClusteredStorageEntity
+    public class LedgerEntry : IStorageEntity<LedgerCompositeEntryKey>
     {
         /// <summary>
-        /// 
+        /// Composite key for identifying a ledger
         /// </summary>
-        /// <value></value>
-        public Guid SecondaryId { get; set; }
+        /// <returns></returns>
+        public LedgerCompositeEntryKey Id { get; set; } = new LedgerCompositeEntryKey();
 
         /// <summary>
         /// 
@@ -36,12 +37,6 @@ namespace Lucent.Common.Entities
         /// 
         /// </summary>
         /// <value></value>
-        public string Id { get; set; }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <value></value>
         public string ETag { get; set; }
 
         /// <summary>
@@ -55,5 +50,33 @@ namespace Lucent.Common.Entities
         /// </summary>
         /// <value></value>
         public DateTime Created { get; set; } = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Key type for retrieving ledger entries
+    /// </summary>
+    public class LedgerCompositeEntryKey
+    {
+        /// <summary>
+        /// The id for the target type
+        /// </summary>
+        /// <value></value>
+        public string TargetId { get; set; }
+
+        /// <summary>
+        /// The TimeUUID for storing the entry
+        /// </summary>
+        /// <value></value>
+        public Guid LedgerTimeId { get; set; }
+
+        public override bool Equals(object obj)
+        {
+            var entry = obj as LedgerCompositeEntryKey;
+            if (entry == null) return false;
+
+            if (entry.LedgerTimeId == null) return entry.TargetId == TargetId;
+
+            return entry.TargetId == TargetId && entry.LedgerTimeId == entry.LedgerTimeId;
+        }
     }
 }
