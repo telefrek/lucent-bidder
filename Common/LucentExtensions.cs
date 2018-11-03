@@ -17,6 +17,14 @@ using Prometheus;
 public static partial class LucentExtensions
 {
     static MD5 _md5 = System.Security.Cryptography.MD5.Create();
+    static double _t2ms = 1000d / Stopwatch.Frequency;
+
+    /// <summary>
+    /// Get the timer milliseconds
+    /// </summary>
+    /// <param name="timer"></param>
+    /// <returns></returns>
+    public static double GetMilliseconds(this Stopwatch timer) => timer.ElapsedTicks * _t2ms;
 
     /// <summary>
     /// Calculate the hash of an buffer

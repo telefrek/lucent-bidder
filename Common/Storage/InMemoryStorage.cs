@@ -44,14 +44,14 @@ namespace Lucent.Common.Storage
             public List<T> Entities { get; set; }
 
             /// <inheritdoc />
-            public Task<ICollection<T>> Get() => Task.FromResult((ICollection<T>)Entities);
+            public Task<ICollection<T>> GetAll() => Task.FromResult((ICollection<T>)Entities);
 
             /// <inheritdoc />
             public Task<T> Get(K key) => Task.FromResult(Entities.FirstOrDefault(e => e.Id.Equals(key)));
 
 
             /// <inheritdoc />
-            public Task<ICollection<T>> GetAll(K key) => Task.FromResult((ICollection<T>)Entities.Where(e => e.Id.Equals(key)).ToList());
+            public Task<ICollection<T>> GetAny(K key) => Task.FromResult((ICollection<T>)Entities.Where(e => e.Id.Equals(key)).ToList());
 
             /// <inheritdoc />
             public Task<bool> TryInsert(T obj)

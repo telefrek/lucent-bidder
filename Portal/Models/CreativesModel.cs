@@ -30,7 +30,7 @@ namespace Lucent.Portal.Models
         public async Task OnGetAsync()
         {
             _log.LogInformation("Getting creatives");
-            Creatives = (await _db.Get()).ToList();
+            Creatives = (await _db.GetAll()).ToList();
         }
     }
 }

@@ -14,7 +14,7 @@ namespace Lucent.Common.Bidding
     /// </summary>
     public class InMemoryBudgetLedgerManager : IBudgetLedgerManager
     {
-        IStorageRepository<Campaign, string> _campaignRepo;
+        IBasicStorageRepository<Campaign> _campaignRepo;
         IStorageRepository<LedgerEntry, LedgerCompositeEntryKey> _ledger;
         ILogger<InMemoryBudgetLedgerManager> _log;
         BudgetLedgerConfig _config;
@@ -30,7 +30,7 @@ namespace Lucent.Common.Bidding
         public InMemoryBudgetLedgerManager(IServiceProvider provider, ILogger<InMemoryBudgetLedgerManager> logger, IStorageManager storageManager, IOptions<BudgetLedgerConfig> config)
         {
             _log = logger;
-            _campaignRepo = storageManager.GetRepository<Campaign, string>();
+            _campaignRepo = storageManager.GetBasicRepository<Campaign>();
             _ledger = storageManager.GetRepository<LedgerEntry, LedgerCompositeEntryKey>();
             _config = config.Value;
             _provider = provider;
@@ -49,7 +49,7 @@ namespace Lucent.Common.Bidding
             if (c == null)
                 return null;
 
-            var current = (await _ledger.GetAll(new LedgerCompositeEntryKey { TargetId = c.Id })).Where(e => e.Created > DateTime.Now.Subtract(TimeSpan.FromDays(1)));
+            var current = (await _ledger.GetAny(new LedgerCompositeEntryKey { TargetId = c.Id })).Where(e => e.Created > DateTime.Now.Subtract(TimeSpan.FromDays(1)));
 
             if (current.Sum(e => e.OriginalAmount) > c.SpendCaps.DailySpendCap)
                 return null;

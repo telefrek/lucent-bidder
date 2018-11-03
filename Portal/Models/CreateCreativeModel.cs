@@ -45,7 +45,7 @@ namespace Lucent.Portal.Models
         public async Task OnGetAsync()
         {
             _log.LogInformation("Getting creatives");
-            Creatives = (await _db.Get()).ToList();
+            Creatives = (await _db.GetAll()).ToList();
         }
 
         [DisableRequestSizeLimit] // questionable on if this is advised, but auth should keep bad actors out in theory...

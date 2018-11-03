@@ -14,13 +14,13 @@ namespace Lucent.Portal.Models
 {
     public class SummaryCampaignModel : PageModel
     {
-        private readonly IStorageRepository<Campaign, string> _db;
+        private readonly IBasicStorageRepository<Campaign> _db;
         private readonly ILogger _log;
         private readonly ICampaignUpdateContext _context;
 
         public SummaryCampaignModel(IStorageManager db, ILogger<CreateCampaignModel> log, ICampaignUpdateContext context)
         {
-            _db = db.GetRepository<Campaign, string>();
+            _db = db.GetBasicRepository<Campaign>();
             _log = log;
             _context = context;
         }

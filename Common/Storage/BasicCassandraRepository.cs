@@ -18,58 +18,49 @@ namespace Lucent.Common.Storage
     /// Internal Cassandra storage repository
     /// </summary>
     /// <typeparam name="T">The type of object to store in cassandra</typeparam>
-    public class CassandraRepository<T> : IStorageRepository<T, string>
-        where T : IBasicStorageEntity, new()
+    public class BasicCassandraRepository<T> : CassandraBaseRepository, IBasicStorageRepository<T>
+        where T : IStorageEntity<string>, new()
     {
-        ISession _session;
         string _tableName;
-        ISerializationContext _serializationContext;
 
         Statement _getAllStatement;
         PreparedStatement _getStatement;
         PreparedStatement _insertStatement;
         PreparedStatement _updateStatement;
         PreparedStatement _deleteStatement;
-        ILogger _log;
-        SerializationFormat _format;
 
-        /// <summary>
-        /// Default constructor
-        /// </summary>
-        /// <param name="session"></param>
-        /// <param name="format"></param>
-        /// <param name="serializationContext"></param>
-        /// <param name="log"></param>
-        public CassandraRepository(ISession session, SerializationFormat format, ISerializationContext serializationContext, ILogger log)
+        /// <inheritdoc/>
+        public BasicCassandraRepository(ISession session, SerializationFormat serializationFormat, ISerializationContext serializationContext, ILogger logger) : base(session, serializationFormat, serializationContext, logger)
         {
-            _session = session;
-            _tableName = typeof(T).Name.ToLowerInvariant();
-            _log = log;
-            _format = format;
-            _serializationContext = serializationContext;
-
-            _getAllStatement = new SimpleStatement("SELECT * FROM {0}".FormatWith(_tableName));
-
-            // optimize this to happen once later
-            _session.Execute("CREATE TABLE IF NOT EXISTS {0} (id text PRIMARY KEY, etag text, format text, updated timestamp, contents blob );".FormatWith(_tableName));
-
-            _getStatement = _session.Prepare("SELECT * FROM {0} WHERE id=?".FormatWith(_tableName));
-            _insertStatement = _session.Prepare("INSERT INTO {0} (id, etag, format, updated, contents) VALUES (?, ?, ?, ?, ?) IF NOT EXISTS".FormatWith(_tableName));
-
-            // Check etag
-            _updateStatement = _session.Prepare("UPDATE {0} SET etag=?, updated=?, contents=?, format=? WHERE id=? IF etag=?".FormatWith(_tableName));
-
-            // Check etag
-            _deleteStatement = _session.Prepare("DELETE FROM {0} WHERE id=? IF etag=?".FormatWith(_tableName));
         }
 
         /// <inheritdoc/>
-        public async Task<ICollection<T>> Get()
+        protected override async Task Initialize()
+        {
+            _tableName = typeof(T).Name.ToLowerInvariant();
+
+            _getAllStatement = new SimpleStatement("SELECT id, etag, format, updated, contents FROM {0}".FormatWith(_tableName));
+
+            // optimize this to happen once later
+            var results = await ExecuteAsync("CREATE TABLE IF NOT EXISTS {0} (id text PRIMARY KEY, etag text, format text, updated timestamp, contents blob );".FormatWith(_tableName), "create_table_" + _tableName);
+
+            _getStatement = await PrepareAsync("SELECT id, etag, format, updated, contents FROM {0} WHERE id=?".FormatWith(_tableName));
+            _insertStatement = await PrepareAsync("INSERT INTO {0} (id, etag, format, updated, contents) VALUES (?, ?, ?, ?, ?) IF NOT EXISTS".FormatWith(_tableName));
+
+            // Check etag
+            _updateStatement = await PrepareAsync("UPDATE {0} SET etag=?, updated=?, contents=?, format=? WHERE id=? IF etag=?".FormatWith(_tableName));
+
+            // Check etag
+            _deleteStatement = await PrepareAsync("DELETE FROM {0} WHERE id=? IF etag=?".FormatWith(_tableName));
+        }
+
+        /// <inheritdoc/>
+        public async Task<ICollection<T>> GetAll()
         {
             var res = new List<T>();
             try
             {
-                using (var rowSet = await _session.ExecuteAsync(_getAllStatement))
+                using (var rowSet = await ExecuteAsync(_getAllStatement, "getAll_" + _tableName))
                 {
                     var numRows = 0;
                     using (var rowEnum = rowSet.GetEnumerator())
@@ -88,7 +79,7 @@ namespace Lucent.Common.Storage
 
                                     using (var ms = new MemoryStream(contents))
                                     {
-                                        using (var reader = _serializationContext.CreateReader(ms, false, _format))
+                                        using (var reader = _serializationContext.CreateReader(ms, false, _serializationFormat))
                                         {
                                             if (reader.HasNext())
                                             {
@@ -116,7 +107,7 @@ namespace Lucent.Common.Storage
 
                             using (var ms = new MemoryStream(contents))
                             {
-                                using (var reader = _serializationContext.CreateReader(ms, false, _format))
+                                using (var reader = _serializationContext.CreateReader(ms, false, _serializationFormat))
                                 {
                                     if (reader.HasNext())
                                     {
@@ -145,7 +136,7 @@ namespace Lucent.Common.Storage
         {
             try
             {
-                using (var rowSet = await _session.ExecuteAsync(_getStatement.Bind(key)))
+                using (var rowSet = await ExecuteAsync(_getStatement.Bind(key), "get_" + _tableName))
                 {
                     var numRows = 0;
                     using (var rowEnum = rowSet.GetEnumerator())
@@ -164,7 +155,7 @@ namespace Lucent.Common.Storage
 
                                     using (var ms = new MemoryStream(contents))
                                     {
-                                        using (var reader = _serializationContext.CreateReader(ms, false, _format))
+                                        using (var reader = _serializationContext.CreateReader(ms, false, _serializationFormat))
                                         {
                                             if (reader.HasNext())
                                             {
@@ -191,7 +182,7 @@ namespace Lucent.Common.Storage
 
                             using (var ms = new MemoryStream(contents))
                             {
-                                using (var reader = _serializationContext.CreateReader(ms, false, _format))
+                                using (var reader = _serializationContext.CreateReader(ms, false, _serializationFormat))
                                 {
                                     if (reader.HasNext())
                                     {
@@ -215,7 +206,7 @@ namespace Lucent.Common.Storage
         }
 
         /// <inheritdoc/>
-        public async Task<ICollection<T>> GetAll(string key)
+        public async Task<ICollection<T>> GetAny(string key)
         {
             var target = await Get(key);
             return target != null ? new List<T>() { target } : new List<T>();
@@ -230,7 +221,7 @@ namespace Lucent.Common.Storage
                 var contents = new byte[0];
                 using (var ms = new MemoryStream())
                 {
-                    using (var writer = _serializationContext.CreateWriter(ms, true, _format))
+                    using (var writer = _serializationContext.CreateWriter(ms, true, _serializationFormat))
                     {
                         writer.Write(obj);
                         writer.Flush();
@@ -242,7 +233,7 @@ namespace Lucent.Common.Storage
 
                 obj.ETag = contents.CalculateETag();
 
-                var rowSet = await _session.ExecuteAsync(_insertStatement.Bind(obj.Id, obj.ETag, _format.ToString(), DateTime.UtcNow, contents));
+                var rowSet = await ExecuteAsync(_insertStatement.Bind(obj.Id, obj.ETag, _serializationFormat.ToString(), DateTime.UtcNow, contents), "insert_" + _tableName);
 
                 return rowSet != null;
             }
@@ -259,7 +250,7 @@ namespace Lucent.Common.Storage
         {
             try
             {
-                var rowSet = await _session.ExecuteAsync(_deleteStatement.Bind(obj.Id, obj.ETag));
+                var rowSet = await ExecuteAsync(_deleteStatement.Bind(obj.Id, obj.ETag), "delete_" + _tableName);
 
                 return rowSet != null;
             }
@@ -280,7 +271,7 @@ namespace Lucent.Common.Storage
                 var contents = new byte[0];
                 using (var ms = new MemoryStream())
                 {
-                    using (var writer = _serializationContext.CreateWriter(ms, true, _format))
+                    using (var writer = _serializationContext.CreateWriter(ms, true, _serializationFormat))
                     {
                         writer.Write(obj);
                     }
@@ -291,7 +282,7 @@ namespace Lucent.Common.Storage
 
                 obj.ETag = contents.CalculateETag();
 
-                var rowSet = await _session.ExecuteAsync(_updateStatement.Bind(obj.ETag, DateTime.UtcNow, contents, _format.ToString(), obj.Id, oldEtag));
+                var rowSet = await ExecuteAsync(_updateStatement.Bind(obj.ETag, DateTime.UtcNow, contents, _serializationFormat.ToString(), obj.Id, oldEtag), "update_" + _tableName);
 
                 return rowSet != null;
             }

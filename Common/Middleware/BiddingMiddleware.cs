@@ -43,7 +43,7 @@ namespace Lucent.Common.Middleware
             _serializationContext = serializationContext;
             _exchangeRegistry = exchangeRegistry;
             _storageManager = storageManager;
-            _bidFilters = _storageManager.GetRepository<BidderFilter, string>().Get().Result.Where(f => f.BidFilter != null).Select(f => f.BidFilter.GenerateCode()).ToList();
+            _bidFilters = _storageManager.GetRepository<BidderFilter, string>().GetAll().Result.Where(f => f.BidFilter != null).Select(f => f.BidFilter.GenerateCode()).ToList();
 
         }
 

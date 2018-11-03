@@ -11,7 +11,7 @@ namespace Lucent.Common.Bidding
     /// </summary>
     public class CampaignLedger : ICampaignLedger
     {
-        IStorageRepository<Campaign, string> _campaignRepo;
+        IBasicStorageRepository<Campaign> _campaignRepo;
         IStorageRepository<LedgerEntry, LedgerCompositeEntryKey> _ledger;
         ILogger _log;
         IBudgetLedgerManager _ledgerManager;
@@ -28,7 +28,7 @@ namespace Lucent.Common.Bidding
         {
             Campaign = c;
             _log = logger;
-            _campaignRepo = storageManager.GetRepository<Campaign, string>();
+            _campaignRepo = storageManager.GetBasicRepository<Campaign>();
             _ledger = storageManager.GetRepository<LedgerEntry, LedgerCompositeEntryKey>();
             _ledgerManager = budgetLedgerManager;
 

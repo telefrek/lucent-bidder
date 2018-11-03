@@ -53,7 +53,7 @@ namespace Lucent.Common.Storage
         {
             if (typeof(T).IsAssignableFrom(typeof(IBasicStorageEntity)))
             {
-                return _provider.CreateInstance(typeof(CassandraRepository<>).MakeGenericType(typeof(T)), _session, _config.Format, _serializationContext, _log) as IStorageRepository<T, K>;
+                return _provider.CreateInstance(typeof(BasicCassandraRepository<>).MakeGenericType(typeof(T)), _session, _config.Format, _serializationContext, _log) as IStorageRepository<T, K>;
             }
 
             return _registry.GetValueOrDefault(typeof(T), null) as IStorageRepository<T, K>;

@@ -13,13 +13,13 @@ namespace Lucent.Portal.Models
 {
     public class CreateCampaignModel : PageModel
     {
-        private readonly IStorageRepository<Campaign, string> _db;
+        private readonly IBasicStorageRepository<Campaign> _db;
         private readonly ILogger _log;
         private readonly IMessageFactory _factory;
 
         public CreateCampaignModel(IStorageManager db, ILogger<CreateCampaignModel> log, IMessageFactory factory)
         {
-            _db = db.GetRepository<Campaign ,string>();
+            _db = db.GetBasicRepository<Campaign>();
             _log = log;
             Campaign = new Campaign { Schedule = new CampaignSchedule() };
             _factory = factory;

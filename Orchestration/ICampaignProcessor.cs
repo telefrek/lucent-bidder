@@ -17,14 +17,14 @@ namespace Lucent.Orchestration
         IMessageSubscriber<LucentMessage<Campaign>> _campaignUpdateSubscriber;
         ILogger<CampaignManager> _log;
         IStorageManager _storage;
-        IStorageRepository<Campaign, string> _campaignRepo;
+        IBasicStorageRepository<Campaign> _campaignRepo;
 
         public CampaignManager(IMessageFactory factory,
             IStorageManager storage, ILogger<CampaignManager> log)
         {
             _log = log;
             _storage = storage;
-            _campaignRepo = storage.GetRepository<Campaign, string>();
+            _campaignRepo = storage.GetBasicRepository<Campaign>();
             _factory = factory;
         }
 

@@ -24,7 +24,7 @@ namespace Lucent.Common.Storage.Test
             var testRepo = manager.GetRepository<Creative, string>();
             Assert.IsNotNull(testRepo, "Failed to create repo");
 
-            foreach (var entry in testRepo.Get().Result)
+            foreach (var entry in testRepo.GetAll().Result)
                 Assert.IsTrue(testRepo.TryRemove(entry).Result);
         }
 

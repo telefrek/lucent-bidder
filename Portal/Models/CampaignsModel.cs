@@ -15,13 +15,13 @@ namespace Lucent.Portal.Models
 {
     public class CampaignsModel : PageModel
     {
-        private readonly IStorageRepository<Campaign, string> _db;
+        private readonly IBasicStorageRepository<Campaign> _db;
         private readonly ILogger<CampaignsModel> _log;
         readonly IMessageFactory _factory;
 
         public CampaignsModel(IStorageManager db, ILogger<CampaignsModel> logger, IMessageFactory factory)
         {
-            _db = db.GetRepository<Campaign, string>();
+            _db = db.GetBasicRepository<Campaign>();
             _log = logger;
             _factory = factory;
         }
@@ -31,12 +31,12 @@ namespace Lucent.Portal.Models
         public async Task OnGetAsync()
         {
             _log.LogInformation("Getting campaigns");
-            Campaigns = (await _db.Get()).ToList();
+            Campaigns = (await _db.GetAll()).ToList();
         }
 
         public async Task<IActionResult> OnPostDeleteAsync(string id)
         {
-            var contact = (await _db.Get()).ToList().FirstOrDefault(c => c.Id == id);
+            var contact = (await _db.GetAll()).ToList().FirstOrDefault(c => c.Id == id);
 
             if (contact != null)
             {

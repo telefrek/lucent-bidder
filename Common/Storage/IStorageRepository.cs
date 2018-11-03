@@ -16,7 +16,7 @@ namespace Lucent.Common.Storage
         /// Gets all the objects in the collection
         /// </summary>
         /// <returns></returns>
-        Task<ICollection<T>> Get();
+        Task<ICollection<T>> GetAll();
 
         /// <summary>
         /// Gets a single object from the collection that has the matching id
@@ -30,7 +30,7 @@ namespace Lucent.Common.Storage
         /// Gets all the objects in the collection that match the key
         /// </summary>
         /// <returns></returns>
-        Task<ICollection<T>> GetAll(K id);
+        Task<ICollection<T>> GetAny(K id);
 
         /// <summary>
         /// Tries to insert the object into the collection

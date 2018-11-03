@@ -69,14 +69,27 @@ namespace Lucent.Common.Entities
         /// <value></value>
         public Guid LedgerTimeId { get; set; }
 
+        /// <summary>
+        /// Override equality comparison
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns></returns>
         public override bool Equals(object obj)
         {
             var entry = obj as LedgerCompositeEntryKey;
             if (entry == null) return false;
 
-            if (entry.LedgerTimeId == null) return entry.TargetId == TargetId;
+            return entry.LedgerTimeId == null ? entry.TargetId == TargetId :
+                entry.TargetId == TargetId && entry.LedgerTimeId == entry.LedgerTimeId;
+        }
 
-            return entry.TargetId == TargetId && entry.LedgerTimeId == entry.LedgerTimeId;
+        /// <summary>
+        /// Override so warnings shut up
+        /// </summary>
+        public override int GetHashCode()
+        {
+            return LedgerTimeId == null ? TargetId.GetHashCode() :
+                LedgerTimeId.GetHashCode();
         }
     }
 }
