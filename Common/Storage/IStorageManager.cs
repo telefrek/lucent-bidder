@@ -16,10 +16,10 @@ namespace Lucent.Common.Storage
         /// <summary>
         /// Register a custom repository
         /// </summary>
-        /// <param name="repository"></param>
+        /// <typeparam name="R"></typeparam>
         /// <typeparam name="T"></typeparam>
         /// <typeparam name="K"></typeparam>
         /// <returns></returns>
-        void RegisterRepository<T, K>(IStorageRepository<T, K> repository) where T : IStorageEntity<K>, new();
+        void RegisterRepository<R, T, K>() where R : IStorageRepository<T, K> where T : IStorageEntity<K>, new();
     }
 }

@@ -18,7 +18,7 @@ namespace Lucent.Common.Entities.Repositories
         }
 
         /// <inheritdoc/>
-        protected override Task Initialize()
+        protected override void Initialize()
         {
             throw new System.NotImplementedException();
         }

@@ -35,23 +35,23 @@ namespace Lucent.Common.Storage
         }
 
         /// <inheritdoc/>
-        protected override async Task Initialize()
+        protected override void Initialize()
         {
             _tableName = typeof(T).Name.ToLowerInvariant();
 
             _getAllStatement = new SimpleStatement("SELECT id, etag, format, updated, contents FROM {0}".FormatWith(_tableName));
 
             // optimize this to happen once later
-            var results = await ExecuteAsync("CREATE TABLE IF NOT EXISTS {0} (id text PRIMARY KEY, etag text, format text, updated timestamp, contents blob );".FormatWith(_tableName), "create_table_" + _tableName);
+            var results = Execute("CREATE TABLE IF NOT EXISTS {0} (id text PRIMARY KEY, etag text, format text, updated timestamp, contents blob );".FormatWith(_tableName), "create_table_" + _tableName);
 
-            _getStatement = await PrepareAsync("SELECT id, etag, format, updated, contents FROM {0} WHERE id=?".FormatWith(_tableName));
-            _insertStatement = await PrepareAsync("INSERT INTO {0} (id, etag, format, updated, contents) VALUES (?, ?, ?, ?, ?) IF NOT EXISTS".FormatWith(_tableName));
-
-            // Check etag
-            _updateStatement = await PrepareAsync("UPDATE {0} SET etag=?, updated=?, contents=?, format=? WHERE id=? IF etag=?".FormatWith(_tableName));
+            _getStatement = Prepare("SELECT id, etag, format, updated, contents FROM {0} WHERE id=?".FormatWith(_tableName));
+            _insertStatement = Prepare("INSERT INTO {0} (id, etag, format, updated, contents) VALUES (?, ?, ?, ?, ?) IF NOT EXISTS".FormatWith(_tableName));
 
             // Check etag
-            _deleteStatement = await PrepareAsync("DELETE FROM {0} WHERE id=? IF etag=?".FormatWith(_tableName));
+            _updateStatement = Prepare("UPDATE {0} SET etag=?, updated=?, contents=?, format=? WHERE id=? IF etag=?".FormatWith(_tableName));
+
+            // Check etag
+            _deleteStatement = Prepare("DELETE FROM {0} WHERE id=? IF etag=?".FormatWith(_tableName));
         }
 
         /// <inheritdoc/>

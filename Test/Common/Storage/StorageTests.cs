@@ -39,7 +39,7 @@ namespace Lucent.Common.Storage.Test
             var manager = ServiceProvider.GetRequiredService<IStorageManager>();
             Assert.IsNotNull(manager, "Failed to create manager");
 
-            var testRepo = manager.GetRepository<Creative, string>();
+            var testRepo = manager.GetBasicRepository<Creative>();
             Assert.IsNotNull(testRepo, "Failed to create repo");
 
             var res = await testRepo.Get(Guid.NewGuid().ToString());

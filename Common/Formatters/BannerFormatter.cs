@@ -23,7 +23,7 @@ namespace Lucent.Common.Formatters
             if (match.Content.ContentType == ContentType.Banner)
             {
                 return @"<a href=""{0}""><img src=""{1}"" width=""{2}"" height=""{3}""></a>".FormatWith(
-                    new Uri(baseUri, "/v1/postback?" + QueryParameters.LUCENT_BID_CONTEXT_PARAMETER + "=" + context.GetOperationString(BidOperation.Clicked) + "&" + QueryParameters.LUCENT_REDIRECT_PARAMETER + "=" + match.Campaign.LandingPage.SafeBase64Encode()).AbsoluteUri,
+                    new Uri(baseUri, "/v1/postback?" + QueryParameters.LUCENT_BID_CONTEXT_PARAMETER + "=" + context.ToString() + "&" + QueryParameters.LUCENT_REDIRECT_PARAMETER + "=" + match.Campaign.LandingPage.SafeBase64Encode()).AbsoluteUri,
                 match.Content.CreativeUri, match.Content.H, match.Content.W);
             }
 

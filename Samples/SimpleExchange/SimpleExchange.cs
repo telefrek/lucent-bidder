@@ -39,8 +39,10 @@ namespace Lucent.Samples.SimpleExchange
             _bidFactory = provider.GetService<IBidFactory>();
             _log = provider.GetService<ILogger<SimpleExchange>>();
 
+            var basic = _storageManager.GetBasicRepository<Campaign>();
+
             // Get the current campaign bidders
-            _bidders.AddRange(_storageManager.GetBasicRepository<Campaign>().GetAll().Result.Select(c => _bidFactory.CreateBidder(c)));
+            _bidders.AddRange(basic.GetAll().Result.Select(c => _bidFactory.CreateBidder(c)));
 
             // Setup the bid state update
             _campaignSub = _messageFactory.CreateSubscriber<LucentMessage<Campaign>>("bidstate", 0, "campaign.#");

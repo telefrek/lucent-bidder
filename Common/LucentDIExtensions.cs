@@ -12,6 +12,7 @@ using Lucent.Common.Filters.Serializers;
 using Lucent.Common.Media;
 using Lucent.Common.OpenRTB;
 using Lucent.Common.OpenRTB.Serializers;
+using Lucent.Common.Entities.Repositories;
 
 namespace Lucent.Common
 {
@@ -120,6 +121,11 @@ namespace Lucent.Common
 
                 services.Configure<RabbitConfiguration>(configuration.GetSection("rabbit"))
                     .AddSingleton<IMessageFactory, RabbitFactory>();
+
+                var storageManager = services.BuildServiceProvider().GetRequiredService<IStorageManager>();
+
+                // Register custom repositories
+                storageManager.RegisterRepository<LedgerEntryRepository, LedgerEntry, LedgerCompositeEntryKey>();
             }
 
             if (includePortal)

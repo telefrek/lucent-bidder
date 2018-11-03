@@ -18,7 +18,7 @@ namespace Lucent.Common.Bidding
         public static BidContext Parse(string encoded)
         {
             // Decode the string
-            var decoded = encoded.SafeBase64Decode();
+            var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(encoded.SafeBase64Decode()));
 
             // Read the raw objects
             var context = new BidContext();
@@ -29,7 +29,7 @@ namespace Lucent.Common.Bidding
             context.BidId = decoded.Substring(44, 22).DecodeGuid();
 
             // Get the other packed values as a protobuf stream
-            var packed = Encoding.UTF8.GetBytes(decoded.Substring(66));
+            var packed = Convert.FromBase64String(decoded.Substring(66));
             using (var protoReader = new ProtobufReader(new MemoryStream(packed)))
             {
                 context.CPM = protoReader.ReadDouble();
@@ -64,7 +64,7 @@ namespace Lucent.Common.Bidding
         /// 
         /// </summary>
         /// <value></value>
-        public DateTime BidDate { get; set; }
+        public DateTime BidDate { get; set; } = DateTime.UtcNow;
 
         /// <summary>
         /// 
@@ -113,10 +113,10 @@ namespace Lucent.Common.Bidding
                     protoWriter.Flush();
                 }
 
-                sb.Append(Encoding.UTF8.GetString(ms.ToArray()));
+                sb.Append(Convert.ToBase64String(ms.ToArray()));
             }
 
-            return sb.ToString().SafeBase64Encode();
+            return Convert.ToBase64String(Encoding.UTF8.GetBytes(sb.ToString())).SafeBase64Encode();
         }
     }
 

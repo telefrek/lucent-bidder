@@ -6,6 +6,7 @@ using Lucent.Common.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.DependencyInjection;
+using System.Linq;
 
 namespace Lucent.Common.Storage
 {
@@ -51,17 +52,19 @@ namespace Lucent.Common.Storage
         /// <inheritdoc/>
         public IStorageRepository<T, K> GetRepository<T, K>() where T : IStorageEntity<K>, new()
         {
-            if (typeof(T).IsAssignableFrom(typeof(IBasicStorageEntity)))
+            var repo = _registry.GetValueOrDefault(typeof(T), null);
+            if (repo == null)
             {
-                return _provider.CreateInstance(typeof(BasicCassandraRepository<>).MakeGenericType(typeof(T)), _session, _config.Format, _serializationContext, _log) as IStorageRepository<T, K>;
+                repo = typeof(CassandraBaseRepository).GetMethods().First(m => m.Name == "CreateAsync" && m.IsStatic).MakeGenericMethod(typeof(BasicCassandraRepository<>).MakeGenericType(typeof(T))).Invoke(null, new object[] { _session, _config.Format, _serializationContext, _log });
             }
 
-            return _registry.GetValueOrDefault(typeof(T), null) as IStorageRepository<T, K>;
+            return repo as IStorageRepository<T, K>;
         }
 
         /// <inheritdoc/>
-        public void RegisterRepository<T, K>(IStorageRepository<T, K> repository) where T : IStorageEntity<K>, new()
+        public void RegisterRepository<R, T, K>() where R : IStorageRepository<T, K> where T : IStorageEntity<K>, new()
         {
+            var repository = CassandraBaseRepository.CreateAsync<R>(_session, _config.Format, _serializationContext, _log);
             _registry.AddOrUpdate(typeof(T), repository, (t, oldRepo) => repository);
         }
     }

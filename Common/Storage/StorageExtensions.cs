@@ -13,6 +13,9 @@ namespace Lucent.Common.Storage
         /// <returns></returns>
         public static IBasicStorageRepository<T> GetBasicRepository<T>(this IStorageManager manager)
             where T : IStorageEntity<string>, new()
-            => manager.GetRepository<T, string>() as IBasicStorageRepository<T>;
+            {
+                var repo = manager.GetRepository<T, string>();
+                return repo as IBasicStorageRepository<T>;
+            }
     }
 }

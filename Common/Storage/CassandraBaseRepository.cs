@@ -68,10 +68,10 @@ namespace Lucent.Common.Storage
         /// <param name="logger">A logger to use for queries</param>
         /// <typeparam name="T">The type of base repository to create</typeparam>
         /// <returns>An initialized repository of the given type</returns>
-        public static async Task<T> CreateAsync<T>(ISession session, SerializationFormat serializationFormat, ISerializationContext serializationContext, ILogger logger) where T : CassandraBaseRepository, new()
+        public static T CreateAsync<T>(ISession session, SerializationFormat serializationFormat, ISerializationContext serializationContext, ILogger logger)
         {
-            var repo = Activator.CreateInstance(typeof(T), session, serializationFormat, serializationContext, logger) as T;
-            await repo.Initialize();
+            var repo = (T)Activator.CreateInstance(typeof(T), session, serializationFormat, serializationContext, logger);
+            (repo as CassandraBaseRepository).Initialize();
             return repo;
         }
 
@@ -79,7 +79,23 @@ namespace Lucent.Common.Storage
         /// Initialize the repository
         /// </summary>
         /// <returns></returns>
-        protected abstract Task Initialize();
+        protected abstract void Initialize();
+
+        /// <summary>
+        /// Sync method
+        /// </summary>
+        /// <param name="statement"></param>
+        /// <param name="queryName"></param>
+        /// <returns></returns>
+        protected RowSet Execute(string statement, string queryName) => ExecuteAsync(statement, queryName).Result;
+
+        /// <summary>
+        /// Sync method
+        /// </summary>
+        /// <param name="statement"></param>
+        /// <param name="queryName"></param>
+        /// <returns></returns>
+        protected RowSet Execute(IStatement statement, string queryName) => ExecuteAsync(statement, queryName).Result;
 
         /// <summary>
         /// Execute the query asynchronously
@@ -103,6 +119,13 @@ namespace Lucent.Common.Storage
                 return await _session.ExecuteAsync(statement);
             }
         }
+
+        /// <summary>
+        /// Sync method
+        /// </summary>
+        /// <param name="statement"></param>
+        /// <returns></returns>
+        protected PreparedStatement Prepare(string statement) => PrepareAsync(statement).Result;
 
         /// <summary>
         /// Prepares the statement asynchronously
