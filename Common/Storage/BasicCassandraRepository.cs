@@ -32,19 +32,23 @@ namespace Lucent.Common.Storage
         /// <inheritdoc/>
         public BasicCassandraRepository(ISession session, SerializationFormat serializationFormat, ISerializationContext serializationContext, ILogger logger) : base(session, serializationFormat, serializationContext, logger)
         {
+            _tableName = typeof(T).Name.ToLowerInvariant();
         }
+
+        /// <summary>
+        /// Create the table asynchronously
+        /// </summary>
+        /// <returns></returns>
+        async Task CreateTableAsync() =>
+            // optimize this to happen once later
+            await ExecuteAsync("CREATE TABLE IF NOT EXISTS {0} (id text PRIMARY KEY, etag text, format text, updated timestamp, contents blob );".FormatWith(_tableName), "create_table_" + _tableName);
 
         /// <inheritdoc/>
         protected override void Initialize()
         {
-            _tableName = typeof(T).Name.ToLowerInvariant();
+            _getAllStatement = new SimpleStatement("SELECT etag, format, updated, contents FROM {0}".FormatWith(_tableName));
 
-            _getAllStatement = new SimpleStatement("SELECT id, etag, format, updated, contents FROM {0}".FormatWith(_tableName));
-
-            // optimize this to happen once later
-            var results = Execute("CREATE TABLE IF NOT EXISTS {0} (id text PRIMARY KEY, etag text, format text, updated timestamp, contents blob );".FormatWith(_tableName), "create_table_" + _tableName);
-
-            _getStatement = Prepare("SELECT id, etag, format, updated, contents FROM {0} WHERE id=?".FormatWith(_tableName));
+            _getStatement = Prepare("SELECT etag, format, updated, contents FROM {0} WHERE id=?".FormatWith(_tableName));
             _insertStatement = Prepare("INSERT INTO {0} (id, etag, format, updated, contents) VALUES (?, ?, ?, ?, ?) IF NOT EXISTS".FormatWith(_tableName));
 
             // Check etag
@@ -60,72 +64,38 @@ namespace Lucent.Common.Storage
             var res = new List<T>();
             try
             {
-                using (var rowSet = await ExecuteAsync(_getAllStatement, "getAll_" + _tableName))
-                {
-                    var numRows = 0;
-                    using (var rowEnum = rowSet.GetEnumerator())
+                var rowSet = await ExecuteAsync(_getAllStatement, "getAll_" + _tableName);
+
+                return await ReadAsAsync(rowSet, (row) =>
                     {
-                        while (!rowSet.IsFullyFetched)
+                        var contents = row.GetValue<byte[]>("contents");
+                        var format = Enum.Parse<SerializationFormat>(row.GetValue<string>("format"));
+
+                        using (var ms = new MemoryStream(contents))
                         {
-                            if ((numRows = rowSet.GetAvailableWithoutFetching()) > 0)
+                            using (var reader = _serializationContext.CreateReader(ms, false, _serializationFormat))
                             {
-                                for (var i = 0; i < numRows && rowEnum.MoveNext(); ++i)
+                                if (reader.HasNext())
                                 {
-                                    var row = rowEnum.Current;
-                                    var id = row.GetValue<string>("id");
-
-                                    var contents = row.GetValue<byte[]>("contents");
-                                    var format = Enum.Parse<SerializationFormat>(row.GetValue<string>("format"));
-
-                                    using (var ms = new MemoryStream(contents))
-                                    {
-                                        using (var reader = _serializationContext.CreateReader(ms, false, _serializationFormat))
-                                        {
-                                            if (reader.HasNext())
-                                            {
-                                                var o = reader.ReadAs<T>();
-                                                o.ETag = row.GetValue<string>("etag");
-                                                o.Updated = row.GetValue<DateTime>("updated");
-                                                res.Add(o);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            else
-                                await rowSet.FetchMoreResultsAsync();
-                        }
-
-                        while (rowEnum.MoveNext())
-                        {
-                            var row = rowEnum.Current;
-                            var id = row.GetValue<string>("id");
-
-                            var contents = row.GetValue<byte[]>("contents");
-                            var tm = Encoding.UTF8.GetString(contents);
-                            var format = Enum.Parse<SerializationFormat>(row.GetValue<string>("format"));
-
-                            using (var ms = new MemoryStream(contents))
-                            {
-                                using (var reader = _serializationContext.CreateReader(ms, false, _serializationFormat))
-                                {
-                                    if (reader.HasNext())
-                                    {
-                                        var o = reader.ReadAs<T>();
-                                        o.Id = id;
-                                        o.ETag = row.GetValue<string>("etag");
-                                        o.Updated = row.GetValue<DateTime>("updated");
-                                        res.Add(o);
-                                    }
+                                    var o = reader.ReadAs<T>();
+                                    o.ETag = row.GetValue<string>("etag");
+                                    o.Updated = row.GetValue<DateTime>("updated");
+                                    return o;
                                 }
                             }
                         }
-                    }
-                }
+
+                        return default(T);
+                    });
             }
-            catch (Exception ex)
+            catch (InvalidQueryException queryError)
             {
-                _log.LogError(ex, "Failed to Get");
+                _log.LogError(queryError, "Checking for table missing error");
+
+                if ((queryError.Message ?? "").ToLowerInvariant().Contains("columnfamily") ||
+                (queryError.Message ?? "").ToLowerInvariant().Contains("table"))
+                    // Recreate
+                    await CreateTableAsync();
             }
 
             return res;
@@ -136,70 +106,38 @@ namespace Lucent.Common.Storage
         {
             try
             {
-                using (var rowSet = await ExecuteAsync(_getStatement.Bind(key), "get_" + _tableName))
-                {
-                    var numRows = 0;
-                    using (var rowEnum = rowSet.GetEnumerator())
+                var rowSet = await ExecuteAsync(_getStatement.Bind(key), "get_" + _tableName);
+
+                return (await ReadAsAsync(rowSet, (row) =>
                     {
-                        while (!rowSet.IsFullyFetched)
+                        var contents = row.GetValue<byte[]>("contents");
+                        var format = Enum.Parse<SerializationFormat>(row.GetValue<string>("format"));
+
+                        using (var ms = new MemoryStream(contents))
                         {
-                            if ((numRows = rowSet.GetAvailableWithoutFetching()) > 0)
+                            using (var reader = _serializationContext.CreateReader(ms, false, _serializationFormat))
                             {
-                                for (var i = 0; i < numRows && rowEnum.MoveNext(); ++i)
+                                if (reader.HasNext())
                                 {
-                                    var row = rowEnum.Current;
-                                    var id = row.GetValue<string>("id");
-
-                                    var contents = row.GetValue<byte[]>("contents");
-                                    var format = Enum.Parse<SerializationFormat>(row.GetValue<string>("format"));
-
-                                    using (var ms = new MemoryStream(contents))
-                                    {
-                                        using (var reader = _serializationContext.CreateReader(ms, false, _serializationFormat))
-                                        {
-                                            if (reader.HasNext())
-                                            {
-                                                var o = reader.ReadAs<T>();
-                                                o.ETag = row.GetValue<string>("etag");
-                                                o.Updated = row.GetValue<DateTime>("updated");
-                                                return o;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            else
-                                await rowSet.FetchMoreResultsAsync();
-                        }
-
-                        while (rowEnum.MoveNext())
-                        {
-                            var row = rowEnum.Current;
-                            var id = row.GetValue<string>("id");
-
-                            var contents = row.GetValue<byte[]>("contents");
-                            var format = Enum.Parse<SerializationFormat>(row.GetValue<string>("format"));
-
-                            using (var ms = new MemoryStream(contents))
-                            {
-                                using (var reader = _serializationContext.CreateReader(ms, false, _serializationFormat))
-                                {
-                                    if (reader.HasNext())
-                                    {
-                                        var o = reader.ReadAs<T>();
-                                        o.ETag = row.GetValue<string>("etag");
-                                        o.Updated = row.GetValue<DateTime>("updated");
-                                        return o;
-                                    }
+                                    var o = reader.ReadAs<T>();
+                                    o.ETag = row.GetValue<string>("etag");
+                                    o.Updated = row.GetValue<DateTime>("updated");
+                                    return o;
                                 }
                             }
                         }
-                    }
-                }
+
+                        return default(T);
+                    })).FirstOrDefault();
             }
-            catch (Exception ex)
+            catch (InvalidQueryException queryError)
             {
-                _log.LogError(ex, "Failed to Get {0}", key);
+                _log.LogError(queryError, "Checking for table missing error");
+
+                if ((queryError.Message ?? "").ToLowerInvariant().Contains("columnfamily") ||
+                (queryError.Message ?? "").ToLowerInvariant().Contains("table"))
+                    // Recreate
+                    await CreateTableAsync();
             }
 
             return default(T);
@@ -237,9 +175,14 @@ namespace Lucent.Common.Storage
 
                 return rowSet != null;
             }
-            catch (Exception ex)
+            catch (InvalidQueryException queryError)
             {
-                _log.LogError(ex, "Failed to Insert {0}", obj.Id);
+                _log.LogError(queryError, "Checking for table missing error");
+
+                if ((queryError.Message ?? "").ToLowerInvariant().Contains("columnfamily") ||
+                (queryError.Message ?? "").ToLowerInvariant().Contains("table"))
+                    // Recreate
+                    await CreateTableAsync();
             }
 
             return false;
@@ -248,15 +191,21 @@ namespace Lucent.Common.Storage
         /// <inheritdoc/>
         public async Task<bool> TryRemove(T obj)
         {
+            _log.LogInformation("Deleting obj");
             try
             {
                 var rowSet = await ExecuteAsync(_deleteStatement.Bind(obj.Id, obj.ETag), "delete_" + _tableName);
 
                 return rowSet != null;
             }
-            catch (Exception ex)
+            catch (InvalidQueryException queryError)
             {
-                _log.LogError(ex, "Failed to Remove {0}", obj.Id);
+                _log.LogError(queryError, "Checking for table missing error");
+
+                if ((queryError.Message ?? "").ToLowerInvariant().Contains("columnfamily") ||
+                (queryError.Message ?? "").ToLowerInvariant().Contains("table"))
+                    // Recreate
+                    await CreateTableAsync();
             }
 
             return false;
@@ -265,6 +214,7 @@ namespace Lucent.Common.Storage
         /// <inheritdoc/>
         public async Task<bool> TryUpdate(T obj)
         {
+            _log.LogInformation("Updating entry");
             var oldEtag = obj.ETag;
             try
             {
@@ -286,10 +236,14 @@ namespace Lucent.Common.Storage
 
                 return rowSet != null;
             }
-            catch (Exception ex)
+            catch (InvalidQueryException queryError)
             {
-                obj.ETag = oldEtag;
-                _log.LogError(ex, "Failed to Update {0}", obj.Id);
+                _log.LogError(queryError, "Checking for table missing error");
+
+                if ((queryError.Message ?? "").ToLowerInvariant().Contains("columnfamily") ||
+                (queryError.Message ?? "").ToLowerInvariant().Contains("table"))
+                    // Recreate
+                    await CreateTableAsync();
             }
 
             return false;

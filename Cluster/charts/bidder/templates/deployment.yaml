@@ -40,6 +40,14 @@ data:
       }
     }
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: exchanges
+data:
+  hello.txt: |
+    Hello World
+---
 apiVersion: apps/v1beta2
 kind: Deployment
 metadata:
@@ -94,6 +102,8 @@ spec:
           volumeMounts:
             - mountPath: /etc/config
               name: app-config
+            - mountPath: /etc/exchanges
+              name: exchange-config
           ports:
             - name: http
               containerPort: 80
@@ -124,3 +134,6 @@ spec:
         - name: app-config
           configMap:
             name: bidder-config
+        - name: exchange-config
+          configMap:
+            name: exchanges

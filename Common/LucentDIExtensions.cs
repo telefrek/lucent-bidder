@@ -136,7 +136,9 @@ namespace Lucent.Common
 
             if (includeBidder)
             {
-                services.AddSingleton<IBidFactory, BidFactory>()
+                // Setup bidder
+                services.Configure<ExchangeConfig>(configuration.GetSection("exchanges"))
+                .AddSingleton<IBidFactory, BidFactory>()
                     .AddSingleton<IExchangeRegistry, ExchangeRegistry>();
             }
 

@@ -6,6 +6,7 @@ using Lucent.Common.Serialization;
 using Microsoft.Extensions.Logging;
 using Lucent.Common;
 using Prometheus;
+using System.Collections.Generic;
 
 namespace Lucent.Common.Storage
 {
@@ -134,5 +135,37 @@ namespace Lucent.Common.Storage
         /// <returns>The prepared version of the statement</returns>
         protected async Task<PreparedStatement> PrepareAsync(string statement)
             => await _session.PrepareAsync(statement);
+
+        /// <summary>
+        /// Reads the rowset completely, using the builder function to create entities
+        /// </summary>
+        /// <param name="rowSet"></param>
+        /// <param name="builder"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        protected async Task<ICollection<T>> ReadAsAsync<T>(RowSet rowSet, Func<Row, T> builder)
+        {
+            var instances = new List<T>();
+
+            var numRows = 0;
+            using (var rowEnum = rowSet.GetEnumerator())
+            {
+                while (!rowSet.IsFullyFetched)
+                {
+                    if ((numRows = rowSet.GetAvailableWithoutFetching()) > 0)
+                    {
+                        for (var i = 0; i < numRows && rowEnum.MoveNext(); ++i)
+                            instances.Add(builder(rowEnum.Current));
+                    }
+                    else
+                        await rowSet.FetchMoreResultsAsync();
+                }
+
+                while (rowEnum.MoveNext())
+                    instances.Add(builder(rowEnum.Current));
+            }
+
+            return instances;
+        }
     }
 }

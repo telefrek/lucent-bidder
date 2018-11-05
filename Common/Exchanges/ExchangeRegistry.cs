@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Runtime.Loader;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Lucent.Common.Exchanges
 {
@@ -19,23 +20,25 @@ namespace Lucent.Common.Exchanges
         List<IAdExchange> _exchanges = new List<IAdExchange>();
         Dictionary<string, IAdExchange> _exchangeMap = new Dictionary<string, IAdExchange>();
         IServiceProvider _provider;
+        ExchangeConfig _config;
 
         object _syncLock = new object();
 
         /// <summary>
         /// Default constructor
         /// </summary>
+        /// <param name="config"></param>
         /// <param name="logger"></param>
         /// <param name="provider"></param>
-        public ExchangeRegistry(ILogger<ExchangeRegistry> logger, IServiceProvider provider)
+        public ExchangeRegistry(IOptions<ExchangeConfig> config, ILogger<ExchangeRegistry> logger, IServiceProvider provider)
         {
             _log = logger;
             _provider = provider;
-            var exchangePath = Path.Combine(Directory.GetCurrentDirectory(), "exchanges");
-            if (!Directory.Exists(exchangePath))
-                Directory.CreateDirectory(exchangePath);
+            _config = config.Value ?? new ExchangeConfig();
+            if (!Directory.Exists(_config.ExchangeLocation))
+                Directory.CreateDirectory(_config.ExchangeLocation);
 
-            _watcher = new FileSystemWatcher(exchangePath, "*.dll");
+            _watcher = new FileSystemWatcher(_config.ExchangeLocation, "*.dll");
 
             // Watch for exchanges that change
             _watcher.Changed += (o, e) =>
@@ -56,7 +59,7 @@ namespace Lucent.Common.Exchanges
             };
 
             // Load any existing exchanges
-            foreach (var file in new DirectoryInfo(exchangePath).GetFileSystemInfos("*.dll"))
+            foreach (var file in new DirectoryInfo(_config.ExchangeLocation).GetFileSystemInfos("*.dll"))
                 LoadExchange(file.FullName);
 
             _watcher.EnableRaisingEvents = true;
