@@ -61,6 +61,12 @@ namespace Lucent.Common.Storage
         }
 
         /// <summary>
+        /// Create the table asynchronously
+        /// </summary>
+        /// <returns></returns>
+        public virtual Task CreateTableAsync() => Task.CompletedTask;
+
+        /// <summary>
         /// Creates a repository of the given type asynchronously
         /// </summary>
         /// <param name="session">The current session</param>
@@ -115,9 +121,20 @@ namespace Lucent.Common.Storage
         /// <returns></returns>
         protected async Task<RowSet> ExecuteAsync(IStatement statement, string queryName)
         {
-            using (var context = _queryLatency.CreateContext(queryName))
+            try
             {
-                return await _session.ExecuteAsync(statement);
+                using (var context = _queryLatency.CreateContext(queryName))
+                {
+                    return await _session.ExecuteAsync(statement);
+                }
+            }
+            catch (InvalidQueryException)
+            {
+                await CreateTableAsync();
+                using (var context = _queryLatency.CreateContext(queryName))
+                {
+                    return await _session.ExecuteAsync(statement);
+                }
             }
         }
 
@@ -134,7 +151,17 @@ namespace Lucent.Common.Storage
         /// <param name="statement">The statement to prepare</param>
         /// <returns>The prepared version of the statement</returns>
         protected async Task<PreparedStatement> PrepareAsync(string statement)
-            => await _session.PrepareAsync(statement);
+        {
+            try
+            {
+                return await _session.PrepareAsync(statement);
+            }
+            catch (InvalidQueryException)
+            {
+                await CreateTableAsync();
+                return await _session.PrepareAsync(statement);
+            }
+        }
 
         /// <summary>
         /// Reads the rowset completely, using the builder function to create entities

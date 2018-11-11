@@ -39,7 +39,7 @@ namespace Lucent.Common.Storage
         /// Create the table asynchronously
         /// </summary>
         /// <returns></returns>
-        async Task CreateTableAsync() =>
+        public override async Task CreateTableAsync() =>
             // optimize this to happen once later
             await ExecuteAsync("CREATE TABLE IF NOT EXISTS {0} (id text PRIMARY KEY, etag text, format text, updated timestamp, contents blob );".FormatWith(_tableName), "create_table_" + _tableName);
 

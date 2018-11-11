@@ -36,7 +36,7 @@ namespace Lucent.Common.Entities.Repositories
             _getAllLedgers = new SimpleStatement("SELECT etag, format, updated, contents FROM {0}".FormatWith(_tableName));
             _getLedgerEntry = Prepare("SELECT etag, format, updated, contents FROM {0} WHERE id = ? AND ledgerid = ?".FormatWith(_tableName));
             _getFullLedger = Prepare("SELECT etag, format, updated, contents FROM {0} WHERE id = ?".FormatWith(_tableName));
-            _insertLedgerEntry = Prepare("INSERT INTO {0} (id, ledgerid, etag, format, updated, contents) VALUES (?, ?, ?, ?, ?, ?) IF NOT EXISTS");
+            _insertLedgerEntry = Prepare("INSERT INTO {0} (id, ledgerid, etag, format, updated, contents) VALUES (?, ?, ?, ?, ?, ?) IF NOT EXISTS".FormatWith(_tableName));
             _updateLedgerEntry = Prepare("UPDATE {0} SET etag=?, updated=?, contents=?, format=? WHERE id=? AND ledgerid=? IF etag=?".FormatWith(_tableName));
             _deleteLedgerEntry = Prepare("DELETE FROM {0} WHERE id=? AND ledgerid=? IF etag=?".FormatWith(_tableName));
         }
@@ -45,9 +45,9 @@ namespace Lucent.Common.Entities.Repositories
         /// Create the table asynchronously
         /// </summary>
         /// <returns></returns>
-        async Task CreateTableAsync() =>
+        public override async Task CreateTableAsync() =>
             // optimize this to happen once later
-            await ExecuteAsync("CREATE TABLE IF NOT EXISTS {0} (id text, ledgerid timeuuid, etag text, format text, updated timestamp, contents blob, PRIMARY KEY(id, ledgerid) ) WITH CLUSTERING ORDER BY ledgerid DESC;".FormatWith(_tableName), "create_table_" + _tableName);
+            await ExecuteAsync("CREATE TABLE IF NOT EXISTS {0} (id text, ledgerid timeuuid, etag text, format text, updated timestamp, contents blob, PRIMARY KEY(id, ledgerid) ) WITH CLUSTERING ORDER BY ( ledgerid DESC );".FormatWith(_tableName), "create_table_" + _tableName);
 
         /// <inheritdoc/>
         public async Task<ICollection<LedgerEntry>> GetAll()
