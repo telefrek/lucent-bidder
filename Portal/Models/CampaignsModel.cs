@@ -26,7 +26,8 @@ namespace Lucent.Portal.Models
             _factory = factory;
         }
 
-        public IList<Campaign> Campaigns { get; private set; }
+        [BindProperty]
+        public IList<Campaign> Campaigns { get; set; }
 
         public async Task OnGetAsync()
         {

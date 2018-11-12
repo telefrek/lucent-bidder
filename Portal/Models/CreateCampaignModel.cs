@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Lucent.Common.Entities;
@@ -27,6 +28,14 @@ namespace Lucent.Portal.Models
 
         [BindProperty]
         public Campaign Campaign { get; set; }
+
+        public IActionResult OnPostAddDomain(string domain)
+        {
+            if(!string.IsNullOrWhiteSpace(domain) && !Campaign.AdDomains.Contains(domain))
+                Campaign.AdDomains.Add(domain);
+
+            return Page();
+        }
 
         public async Task<IActionResult> OnPostAsync()
         {

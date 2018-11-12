@@ -33,9 +33,6 @@ namespace Lucent.Portal.Models
         [BindProperty]
         public Campaign Campaign { get; set; }
 
-        [BindProperty]
-        public BidFilter CampaignFilters { get; set; }
-
         public string FilterTypeValue { get; set; }
 
         public async Task<IActionResult> OnGetAsync(string id)
@@ -46,7 +43,6 @@ namespace Lucent.Portal.Models
             if (c != null)
             {
                 Campaign = c;
-                CampaignFilters = new BidFilter();
                 return Page();
             }
 
@@ -56,8 +52,6 @@ namespace Lucent.Portal.Models
         public async Task<IActionResult> OnPostAsync()
         {
             _log.LogInformation("Validating post");
-            foreach (var key in Request.Form.Keys)
-                _log.LogInformation("Key : {0}", key);
             if (!ModelState.IsValid || Campaign == null)
             {
                 return Page();
@@ -66,13 +60,11 @@ namespace Lucent.Portal.Models
             var c = await _db.Get(Campaign.Id);
             if (c != null)
             {
-                c.Name = Campaign.Name;
-
                 try
                 {
-                    if (await _db.TryUpdate(c))
+                    if (await _db.TryUpdate(Campaign))
                     {
-                        await _context.UpdateCampaignAsync(c, CancellationToken.None);
+                        await _context.UpdateCampaignAsync(Campaign, CancellationToken.None);
 
                         _log.LogInformation("Modified campaign, sending across clusters");
                         var cluster = _factory.GetClusters().FirstOrDefault();

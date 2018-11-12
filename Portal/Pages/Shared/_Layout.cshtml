@@ -49,13 +49,6 @@
             </form>
         </div>
     </nav>
-    <div class="container-fluid body-content">
-        @RenderBody()
-    </div>
-    
-    <footer class="footer container-fluid">
-        <span class="text-muted">&copy Telefrek - LucentBid DSP</span>
-    </footer>
 
     <script src="https://code.jquery.com/jquery-3.2.1.min.js" 
             asp-fallback-src="~/lib/jquery/dist/jquery.min.js"
@@ -71,6 +64,14 @@
             integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" 
             crossorigin="anonymous">
     </script>
+    
+    <div class="container-fluid body-content">
+        @RenderBody()
+    </div>
+    
+    <footer class="footer container-fluid">
+        <span class="text-muted">&copy Telefrek - LucentBid DSP</span>
+    </footer>
 
     @RenderSection("scripts", required: false)
 </body>

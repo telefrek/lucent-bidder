@@ -76,7 +76,11 @@ namespace Lucent.Common.Storage
             }
 
             /// <inheritdoc />
-            public Task<bool> TryRemove(T obj) => Task.FromResult(Entities.Exists(e => e.Id.Equals(obj.Id) && e.ETag == obj.ETag) ? Entities.Remove(obj) : false);
+            public Task<bool> TryRemove(T obj)
+            {
+                var test = Entities.FirstOrDefault(e => e.Id.Equals(obj.Id) && e.ETag == obj.ETag);
+                return Task.FromResult(test != null ? Entities.Remove(test) : false);
+            }
 
             /// <inheritdoc />
             public async Task<bool> TryUpdate(T obj) => await TryRemove(obj) ? await TryInsert(obj) : false;
@@ -114,7 +118,11 @@ namespace Lucent.Common.Storage
             }
 
             /// <inheritdoc />
-            public Task<bool> TryRemove(T obj) => Task.FromResult(Entities.Exists(e => e.Id.Equals(obj.Id) && e.ETag == obj.ETag) ? Entities.Remove(obj) : false);
+            public Task<bool> TryRemove(T obj)
+            {
+                var test = Entities.FirstOrDefault(e => e.Id.Equals(obj.Id) && e.ETag == obj.ETag);
+                return Task.FromResult(test != null ? Entities.Remove(test) : false);
+            }
 
             /// <inheritdoc />
             public async Task<bool> TryUpdate(T obj) => await TryRemove(obj) ? await TryInsert(obj) : false;

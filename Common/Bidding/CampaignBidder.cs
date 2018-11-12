@@ -100,7 +100,7 @@ namespace Lucent.Common.Bidding
                     BillingUrl = new Uri(baseUri.Uri, "/v1/postback?" + QueryParameters.LUCENT_BID_CONTEXT_PARAMETER + "=" + bidContext.GetOperationString(BidOperation.Impression)).AbsoluteUri,
                     H = bm.Content.H,
                     W = bm.Content.W,
-                    AdDomain = bm.Campaign.AdDomains,
+                    AdDomain = bm.Campaign.AdDomains.ToArray(),
                     BidExpiresSeconds = 300,
                     Bundle = bm.Campaign.BundleId,
                     ContentCategories = bm.Content.Categories,

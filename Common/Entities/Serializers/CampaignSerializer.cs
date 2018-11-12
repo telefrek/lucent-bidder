@@ -51,7 +51,7 @@ namespace Lucent.Common.Entities.Serializers
                                 instance.BundleId = await serializationStreamReader.ReadStringAsync();
                                 break;
                             case 9:
-                                instance.AdDomains = await serializationStreamReader.ReadStringArrayAsync();
+                                instance.AdDomains.AddRange(await serializationStreamReader.ReadStringArrayAsync());
                                 break;
                             default:
                                 await serializationStreamReader.SkipAsync();
@@ -85,7 +85,7 @@ namespace Lucent.Common.Entities.Serializers
                         instance.BundleId = await serializationStreamReader.ReadStringAsync();
                         break;
                     case "domains":
-                        instance.AdDomains = await serializationStreamReader.ReadStringArrayAsync();
+                        instance.AdDomains.AddRange(await serializationStreamReader.ReadStringArrayAsync());
                         break;
                     default:
                         await serializationStreamReader.SkipAsync();
@@ -115,7 +115,7 @@ namespace Lucent.Common.Entities.Serializers
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 6, Name = "landing" }, instance.LandingPage);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 7, Name = "buyerid" }, instance.BuyerId);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 8, Name = "bundleid" }, instance.BundleId);
-                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 9, Name = "domains" }, instance.AdDomains);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 9, Name = "domains" }, instance.AdDomains.ToArray());
                 await serializationStreamWriter.EndObjectAsync();
                 await serializationStreamWriter.FlushAsync();
             }

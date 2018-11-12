@@ -59,13 +59,14 @@ namespace Lucent.Common.Entities
         /// </summary>
         /// <value></value> 
         [Display(Name = "Domains")]
-        public string[] AdDomains { get; set; }
+        [UIHint("Domains")]
+        public List<string> AdDomains { get; set; } = new List<string> { };
 
         /// <summary>
         /// 
         /// </summary>
         /// <value></value>
-        public BidFilter BidFilter { get; set; }
+        public BidFilter BidFilter { get; set; } = new BidFilter { GeoFilters = new Filters.Filter[] { new Filters.Filter { Property = "Country", PropertyType = typeof(string), Value = "USA", FilterType = Filters.FilterType.EQ } } };
 
         /// <summary>
         /// 

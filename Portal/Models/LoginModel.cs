@@ -44,7 +44,7 @@ namespace Lucent.Portal.Models
                 if (principal != null)
                 {
                     await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal, new AuthenticationProperties { IsPersistent = LoginEntity.RememberMe });
-                    return Page();
+                        return RedirectToPage("Campaigns");
                 }
 
                 ModelState.AddModelError("", "credentials are invalid");

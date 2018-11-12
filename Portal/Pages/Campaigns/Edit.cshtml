@@ -15,17 +15,7 @@
 <form method="POST">
     <div asp-validation-summary="All"></div>
     <input asp-for="Campaign.Id" type="hidden" />
-    <div class="form-group">
-        <label asp-for="Campaign.Name" class="col-md-2 control-label"></label>
-        <div class="col-md-10">
-            <input asp-for="Campaign.Name" class="form-control" />
-            <span asp-validation-for="Campaign.Name" class="text-danger"></span>
-        </div>
-    </div>     
-
-    <partial name="CampaignSchedule"
-        for="Campaign.Schedule" />
-
-    <partial name="BidFilters" for="CampaignFilters"/>
+        <partial name="CampaignMetadata" for="Campaign" />
+        <partial name="CampaignSchedule" for="Campaign.Schedule" />
     <input class="btn btn-secondary" type="submit"/>
 </form>
