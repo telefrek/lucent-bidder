@@ -1,28 +1,35 @@
-@model List<Lucent.Common.Entities.Creative>
+@using Lucent.Common.Entities;
+@model Lucent.Portal.Entities.CampaignContent
 <h2>Creatives</h2>
-<form method="post">
-    <table class="table">
-        <thead>
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var creative in Model.Campaign.Creatives)
+        {
             <tr>
-                <th>ID</th>
-                <th>Name</th>
+                <td>@creative.Id</td>
+                <td>@creative.Name</td>
+                <td>
+                    <input type="submit" class="btn btn-link" asp-page-handler="RemoveCreative" 
+                            asp-route-id="@creative.Id" value="remove" />
+                </td>
             </tr>
-        </thead>
-        <tbody>
-            @foreach (var creative in Model)
-            {
-                <tr>
-                    <td>@creative.Id</td>
-                    <td>@creative.Name</td>
-                    <td>
-                        <a asp-page="./Edit" asp-route-id="@creative.Id">edit</a>
-                        <button type="submit" asp-page-handler="delete" 
-                                asp-route-id="@creative.Id">delete</button>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
-
-    <a asp-page="./Create">Create</a>
-</form>
+        }
+        @foreach (var creative in Model.CreativeCatalog)
+        {
+            <tr>
+                <td>@creative.Id</td>
+                <td>@creative.Name</td>
+                <td>
+                    <input type="submit" asp-page="./Edit" class="btn btn-link" asp-page-handler="AddCreative" 
+                            asp-route-id="@creative.Id" value="add"/>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
