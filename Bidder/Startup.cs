@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Lucent.Common;
 using Lucent.Common.Messaging;
+using Lucent.Common.Middleware;
 using Lucent.Common.OpenRTB;
 using Lucent.Common.Serialization;
 using Microsoft.AspNetCore.Builder;
@@ -85,10 +86,6 @@ namespace Bidder
             // Add metrics ftw
             app.UseMetricServer();
             var routeBuilder = new RouteBuilder(app);
-            routeBuilder.MapPost("/v1/bidder", async (context) =>
-            {
-                await context.RequestServices.GetRequiredService<IBidHandler>().HandleAsync(context);
-            });
 
             routeBuilder.MapGet("/health", (context) =>
             {
@@ -106,6 +103,7 @@ namespace Bidder
             app.MapWhen(context => context.Request.Path.StartsWithSegments("/v1"), appBuilder =>
             {
                 appBuilder.UseLoadShedding();
+                app.UseMiddleware<BiddingMiddleware>();
             });
         }
     }

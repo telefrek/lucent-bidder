@@ -25,6 +25,7 @@ namespace Lucent.Common.Middleware
         IExchangeRegistry _exchangeRegistry;
         IStorageManager _storageManager;
         List<Func<BidRequest, bool>> _bidFilters;
+        RequestDelegate _nextHandler;
 
         int _next = 0;
 
@@ -44,7 +45,7 @@ namespace Lucent.Common.Middleware
             _exchangeRegistry = exchangeRegistry;
             _storageManager = storageManager;
             _bidFilters = _storageManager.GetRepository<BidderFilter, string>().GetAll().Result.Where(f => f.BidFilter != null).Select(f => f.BidFilter.GenerateCode()).ToList();
-
+            _nextHandler = next;
         }
 
         /// <summary>
@@ -52,8 +53,14 @@ namespace Lucent.Common.Middleware
         /// </summary>
         /// <param name="httpContext">The current http context</param>
         /// <returns>A completed pipeline step</returns>
-        public async Task HandleAsync(HttpContext httpContext)
+        public async Task InvokeAsync(HttpContext httpContext)
         {
+            if (!httpContext.Request.Path.StartsWithSegments("/v1/bidder"))
+            {
+                await _nextHandler.Invoke(httpContext);
+                return;
+            }
+
             // Validate we can find a matching exchange
             var exchange = _exchangeRegistry.Exchanges.FirstOrDefault(e => e.IsMatch(httpContext));
             if (exchange == null)
@@ -80,11 +87,11 @@ namespace Lucent.Common.Middleware
                     if (request != null && !_bidFilters.Any(f => f.Invoke(request)))
                     {
                         var response = await exchange.Bid(request, httpContext);
-                        
+
                         // Clear the compression flag and re-validate the accept header
                         format &= ~SerializationFormat.COMPRESSED;
-                        if(httpContext.Request.Headers.TryGetValue("Accept-Encoding", out encoding))
-                            if(encoding.Any(e=>e.Contains("gzip")))
+                        if (httpContext.Request.Headers.TryGetValue("Accept-Encoding", out encoding))
+                            if (encoding.Any(e => e.Contains("gzip")))
                                 format |= SerializationFormat.COMPRESSED;
 
                         if (response != null && (response.Bids ?? new SeatBid[0]).Length > 0)

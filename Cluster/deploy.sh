@@ -1,19 +1,32 @@
 #!/bin/bash
 set -e
-echo 'Pushing images'
 
-if [ "${1:-setup}" == "setup" ]; then
+if [ "${1:-infra}" == "infra" ]; then
     echo 'Setting up helm'
+
+    # setup roles for kubernetes
     kubectl update -f create_admin_role.yaml
 
+    # add the storage class
+    kubectl create -f ./setup/content_file_store_sc.yaml -n lucent
+
+    # Helm and nginx ingress
     helm init --tiller-namespace lucent --service-account helm
+    helm repo update charts/stable
     sleep 10
     helm install stable/nginx-ingress --name ingress --namespace kube-system --tiller-namespace lucent
+
     helm upgrade --install --tiller-namespace=lucent --namespace=lucent cassandra ./charts/cassandra
     helm upgrade --install --tiller-namespace=lucent --namespace=lucent rabbitmq ./charts/rabbitmq-ha
-    helm upgrade --install --tiller-namespace=lucent --namespace=lucent prometheus-operator ./charts/prometheus-operator/
-    helm upgrade --install --tiller-namespace=lucent --namespace=lucent prometheus ./charts/kube-prometheus/ -f ${2-.}/monitoring.yaml
+fi
 
+if [ "${1:-ldap}" == "monitoring" ]; then
+    # setup monitoring
+    helm upgrade --install --tiller-namespace=lucent --namespace=lucent prometheus stable/prometheus-operator -f ${2-.}/monitoring.yaml
+fi
+
+if [ "${1:-ldap}" == "ldap" ]; then
+    helm upgrade --install --tiller-namespace=lucent --namespace=lucent openldap ./charts/openldap
     echo 'ldap credentials:'
     kubectl get secret --namespace lucent openldap-secret -o jsonpath="{.data.LDAP_ADMIN_PASSWORD}" | base64 --decode; echo
 fi
