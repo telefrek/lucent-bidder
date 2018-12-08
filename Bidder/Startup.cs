@@ -43,8 +43,9 @@ namespace Bidder
             });
 
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+
+            services.AddLucentServices(Configuration, localOnly: true, includeBidder: true);
             services.ConfigureLoadShedding(Configuration);
-            services.AddLucentServices(Configuration, includeBidder:true);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -59,31 +60,17 @@ namespace Bidder
                 app.UseExceptionHandler("/Error");
                 app.UseHsts();
             }
+
+            System.Runtime.GCSettings.LatencyMode = System.Runtime.GCLatencyMode.SustainedLowLatency;
+            ThreadPool.SetMinThreads(64, 64);
             
-
-            // Track the api latency for each request type
-            var api_latency = Metrics.CreateHistogram("bidder_latency", "Latency for each bidder call", new HistogramConfiguration
-            {
-                LabelNames = new string[] { "method", "path" },
-                Buckets = new double[] { 0.005, 0.010, 0.015, 0.025, 0.050, 0.075, 0.100, 0.125, 0.150, 0.200, 0.25, 0.5, 0.75, 1.0 },
-            });
-
-            // This should be fun...
-            app.Use(async (context, next) =>
-            {
-                var instance = api_latency.WithLabels(context.Request.Method, context.Request.Path);
-                var sw = Stopwatch.StartNew();
-                await next().ContinueWith(t =>
-                {
-                    instance.Observe(sw.ElapsedTicks * 1000d / Stopwatch.Frequency);
-                });
-            });
 
             //app.UseHttpsRedirection(); turn this off for now
             app.UseCookiePolicy();
 
             // Add metrics ftw
             app.UseMetricServer();
+            app.UseMiddleware<MonitoringMiddleware>();
             var routeBuilder = new RouteBuilder(app);
 
             routeBuilder.MapGet("/health", (context) =>
@@ -99,56 +86,8 @@ namespace Bidder
             });
 
             app.UseRouter(routeBuilder.Build());
-            app.MapWhen(context => context.Request.Path.StartsWithSegments("/v1"), appBuilder =>
-            {
-                appBuilder.UseLoadShedding();
-                app.UseMiddleware<BiddingMiddleware>();
-            });
-        }
-    }
-
-    public interface IBidHandler
-    {
-        Task HandleAsync(HttpContext context);
-    }
-
-    public class BidHandler : IBidHandler
-    {
-        ILogger<BidHandler> _log;
-        IMessageSubscriber<LucentMessage> _subscriber;
-        ISerializationContext _serializationContext;
-        int _next = 0;
-
-        public BidHandler(ILogger<BidHandler> log, IMessageFactory factory, ISerializationContext serializationContext)
-        {
-            _log = log;
-            _serializationContext = serializationContext;
-            _subscriber = factory.CreateSubscriber<LucentMessage>("campaigns", 0);
-            _subscriber.OnReceive = (m) =>
-           {
-               if (m != null)
-               {
-                   _log.LogInformation("Received message: {0}", m.Body);
-                   Interlocked.Exchange(ref _next, 1);
-               }
-           };
-        }
-
-        public async Task HandleAsync(HttpContext context)
-        {
-            using (var serializationReader = _serializationContext.CreateReader(context.Request.Body, false, SerializationFormat.JSON))
-            {
-                if (await serializationReader.HasNextAsync())
-                {
-                    var request = await serializationReader.ReadAsAsync<BidRequest>();
-
-                    if (request != null)
-                        _log.LogInformation("Got request {0}", request.Id);
-
-                    context.Response.StatusCode = request == null ? 400 : 204;
-                }
-                else context.Response.StatusCode = 400;
-            }
+            //app.UseLoadShedding();
+            app.UseMiddleware<BiddingMiddleware>();
         }
     }
 }

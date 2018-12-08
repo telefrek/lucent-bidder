@@ -1,4 +1,5 @@
 using System.IO;
+using System.Threading.Tasks;
 
 namespace Lucent.Common.Serialization
 {
@@ -7,13 +8,6 @@ namespace Lucent.Common.Serialization
     /// </summary>
     public interface ISerializationContext
     {
-        /// <summary>
-        /// Creates a new serialization stream with the given format
-        /// </summary>
-        /// <param name="format">The desired serialization format</param>
-        /// <returns>A new serialization stream</returns>
-        ISerializationStream CreateStream(SerializationFormat format);
-
         /// <summary>
         /// Wraps an existing stream as a serialization stream with the given format
         /// </summary>
@@ -40,5 +34,14 @@ namespace Lucent.Common.Serialization
         /// <param name="format">The desired serialization format</param>
         /// <returns>A new serialization stream writer</returns>
         ISerializationStreamWriter CreateWriter(Stream target, bool leaveOpen, SerializationFormat format);
+
+        /// <summary>
+        /// Write the object to the stream
+        /// </summary>
+        /// <param name="writer"></param>
+        /// <param name="instance"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        Task Write<T>(ILucentObjectWriter writer, T instance) where T : new();
     }
 }

@@ -36,6 +36,7 @@ namespace Lucent.Common.Bidding
         }
 
         [TestMethod]
+        [Ignore]
         public async Task TestSuccessfulBid()
         {
             var serializationContext = ServiceProvider.GetRequiredService<ISerializationContext>();

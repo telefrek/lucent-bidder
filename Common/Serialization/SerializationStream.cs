@@ -30,7 +30,7 @@ namespace Lucent.Common.Serialization
         /// <param name="leaveOpen"></param>
         public SerializationStream(Stream source, SerializationFormat streamFormat, ISerializationContext serializationContext, bool leaveOpen = false)
         {
-            _wrappedStream = source;
+            _wrappedStream = new BufferedStream(source, 4096);
             _streamFormat = streamFormat;
             _serializationContext = serializationContext;
             _leaveOpen = leaveOpen;

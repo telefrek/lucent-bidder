@@ -20,6 +20,10 @@ namespace Bidder
         public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
                 .UseKestrel()
+                .UseLibuv(libuvopts =>
+                {
+                    libuvopts.ThreadCount = 16;
+                })
                 .UseContentRoot(Directory.GetCurrentDirectory())
                 .ConfigureAppConfiguration((hostingContext, config) =>
                 {
