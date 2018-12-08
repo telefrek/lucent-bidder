@@ -198,7 +198,10 @@ namespace Lucent.Common.Storage.Test
         async Task TestWriteOne<T>(ILucentWriter writer, T instance, ISerializationContext context) where T : new()
         {
             using (var objWriter = await writer.CreateObjectWriter(new PropertyId { Id = 1, Name = "geo" }))
+            {
                 await context.Write(objWriter, instance);
+                await objWriter.EndObject();
+            }
 
             await writer.Flush();
         }

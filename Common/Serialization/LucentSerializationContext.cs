@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -72,7 +73,7 @@ namespace Lucent.Common.Serialization
             {
                 AsyncBuilder = asm,
                 Instance = instance,
-                State = 0,
+                State = 1,
                 Writer = writer,
                 AwaiterMap = BuildMap<T>()
             };
@@ -95,8 +96,9 @@ namespace Lucent.Common.Serialization
             var cases = new List<SwitchCase>();
 
             var awaiter = typeof(Task).GetMethod("GetAwaiter");
+            var retVar = Expression.Parameter(typeof(TaskAwaiter), "a");
 
-            var mTypes = (from m in typeof(ILucentObjectWriter).GetMethods()
+            var mTypes = (from m in typeof(ILucentWriter).GetMethods()
                           let ptype = m.GetParameters().LastOrDefault()
                           where m.Name == "WriteAsync"
                           select new { PType = ptype, Method = m }).ToDictionary(e => e.PType.ParameterType, e => e.Method);
@@ -107,6 +109,8 @@ namespace Lucent.Common.Serialization
 
             foreach (var prop in list)
             {
+                var convert = prop.Property.PropertyType.IsEnum;
+
                 // Find the target method
                 var mInfo = mTypes.GetValueOrDefault(prop.Property.PropertyType, null);
                 if (mInfo == null && prop.Property.PropertyType.IsEnum)
@@ -119,10 +123,13 @@ namespace Lucent.Common.Serialization
                     //      return writer.WriteAsync(prop, val).GetAwaiter();
                     cases.Add(
                         Expression.SwitchCase(
-                            Expression.Return(ret,
+                            Expression.Assign(retVar,
                                 Expression.Call(
                                     Expression.Call(writerParam, mInfo, Expression.Constant(new PropertyId { Id = prop.Attribute.Id, Name = prop.Attribute.Name }),
-                                        Expression.Property(objParam, prop.Property)
+                                        // Check for cast on enum
+                                        convert ?
+                                        (Expression)Expression.Convert(Expression.Property(objParam, prop.Property), typeof(int))
+                                        : Expression.Property(objParam, prop.Property)
                                     ),
                                 awaiter)
                             ),
@@ -130,7 +137,22 @@ namespace Lucent.Common.Serialization
                 }
             }
 
-            return null;
+            // switch(idx) { 0-N in order, followed by default: return default(TaskAwaiter)}
+            var body = new List<Expression>();
+            body.Add(Expression.Switch(idParam, Expression.Assign(retVar, Expression.Default(typeof(TaskAwaiter))), cases.ToArray()));
+
+            body.Add(Expression.Label(ret, retVar));
+
+            var block = Expression.Block(new[] { retVar }, body);
+            var ftype = typeof(Func<,,,>).MakeGenericType(typeof(T), typeof(ILucentObjectWriter), typeof(ulong), typeof(TaskAwaiter));
+
+            var compiler = makeLambda.MakeGenericMethod(ftype).Invoke(null, new object[] { block, new ParameterExpression[] { objParam, writerParam, idParam } });
+
+            return (Func<T, ILucentObjectWriter, ulong, TaskAwaiter>)compiler.GetType().GetMethod("Compile", Type.EmptyTypes).Invoke(compiler, new object[] { });
         }
+
+        static readonly MethodInfo makeLambda = typeof(Expression).GetMethods().Where(m =>
+                m.Name == "Lambda" && m.IsGenericMethod && m.GetGenericArguments().Length == 1
+                ).First();
     }
 }
