@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -13,6 +14,12 @@ namespace Lucent.Common.Serialization._Internal
     /// </summary>
     public static class AsyncExpressionExtensions
     {
+        static ConcurrentDictionary<Type, object> _writers = new ConcurrentDictionary<Type, object>();
+        static ConcurrentDictionary<Type, object> _arrayWriters = new ConcurrentDictionary<Type, object>();
+        static ConcurrentDictionary<Type, object> _readers = new ConcurrentDictionary<Type, object>();
+        static ConcurrentDictionary<Type, object> _arrayReaders = new ConcurrentDictionary<Type, object>();
+
+
         /// <summary>
         /// Write the instance to the writer asynchronously
         /// </summary>
@@ -24,13 +31,14 @@ namespace Lucent.Common.Serialization._Internal
         public static Task Write<T>(this ILucentObjectWriter writer, ISerializationContext context, T instance) where T : new()
         {
             var asm = AsyncTaskMethodBuilder.Create();
+
             var rsm = new ObjectWriterStateMachine<T>
             {
                 AsyncBuilder = asm,
                 Instance = instance,
                 State = 1,
                 Writer = writer,
-                AwaiterMap = BuildWriter<T>(),
+                AwaiterMap = (Func<T, ILucentObjectWriter, ISerializationContext, ulong, TaskAwaiter>)_writers.GetOrAdd(typeof(T), (t) => BuildWriter<T>()),
                 Context = context,
             };
 
@@ -55,7 +63,7 @@ namespace Lucent.Common.Serialization._Internal
                 Instances = instances,
                 State = 0,
                 Writer = writer,
-                WriteObj = BuildArrayWriter<T>(),
+                WriteObj = (Func<T, ILucentArrayWriter, ISerializationContext, TaskAwaiter>)_arrayWriters.GetOrAdd(typeof(T), (t) => BuildArrayWriter<T>()),
                 Context = context,
             };
 
@@ -79,7 +87,7 @@ namespace Lucent.Common.Serialization._Internal
                 Instance = new T(),
                 State = 0,
                 Reader = reader,
-                AwaiterMap = BuildReader<T>(),
+                AwaiterMap = (Func<T, ILucentObjectReader, ISerializationContext, PropertyId, TaskAwaiter>)_readers.GetOrAdd(typeof(T), (t) => BuildReader<T>()),
                 Context = context,
             };
 
@@ -103,7 +111,7 @@ namespace Lucent.Common.Serialization._Internal
                 Instances = new List<T>(),
                 State = 0,
                 Reader = reader,
-                AwaiterMap = BuildArrayReader<T>(),
+                AwaiterMap = (Func<ILucentArrayReader, ISerializationContext, TaskAwaiter<T>>)_arrayReaders.GetOrAdd(typeof(T), (t) => BuildArrayReader<T>()),
                 Context = context,
             };
 

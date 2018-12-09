@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
@@ -71,8 +72,6 @@ namespace Lucent.Common.Storage.Test
 
             using (var ms = new MemoryStream())
             {
-                //test.Arr = null;
-
                 await serializationContext.WriteTo(test, ms, true, SerializationFormat.JSON);
 
                 ms.Seek(0, SeekOrigin.Begin);
@@ -107,6 +106,29 @@ namespace Lucent.Common.Storage.Test
                 var tmp = JsonConvert.SerializeObject(geo);
                 Assert.AreEqual(tmp, JsonConvert.SerializeObject(testGeo));
             }
+
+            foreach (var fmt in new[] { SerializationFormat.PROTOBUF, SerializationFormat.JSON })
+                for (var i = 0; i < 25; ++i)
+                {
+                    var sw = new Stopwatch();
+                    using (var ms = new MemoryStream())
+                    {
+                        sw.Start();
+                        await serializationContext.WriteTo(test, ms, true, fmt);
+                        sw.Stop();
+
+                        ms.Seek(0, SeekOrigin.Begin);
+                        var tmp1 = Encoding.UTF8.GetString(ms.ToArray());
+
+                        sw.Start();
+                        var testGeo = await serializationContext.ReadFrom<TestObj>(ms, false, fmt);
+                        sw.Stop();
+
+                        var tmp = JsonConvert.SerializeObject(test);
+                        Assert.AreEqual(tmp, JsonConvert.SerializeObject(testGeo));
+                    }
+                    TestContext.WriteLine("Serialized {0} in {1:#,##0.000} ms", fmt, sw.ElapsedTicks * 1000d / Stopwatch.Frequency);
+                }
         }
 
         [TestMethod]

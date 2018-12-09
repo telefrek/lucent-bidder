@@ -180,7 +180,7 @@ namespace Lucent.Common.OpenRTB.Serializers
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 12, Name = "companionad" }, instance.CompanionAds);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 13, Name = "api" }, instance.Frameworks);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 20, Name = "companiontype" }, instance.CompanionTypes);
-                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 21, Name = "maxxeq" }, instance.MaxAds);
+                await serializationStreamWriter.WriteAsync(new PropertyId { Id = 21, Name = "maxseq" }, instance.MaxAds);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 22, Name = "feed" }, instance.AudioFeedType);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 23, Name = "stitched" }, instance.IsStitched);
                 await serializationStreamWriter.WriteAsync(new PropertyId { Id = 24, Name = "nvol" }, instance.VolumeNormalization);
