@@ -24,11 +24,11 @@ namespace Lucent.Common.Serialization.Protobuf
         public SerializationFormat Format { get => SerializationFormat.PROTOBUF; }
 
         /// <inheritdoc/>
-        public Task<ILucentArrayReader> GetArrayReader() => 
+        public Task<ILucentArrayReader> GetArrayReader() =>
             Task.FromResult((ILucentArrayReader)new LucentProtoArrayReader(protobufReader.GetNextMessageReader()));
 
         /// <inheritdoc/>
-        public Task<ILucentObjectReader> GetObjectReader() => 
+        public Task<ILucentObjectReader> GetObjectReader() =>
             Task.FromResult((ILucentObjectReader)new LucentProtoObjectReader(protobufReader.GetNextMessageReader()));
 
         /// <inheritdoc/>
@@ -62,6 +62,14 @@ namespace Lucent.Common.Serialization.Protobuf
         /// <inheritdoc/>
         public async Task<ulong> NextULong() => await protobufReader.ReadUInt64Async();
 
+        /// <inheritdoc/>
+        public async Task<Guid> NextGuid() => Guid.Parse(await protobufReader.ReadStringAsync());
+
+        /// <inheritdoc/>
+        public async Task<DateTime> NextDateTime() => DateTime.FromFileTimeUtc(await protobufReader.ReadInt64Async());
+
+        /// <inheritdoc/>
+        public async Task<TEnum> NextEnum<TEnum>() => (TEnum)Enum.ToObject(typeof(TEnum), await protobufReader.ReadInt32Async());
         /// <inheritdoc/>
         public async Task Skip() => await protobufReader.SkipAsync();
 

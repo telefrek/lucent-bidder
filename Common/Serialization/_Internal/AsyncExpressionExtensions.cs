@@ -87,6 +87,30 @@ namespace Lucent.Common.Serialization._Internal
             return rsm.AsyncBuilder.Task;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="reader"></param>
+        /// <param name="context"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public static Task<T[]> ReadArray<T>(this ILucentArrayReader reader, ISerializationContext context)
+        {
+            var asm = AsyncTaskMethodBuilder<T[]>.Create();
+            var rsm = new ArrayReaderStateMachine<T>
+            {
+                AsyncBuilder = asm,
+                Instances = new List<T>(),
+                State = 0,
+                Reader = reader,
+                AwaiterMap = BuildArrayReader<T>(),
+                Context = context,
+            };
+
+            asm.Start(ref rsm);
+            return rsm.AsyncBuilder.Task;
+        }
+
         static Func<T, ILucentArrayWriter, ISerializationContext, TaskAwaiter> BuildArrayWriter<T>()
         {
             var ret = Expression.Label(typeof(TaskAwaiter));
@@ -118,7 +142,7 @@ namespace Lucent.Common.Serialization._Internal
                 valExp = Expression.Convert(valExp, typeof(int));
                 body.Add(Expression.Return(ret, Expression.Call(Expression.Call(writerParam, mInfo, objParam), awaiter)));
             }
-            else if(mInfo != null)
+            else if (mInfo != null)
             {
                 body.Add(Expression.Return(ret, Expression.Call(Expression.Call(writerParam, mInfo, objParam), awaiter)));
             }
@@ -136,7 +160,6 @@ namespace Lucent.Common.Serialization._Internal
             var compiler = makeLambda.MakeGenericMethod(ftype).Invoke(null, new object[] { block, new ParameterExpression[] { objParam, writerParam, contextParam } });
 
             return (Func<T, ILucentArrayWriter, ISerializationContext, TaskAwaiter>)compiler.GetType().GetMethod("Compile", Type.EmptyTypes).Invoke(compiler, new object[] { });
-
         }
 
         static Func<T, ILucentObjectWriter, ISerializationContext, ulong, TaskAwaiter> BuildWriter<T>() where T : new()
@@ -236,6 +259,46 @@ namespace Lucent.Common.Serialization._Internal
             return (Func<T, ILucentObjectWriter, ISerializationContext, ulong, TaskAwaiter>)compiler.GetType().GetMethod("Compile", Type.EmptyTypes).Invoke(compiler, new object[] { });
         }
 
+
+        static Func<ILucentArrayReader, ISerializationContext, TaskAwaiter<T>> BuildArrayReader<T>()
+        {
+            var ret = Expression.Label(typeof(TaskAwaiter<T>));
+
+            var mTypes = (from m in typeof(ILucentArrayWriter).GetMethods()
+                          let ptype = m.ReturnType.GetGenericArguments()
+                          where m.Name.StartsWith("Next") && !m.Name.EndsWith("Async") && m.ReturnType.IsGenericType
+                          select new { PType = ptype, Method = m }).ToDictionary(e => e.PType.Single(), e => e.Method);
+
+            var aType = typeof(T);
+            var convert = aType.IsEnum;
+
+            var objParam = Expression.Parameter(typeof(T), "obj");
+            var readerParam = Expression.Parameter(typeof(ILucentArrayReader), "reader");
+            var contextParam = Expression.Parameter(typeof(ISerializationContext), "context");
+
+            // Find the target method
+            var mInfo = mTypes.GetValueOrDefault(aType, null);
+
+            var valExp = (Expression)objParam;
+
+            var body = new List<Expression>();
+            var awaiter = typeof(Task).GetMethod("GetAwaiter");
+            var continuation = typeof(Task<>).GetMethods().First(m => m.Name == "ContinueWith" && m.GetParameters().Length == 2 &&
+            m.GetParameters()[1].ParameterType == typeof(object));
+
+
+            var skip = typeof(ILucentReader).GetMethod("Skip");
+
+            body.Add(Expression.Label(ret, Expression.Default(typeof(TaskAwaiter<T>))));
+
+            var block = Expression.Block(body);
+            var ftype = typeof(Func<,,>).MakeGenericType(typeof(ILucentArrayReader), typeof(ISerializationContext), typeof(TaskAwaiter<>).MakeGenericType(typeof(T)));
+
+            var compiler = makeLambda.MakeGenericMethod(ftype).Invoke(null, new object[] { block, new ParameterExpression[] { objParam, readerParam, contextParam } });
+
+            return (Func<ILucentArrayReader, ISerializationContext, TaskAwaiter<T>>)compiler.GetType().GetMethod("Compile", Type.EmptyTypes).Invoke(compiler, new object[] { });
+        }
+
         static Func<T, ILucentObjectReader, ISerializationContext, PropertyId, TaskAwaiter> BuildReader<T>() where T : new()
         {
             var ret = Expression.Label(typeof(TaskAwaiter));
@@ -270,136 +333,7 @@ namespace Lucent.Common.Serialization._Internal
                 var sType = prop.Property.PropertyType;
                 Expression propExp = Expression.Property(objParam, prop.Property);
 
-                if (sType.IsEnum)
-                {
-                    sType = typeof(int);
-                    var mInfo = mTypes.GetValueOrDefault(sType, null);
-                    if (mInfo != null)
-                    {
-                        var eMethod = typeof(Enum).GetMethods(BindingFlags.Static | BindingFlags.Public).First(m => m.Name == "ToObject" && m.GetParameters().Length == 2 && m.GetParameters()[1].ParameterType == typeof(int));
-
-                        var tParam = Expression.Parameter(typeof(Task<>).MakeGenericType(sType), "t");
-                        var cObjParam = Expression.Parameter(typeof(object), "o");
-                        var tRes = Expression.Convert(Expression.Call(eMethod, Expression.Constant(prop.Property.PropertyType), Expression.Property(tParam, "Result")), prop.Property.PropertyType);
-
-                        var read = Expression.Call(readerParam, mInfo);
-                        var lambda = (Expression)makeLambda.MakeGenericMethod(typeof(Action<,>).MakeGenericType(typeof(Task<>).MakeGenericType(sType), typeof(object))).Invoke(null, new object[] { Expression.Block(new[] { Expression.Assign(Expression.Property(Expression.Convert(cObjParam, typeof(T)), prop.Property), tRes) }), new[] { tParam, cObjParam } });
-
-                        var tcont = typeof(Task<>).MakeGenericType(sType).GetMethods().First(m => m.Name == "ContinueWith" && m.GetParameters().Length == 2 &&
-                        m.GetParameters()[1].ParameterType == typeof(object));
-
-                        var cont = Expression.Call(
-                                            read,
-                                            tcont,
-
-                                            // Hook the Task.ContinueWith((t,o)=>((T)o).Prop = t.Result)
-                                            lambda,
-                                            objParam
-                                        );
-
-                        body.Add(Expression.IfThen(
-                            // Test the property value
-                            Expression.OrElse(Expression.Equal(Expression.Property(idParam, "Id"), Expression.Constant(prop.Attribute.Id)), Expression.Equal(Expression.Property(idParam, "Name"), Expression.Constant(prop.Attribute.Name))),
-                                // Return the awaiter
-                                Expression.Return(ret,
-                                    // Get the awaiter
-                                    Expression.Call(
-                                        // Call the reader method
-                                        cont,
-                                        awaiter
-                                    )
-                                )
-                            )
-                        );
-                    }
-                }
-                else if (sType == typeof(Guid))
-                {
-                    sType = typeof(string);
-                    var mInfo = mTypes.GetValueOrDefault(sType, null);
-                    if (mInfo != null)
-                    {
-                        var eMethod = typeof(Guid).GetMethods(BindingFlags.Static | BindingFlags.Public).First(m => m.Name == "Parse" && m.GetParameters().Length == 1 && m.GetParameters()[0].ParameterType == typeof(string));
-
-                        var tParam = Expression.Parameter(typeof(Task<>).MakeGenericType(sType), "t");
-                        var cObjParam = Expression.Parameter(typeof(object), "o");
-                        var tRes = Expression.Call(eMethod, Expression.Constant(prop.Property.PropertyType), Expression.Property(tParam, "Result"));
-
-                        var read = Expression.Call(readerParam, mInfo);
-                        var lambda = (Expression)makeLambda.MakeGenericMethod(typeof(Action<,>).MakeGenericType(typeof(Task<>).MakeGenericType(sType), typeof(object))).Invoke(null, new object[] { Expression.Block(new[] { Expression.Assign(Expression.Property(Expression.Convert(cObjParam, typeof(T)), prop.Property), tRes) }), new[] { tParam, cObjParam } });
-
-                        var tcont = typeof(Task<>).MakeGenericType(sType).GetMethods().First(m => m.Name == "ContinueWith" && m.GetParameters().Length == 2 &&
-                        m.GetParameters()[1].ParameterType == typeof(object));
-
-                        var cont = Expression.Call(
-                                            read,
-                                            tcont,
-
-                                            // Hook the Task.ContinueWith((t,o)=>((T)o).Prop = t.Result)
-                                            lambda,
-                                            objParam
-                                        );
-
-                        body.Add(Expression.IfThen(
-                            // Test the property value
-                            Expression.OrElse(Expression.Equal(Expression.Property(idParam, "Id"), Expression.Constant(prop.Attribute.Id)), Expression.Equal(Expression.Property(idParam, "Name"), Expression.Constant(prop.Attribute.Name))),
-                                // Return the awaiter
-                                Expression.Return(ret,
-                                    // Get the awaiter
-                                    Expression.Call(
-                                        // Call the reader method
-                                        cont,
-                                        awaiter
-                                    )
-                                )
-                            )
-                        );
-                    }
-                }
-                else if (sType == typeof(DateTime))
-                {
-                    sType = typeof(long);
-                    var mInfo = mTypes.GetValueOrDefault(sType, null);
-                    if (mInfo != null)
-                    {
-                        var eMethod = typeof(DateTime).GetMethods(BindingFlags.Static | BindingFlags.Public).First(m => m.Name == "FromFileTimeUtc" && m.GetParameters().Length == 1 && m.GetParameters()[0].ParameterType == typeof(long));
-
-                        var tParam = Expression.Parameter(typeof(Task<>).MakeGenericType(sType), "t");
-                        var cObjParam = Expression.Parameter(typeof(object), "o");
-                        var tRes = Expression.Call(eMethod, Expression.Constant(prop.Property.PropertyType), Expression.Property(tParam, "Result"));
-
-                        var read = Expression.Call(readerParam, mInfo);
-                        var lambda = (Expression)makeLambda.MakeGenericMethod(typeof(Action<,>).MakeGenericType(typeof(Task<>).MakeGenericType(sType), typeof(object))).Invoke(null, new object[] { Expression.Block(new[] { Expression.Assign(Expression.Property(Expression.Convert(cObjParam, typeof(T)), prop.Property), tRes) }), new[] { tParam, cObjParam } });
-
-                        var tcont = typeof(Task<>).MakeGenericType(sType).GetMethods().First(m => m.Name == "ContinueWith" && m.GetParameters().Length == 2 &&
-                        m.GetParameters()[1].ParameterType == typeof(object));
-
-                        var cont = Expression.Call(
-                                            read,
-                                            tcont,
-
-                                            // Hook the Task.ContinueWith((t,o)=>((T)o).Prop = t.Result)
-                                            lambda,
-                                            objParam
-                                        );
-
-                        body.Add(Expression.IfThen(
-                            // Test the property value
-                            Expression.OrElse(Expression.Equal(Expression.Property(idParam, "Id"), Expression.Constant(prop.Attribute.Id)), Expression.Equal(Expression.Property(idParam, "Name"), Expression.Constant(prop.Attribute.Name))),
-                                // Return the awaiter
-                                Expression.Return(ret,
-                                    // Get the awaiter
-                                    Expression.Call(
-                                        // Call the reader method
-                                        cont,
-                                        awaiter
-                                    )
-                                )
-                            )
-                        );
-                    }
-                }
-                else if (!sType.IsValueType && sType.GetConstructor(Type.EmptyTypes) != null)
+                if (!sType.IsValueType && sType.GetConstructor(Type.EmptyTypes) != null)
                 {
                     // Type has to be object and new()
                     var readMethod = typeof(ISerializationContext).GetMethods().First(m => m.Name == "ReadObject" && m.IsGenericMethod).MakeGenericMethod(sType);
@@ -439,10 +373,55 @@ namespace Lucent.Common.Serialization._Internal
                         )
                     );
                 }
-                // Handle object/array here
+                else if (sType.IsArray)
+                {
+                    // Type has to be object and new()
+                    var readMethod = typeof(ISerializationContext).GetMethods().First(m => m.Name == "ReadArray" && m.IsGenericMethod).MakeGenericMethod(sType.GetElementType());
+
+                    // Have to get an object reader from the current one
+                    var tParam = Expression.Parameter(typeof(Task<>).MakeGenericType(sType), "t");
+                    var cObjParam = Expression.Parameter(typeof(object), "o");
+                    var tRes = Expression.Property(tParam, "Result");
+
+                    var read = Expression.Call(contextParam, readMethod, readerParam);
+                    var lambda = (Expression)makeLambda.MakeGenericMethod(typeof(Action<,>).MakeGenericType(typeof(Task<>).MakeGenericType(sType), typeof(object))).Invoke(null, new object[] { Expression.Block(new[] { Expression.Assign(Expression.Property(Expression.Convert(cObjParam, typeof(T)), prop.Property), tRes) }), new[] { tParam, cObjParam } });
+
+                    var tcont = typeof(Task<>).MakeGenericType(sType).GetMethods().First(m => m.Name == "ContinueWith" && m.GetParameters().Length == 2 &&
+                    m.GetParameters()[1].ParameterType == typeof(object));
+
+                    var cont = Expression.Call(
+                                        read,
+                                        tcont,
+
+                                        // Hook the Task.ContinueWith((t,o)=>((T)o).Prop = t.Result, obj)
+                                        lambda,
+                                        objParam
+                                    );
+
+                    body.Add(Expression.IfThen(
+                        // Test the property value
+                        Expression.OrElse(Expression.Equal(Expression.Property(idParam, "Id"), Expression.Constant(prop.Attribute.Id)), Expression.Equal(Expression.Property(idParam, "Name"), Expression.Constant(prop.Attribute.Name))),
+                            // Return the awaiter
+                            Expression.Return(ret,
+                                // Get the awaiter
+                                Expression.Call(
+                                    // Call the reader method
+                                    cont,
+                                    awaiter
+                                )
+                            )
+                        )
+                    );
+                }
                 else
                 {
                     var mInfo = mTypes.GetValueOrDefault(sType, null);
+
+                    if (sType.IsEnum)
+                    {
+                        mInfo = typeof(ILucentReader).GetMethod("NextEnum").MakeGenericMethod(sType);
+                    }
+
                     if (mInfo != null)
                     {
                         var tParam = Expression.Parameter(typeof(Task<>).MakeGenericType(sType), "t");

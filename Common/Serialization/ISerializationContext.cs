@@ -101,6 +101,14 @@ namespace Lucent.Common.Serialization
         Task<T> ReadObject<T>(ILucentReader reader) where T : new();
 
         /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="reader"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        Task<T[]> ReadArray<T>(ILucentReader reader);
+
+        /// <summary>
         /// Read the object from the stream
         /// </summary>
         /// <param name="target"></param>

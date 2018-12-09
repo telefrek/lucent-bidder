@@ -62,26 +62,34 @@ namespace Lucent.Common.Serialization
 
 
         /// <inheritdoc />
-        public async Task Write<T>(ILucentObjectWriter writer, T instance) where T : new() => await writer.Write(this, instance);
+        public async Task Write<T>(ILucentObjectWriter writer, T instance) where T : new()
+        {
+            if (!instance.IsNullOrDefault())
+                await writer.Write(this, instance);
 
+        }
+        
         /// <inheritdoc />
         public async Task WriteObject<T>(ILucentWriter writer, PropertyId property, T instance) where T : new()
         {
-            await Write<T>(await writer.CreateObjectWriter(property), instance);
+            if (!instance.IsNullOrDefault())
+                await Write<T>(await writer.CreateObjectWriter(property), instance);
             await writer.Flush();
         }
 
         /// <inheritdoc />
         public async Task WriteArrayObject<T>(ILucentArrayWriter writer, T instance) where T : new()
         {
-            await Write<T>(await writer.CreateObjectWriter(), instance);
+            if (!instance.IsNullOrDefault())
+                await Write<T>(await writer.CreateObjectWriter(), instance);
             await writer.Flush();
         }
 
         /// <inheritdoc />
         public async Task WriteArray<T>(ILucentWriter writer, PropertyId property, T[] instances)
         {
-            await (await writer.CreateArrayWriter(property)).Write(this, instances);
+            if (!instances.IsNullOrDefault())
+                await (await writer.CreateArrayWriter(property)).Write(this, instances);
             await writer.Flush();
         }
 
@@ -89,12 +97,7 @@ namespace Lucent.Common.Serialization
         public async Task<T> Read<T>(ILucentObjectReader reader) where T : new() => await reader.Read<T>(this);
 
         /// <inheritdoc />
-        public async Task<T[]> ReadArray<T>(ILucentArrayReader reader) where T : new()
-        {
-            var items = new List<T>();
-
-            return items.ToArray();
-        }
+        public async Task<T[]> ReadArray<T>(ILucentReader reader) => await (await reader.GetArrayReader()).ReadArray<T>(this);
 
         /// <inheritdoc/>
         public async Task<T> ReadObject<T>(ILucentReader reader) where T : new() => await Read<T>(await reader.GetObjectReader());

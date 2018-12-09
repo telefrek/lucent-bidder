@@ -65,12 +65,14 @@ namespace Lucent.Common.Storage.Test
                 LastFixed = 1,
             };
 
-            var test = new TestObj { Geo = geo, Arr = new string[] { "Test1", "Test2" } };
+            var test = new TestObj { Geo = geo, Arr = new []{"Test1", "Test2"} };
 
             var serializationContext = ServiceProvider.GetRequiredService<ISerializationContext>();
 
             using (var ms = new MemoryStream())
             {
+                test.Arr = null;
+                
                 await serializationContext.WriteTo(test, ms, true, SerializationFormat.JSON);
 
                 ms.Seek(0, SeekOrigin.Begin);

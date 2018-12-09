@@ -69,6 +69,25 @@ namespace Lucent.Common.Serialization
         Task<string> NextString();
 
         /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        Task<Guid> NextGuid();
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        Task<DateTime> NextDateTime();
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="TEnum"></typeparam>
+        /// <returns></returns>
+        Task<TEnum> NextEnum<TEnum>();
+
+        /// <summary>
         /// Skip the next item in the reader asynchronously
         /// </summary>
         /// <returns></returns>

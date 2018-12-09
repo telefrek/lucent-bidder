@@ -63,6 +63,15 @@ namespace Lucent.Common.Serialization.Protobuf
         public async Task<ulong> NextULong() => await protobufReader.ReadUInt64Async();
 
         /// <inheritdoc/>
+        public async Task<Guid> NextGuid() => Guid.Parse(await protobufReader.ReadStringAsync());
+
+        /// <inheritdoc/>
+        public async Task<DateTime> NextDateTime() => DateTime.FromFileTimeUtc(await protobufReader.ReadInt64Async());
+
+        /// <inheritdoc/>
+        public async Task<TEnum> NextEnum<TEnum>() => (TEnum)Enum.ToObject(typeof(TEnum), await protobufReader.ReadInt32Async());
+        
+        /// <inheritdoc/>
         public async Task Skip() => await protobufReader.SkipAsync();
 
         /// <inheritdoc/>
