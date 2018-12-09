@@ -5,31 +5,34 @@ using System.Runtime.InteropServices;
 namespace Lucent.Common.Serialization._Internal
 {
     /// <summary>
-    /// Implementation of an async state machine
+    /// Implementation of an async state machine for objects
     /// </summary>
     /// <remarks>
     /// Need this to create asynchronous readers via Expressions + Lambdas
     /// </remarks>
     [CompilerGenerated]
     [StructLayout(LayoutKind.Auto)]
-    struct WriterStateMachine<T> : IAsyncStateMachine
+    struct ObjectWriterStateMachine<T> : IAsyncStateMachine
     {
         public ILucentObjectWriter Writer;
         public int State;
         public AsyncTaskMethodBuilder AsyncBuilder;
         public T Instance;
-
+        public bool Finished;
         public Func<T, ILucentObjectWriter, ulong, TaskAwaiter> AwaiterMap;
 
         public void MoveNext()
         {
             try
             {
-                while (true)
+                while (!Finished)
                 {
                     var aw = AwaiterMap(Instance, Writer, (ulong)State);
                     if (aw.Equals(default(TaskAwaiter)))
-                        break;
+                    {
+                        Finished = true;
+                        aw = Writer.EndObject().GetAwaiter();
+                    }
 
                     State++;
 

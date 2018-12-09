@@ -69,7 +69,7 @@ namespace Lucent.Common.Serialization
         public Task Write<T>(ILucentObjectWriter writer, T instance) where T : new()
         {
             var asm = AsyncTaskMethodBuilder.Create();
-            var rsm = new WriterStateMachine<T>
+            var rsm = new ObjectWriterStateMachine<T>
             {
                 AsyncBuilder = asm,
                 Instance = instance,
@@ -81,6 +81,23 @@ namespace Lucent.Common.Serialization
             asm.Start(ref rsm);
             return rsm.AsyncBuilder.Task;
         }
+                
+        /// <inheritdoc />
+        // public Task Write<T>(ILucentArrayWriter writer, T[] instance) where T : new()
+        // {
+        //     var asm = AsyncTaskMethodBuilder.Create();
+        //     var rsm = new ObjectWriterStateMachine<T>
+        //     {
+        //         AsyncBuilder = asm,
+        //         Instance = instance,
+        //         State = 1,
+        //         Writer = writer,
+        //         AwaiterMap = BuildMap<T>()
+        //     };
+
+        //     asm.Start(ref rsm);
+        //     return rsm.AsyncBuilder.Task;
+        // }
 
         Func<T, ILucentObjectWriter, ulong, TaskAwaiter> BuildMap<T>() where T : new()
         {
@@ -115,6 +132,8 @@ namespace Lucent.Common.Serialization
                 var mInfo = mTypes.GetValueOrDefault(prop.Property.PropertyType, null);
                 if (mInfo == null && prop.Property.PropertyType.IsEnum)
                     mInfo = mTypes.GetValueOrDefault(typeof(int), null);
+
+                // need to handle array/sub object here
 
                 // Validate we found the method
                 if (mInfo != null)
