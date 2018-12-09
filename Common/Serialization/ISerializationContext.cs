@@ -43,5 +43,13 @@ namespace Lucent.Common.Serialization
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
         Task Write<T>(ILucentObjectWriter writer, T instance) where T : new();
+
+        /// <summary>
+        /// Read the next object from the stream
+        /// </summary>
+        /// <param name="reader"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        Task<T> Read<T>(ILucentObjectReader reader) where T : new();
     }
 }

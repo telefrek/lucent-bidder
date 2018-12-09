@@ -83,6 +83,12 @@ namespace Lucent.Common.Storage.Test
             }
         }
 
+        class TestObj
+        {
+            [SerializationProperty(1, "geo")]
+            public Geo Geo { get; set; }
+        }
+
         [TestMethod]
         public async Task TestAsyncGeneration()
         {
@@ -108,14 +114,44 @@ namespace Lucent.Common.Storage.Test
             using (var ms = new MemoryStream())
             {
                 using (var jsonWriter = new LucentJsonWriter(ms, true))
-                    await TestWrite(jsonWriter, geo);
+                    await TestWriteOne(jsonWriter, geo, serializationContext);
 
                 ms.Seek(0, SeekOrigin.Begin);
 
                 var jsonReader = new LucentJsonReader(ms, false);
-                var testGeo = await TestReadOne<Geo>(await jsonReader.GetObjectReader());
+
+                var testGeo = await TestReadOne<Geo>(await jsonReader.GetObjectReader(), serializationContext);
 
                 var tmp = JsonConvert.SerializeObject(geo);
+                Assert.AreEqual(tmp, JsonConvert.SerializeObject(testGeo));
+            }
+
+            using (var ms = new MemoryStream())
+            {
+                using (var protoWriter = new LucentProtoWriter(ms, true))
+                    await TestWriteOne(protoWriter, geo, serializationContext);
+                ms.Seek(0, SeekOrigin.Begin);
+
+                var protoReader = new LucentProtoReader(ms, false);
+                var testGeo = await TestReadOne<Geo>(protoReader, serializationContext);
+
+                var tmp = JsonConvert.SerializeObject(geo);
+                Assert.AreEqual(tmp, JsonConvert.SerializeObject(testGeo));
+            }
+
+            using (var ms = new MemoryStream())
+            {
+                using (var jsonWriter = new LucentJsonWriter(ms, true))
+                    await TestWrite(jsonWriter, geo);
+
+                ms.Seek(0, SeekOrigin.Begin);
+
+                var tmp = Encoding.UTF8.GetString(ms.ToArray());
+
+                var jsonReader = new LucentJsonReader(ms, false);
+                var testGeo = await TestReadOne<Geo>(await jsonReader.GetObjectReader(), serializationContext);
+
+                tmp = JsonConvert.SerializeObject(geo);
                 Assert.AreEqual(tmp, JsonConvert.SerializeObject(testGeo));
             }
 
@@ -126,7 +162,7 @@ namespace Lucent.Common.Storage.Test
                 ms.Seek(0, SeekOrigin.Begin);
 
                 var protoReader = new LucentProtoReader(ms, false);
-                var testGeo = await TestReadOne<Geo>(protoReader);
+                var testGeo = await TestReadOne<Geo>(protoReader, serializationContext);
 
                 var tmp = JsonConvert.SerializeObject(geo);
                 Assert.AreEqual(tmp, JsonConvert.SerializeObject(testGeo));
@@ -158,41 +194,14 @@ namespace Lucent.Common.Storage.Test
                 var tmp = JsonConvert.SerializeObject(geo);
                 Assert.AreEqual(tmp, JsonConvert.SerializeObject(testGeo));
             }
-
-            using (var ms = new MemoryStream())
-            {
-                using (var jsonWriter = new LucentJsonWriter(ms, true))
-                    await TestWriteOne(jsonWriter, geo, serializationContext);
-
-                ms.Seek(0, SeekOrigin.Begin);
-
-                var jsonReader = new LucentJsonReader(ms, false);
-                var testGeo = await TestReadOne<Geo>(await jsonReader.GetObjectReader());
-
-                var tmp = JsonConvert.SerializeObject(geo);
-                Assert.AreEqual(tmp, JsonConvert.SerializeObject(testGeo));
-            }
-
-            using (var ms = new MemoryStream())
-            {
-                using (var protoWriter = new LucentProtoWriter(ms, true))
-                    await TestWriteOne(protoWriter, geo, serializationContext);
-                ms.Seek(0, SeekOrigin.Begin);
-
-                var protoReader = new LucentProtoReader(ms, false);
-                var testGeo = await TestReadOne<Geo>(protoReader);
-
-                var tmp = JsonConvert.SerializeObject(geo);
-                Assert.AreEqual(tmp, JsonConvert.SerializeObject(testGeo));
-            }
         }
 
-        async Task<T> TestReadOne<T>(ILucentReader reader) where T : new()
+        async Task<T> TestReadOne<T>(ILucentReader reader, ISerializationContext context) where T : new()
         {
             PropertyId prop = await reader.NextAsync();
             Assert.IsTrue(prop.Id == 1 || prop.Name == "geo");
             using (var objReader = await reader.GetObjectReader())
-                return await CreateReader<T>(objReader);
+                return await context.Read<T>(objReader);
         }
 
         async Task TestWriteOne<T>(ILucentWriter writer, T instance, ISerializationContext context) where T : new()
@@ -235,10 +244,6 @@ namespace Lucent.Common.Storage.Test
                 }
                 else if (def.Property.PropertyType == typeof(string))
                     return reader.NextString().ContinueWith((t, g) => def.Property.SetValue(g, t.Result), instance);
-                else if (def.Property.PropertyType.IsArray) // let's read an array!
-                {
-                    ((Task<object[]>)this.GetType().GetMethods().Single(m => m.Name == "CreateArrayReader").MakeGenericMethod(def.Property.PropertyType.GetElementType()).Invoke(this, new object[] { reader.GetArrayReader() })).ContinueWith((t, g) => def.Property.SetValue(g, t.Result), instance);
-                }
             }
 
             return reader.Skip();
@@ -444,7 +449,7 @@ namespace Lucent.Common.Storage.Test
             }
 
             public void SetStateMachine(IAsyncStateMachine stateMachine) => ResultBuilder.SetStateMachine(stateMachine);
-        }        
+        }
 
         async Task TestWrite(ILucentWriter writer, Geo geo)
         {
