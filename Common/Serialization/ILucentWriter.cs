@@ -86,6 +86,12 @@ namespace Lucent.Common.Serialization
         Task<ILucentObjectWriter> CreateObjectWriter(PropertyId property);
 
         /// <summary>
+        /// Cast the current stream as an object writer
+        /// </summary>
+        /// <returns>The current stream as an object writer</returns>
+        Task<ILucentObjectWriter> AsObjectWriter();
+
+        /// <summary>
         /// Create a new array writer
         /// </summary>
         /// <param name="property"></param>

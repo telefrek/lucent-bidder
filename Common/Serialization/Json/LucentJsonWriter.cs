@@ -12,6 +12,7 @@ namespace Lucent.Common.Serialization.Json
     public class LucentJsonWriter : ILucentWriter
     {
         readonly JsonWriter jsonWriter;
+        volatile bool _wasObject = false;
 
         /// <summary>
         /// Default construtroe
@@ -126,6 +127,13 @@ namespace Lucent.Common.Serialization.Json
         }
 
         /// <inheritdoc/>
+        public Task<ILucentObjectWriter> AsObjectWriter() 
+        {
+            _wasObject = true;
+            return Task.FromResult((ILucentObjectWriter)new LucentJsonObjectWriter(jsonWriter));
+        }
+
+        /// <inheritdoc/>
         public async Task<ILucentArrayWriter> CreateArrayWriter(PropertyId property)
         {
             await jsonWriter.WritePropertyNameAsync(property.Name);
@@ -136,7 +144,9 @@ namespace Lucent.Common.Serialization.Json
         /// <inheritdoc/>
         public void Dispose() 
         {
-            jsonWriter.WriteEndObject();
+            if(!_wasObject)
+                jsonWriter.WriteEndObject();
+                
             jsonWriter.Close();
         }
 

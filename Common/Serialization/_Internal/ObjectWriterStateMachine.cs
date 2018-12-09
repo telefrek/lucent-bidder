@@ -19,7 +19,8 @@ namespace Lucent.Common.Serialization._Internal
         public int State;
         public AsyncTaskMethodBuilder AsyncBuilder;
         public T Instance;
-        public bool Finished;
+        bool Finished;
+        bool Flushed;
         public Func<T, ILucentObjectWriter, ISerializationContext, ulong, TaskAwaiter> AwaiterMap;
 
         public void MoveNext()
@@ -36,6 +37,17 @@ namespace Lucent.Common.Serialization._Internal
                     }
 
                     State++;
+
+                    if (!aw.IsCompleted)
+                    {
+                        AsyncBuilder.AwaitUnsafeOnCompleted(ref aw, ref this);
+                        return;
+                    }
+                }
+                if (!Flushed)
+                {
+                    var aw = Writer.Flush().GetAwaiter();
+                    Flushed = true;
 
                     if (!aw.IsCompleted)
                     {

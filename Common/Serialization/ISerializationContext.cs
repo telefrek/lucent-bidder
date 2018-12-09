@@ -45,11 +45,50 @@ namespace Lucent.Common.Serialization
         Task Write<T>(ILucentObjectWriter writer, T instance) where T : new();
 
         /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="writer"></param>
+        /// <param name="property"></param>
+        /// <param name="instance"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        Task WriteObject<T>(ILucentWriter writer, PropertyId property, T instance) where T : new();
+
+        /// <summary>
         /// Read the next object from the stream
         /// </summary>
         /// <param name="reader"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
         Task<T> Read<T>(ILucentObjectReader reader) where T : new();
+
+        /// <summary>
+        /// Read the next item as an object
+        /// </summary>
+        /// <param name="reader"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        Task<T> ReadObject<T>(ILucentReader reader) where T : new();
+
+        /// <summary>
+        /// Read the object from the stream
+        /// </summary>
+        /// <param name="target"></param>
+        /// <param name="leaveOpen"></param>
+        /// <param name="format"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        Task<T> ReadFrom<T>(Stream target, bool leaveOpen, SerializationFormat format) where T : new();
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="instance"></param>
+        /// <param name="target"></param>
+        /// <param name="leaveOpen"></param>
+        /// <param name="format"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        Task WriteTo<T>(T instance, Stream target, bool leaveOpen, SerializationFormat format) where T : new();
     }
 }

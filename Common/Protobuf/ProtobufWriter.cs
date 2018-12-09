@@ -194,6 +194,7 @@ namespace Lucent.Common.Protobuf
             // This may not be entirely safe, but only used from MemoryStream for now so...meh
             src._raw.Seek(0, SeekOrigin.Begin);
             await src._raw.CopyToAsync(_raw);
+            await _raw.FlushAsync();
         }
 
         /// <summary>

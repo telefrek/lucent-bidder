@@ -121,6 +121,9 @@ namespace Lucent.Common.Serialization.Protobuf
         }
 
         /// <inheritdoc/>
+        public Task<ILucentObjectWriter> AsObjectWriter() => Task.FromResult((ILucentObjectWriter)new LucentProtoObjectWriter(protobufWriter));
+
+        /// <inheritdoc/>
         public async Task<ILucentArrayWriter> CreateArrayWriter(PropertyId property)
         {
             await protobufWriter.WriteFieldAsync(property.Id, WireType.VARINT);

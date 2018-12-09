@@ -121,6 +121,9 @@ namespace Lucent.Common.Serialization.Json
         }
 
         /// <inheritdoc/>
+        public Task<ILucentObjectWriter> AsObjectWriter() => Task.FromResult((ILucentObjectWriter)this);
+
+        /// <inheritdoc/>
         public async Task<ILucentArrayWriter> CreateArrayWriter(PropertyId property)
         {
             await jsonWriter.WritePropertyNameAsync(property.Name);
