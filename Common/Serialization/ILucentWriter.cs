@@ -202,13 +202,13 @@ namespace Lucent.Common.Serialization
         /// Create a new object writer
         /// </summary>
         /// <returns></returns>
-        ILucentObjectWriter CreateObjectWriter();
+        Task<ILucentObjectWriter> CreateObjectWriter();
 
         /// <summary>
         /// Create a new array writer
         /// </summary>
         /// <returns></returns>
-        ILucentArrayWriter CreateArrayWriter();
+        Task<ILucentArrayWriter> CreateArrayWriter();
 
     }
 }

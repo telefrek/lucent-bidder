@@ -40,6 +40,9 @@ namespace Lucent.Common.Storage.Test
         {
             [SerializationProperty(1, "geo")]
             public Geo Geo { get; set; }
+
+            [SerializationProperty(2, "arr")]
+            public string[] Arr { get; set; }
         }
 
         [TestMethod]
@@ -62,11 +65,26 @@ namespace Lucent.Common.Storage.Test
                 LastFixed = 1,
             };
 
+            var test = new TestObj { Geo = geo, Arr = new string[] { "Test1", "Test2" } };
+
             var serializationContext = ServiceProvider.GetRequiredService<ISerializationContext>();
 
             using (var ms = new MemoryStream())
             {
-                await serializationContext.WriteTo(new TestObj { Geo = geo }, ms, true, SerializationFormat.JSON);
+                await serializationContext.WriteTo(test, ms, true, SerializationFormat.JSON);
+
+                ms.Seek(0, SeekOrigin.Begin);
+                var tmp1 = Encoding.UTF8.GetString(ms.ToArray());
+
+                var testGeo = await serializationContext.ReadFrom<TestObj>(ms, false, SerializationFormat.JSON);
+
+                var tmp = JsonConvert.SerializeObject(test);
+                Assert.AreEqual(tmp, JsonConvert.SerializeObject(testGeo));
+            }
+
+            using (var ms = new MemoryStream())
+            {
+                await serializationContext.WriteTo(test, ms, true, SerializationFormat.JSON);
 
                 ms.Seek(0, SeekOrigin.Begin);
 
@@ -78,7 +96,7 @@ namespace Lucent.Common.Storage.Test
 
             using (var ms = new MemoryStream())
             {
-                await serializationContext.WriteTo(new TestObj { Geo = geo }, ms, true, SerializationFormat.PROTOBUF);
+                await serializationContext.WriteTo(test, ms, true, SerializationFormat.PROTOBUF);
 
                 ms.Seek(0, SeekOrigin.Begin);
 

@@ -55,10 +55,11 @@ namespace Lucent.Common.Serialization.Protobuf
         public async Task WriteEnd() => await original.CopyFromAsync(protoWriter);
 
         /// <inheritdoc/>
-        public ILucentObjectWriter CreateObjectWriter() => new LucentProtoObjectWriter(protoWriter);
+        public Task<ILucentObjectWriter> CreateObjectWriter() => 
+            Task.FromResult((ILucentObjectWriter)new LucentProtoObjectWriter(protoWriter));
 
         /// <inheritdoc/>
-        public ILucentArrayWriter CreateArrayWriter() => new LucentProtoArrayWriter(protoWriter);
+        public Task<ILucentArrayWriter> CreateArrayWriter() => Task.FromResult((ILucentArrayWriter)new LucentProtoArrayWriter(protoWriter));
 
         /// <inheritdoc/>
         public void Dispose() => protoWriter.Close();

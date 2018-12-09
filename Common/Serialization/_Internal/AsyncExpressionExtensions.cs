@@ -39,6 +39,31 @@ namespace Lucent.Common.Serialization._Internal
         }
 
         /// <summary>
+        /// Write the instances to the writer asynchronously
+        /// </summary>
+        /// <param name="writer"></param>
+        /// <param name="context"></param>
+        /// <param name="instances"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public static Task Write<T>(this ILucentArrayWriter writer, ISerializationContext context, T[] instances)
+        {
+            var asm = AsyncTaskMethodBuilder.Create();
+            var rsm = new ArrayWriterStateMachine<T>
+            {
+                AsyncBuilder = asm,
+                Instances = instances,
+                State = 0,
+                Writer = writer,
+                WriteObj = BuildArrayWriter<T>(),
+                Context = context,
+            };
+
+            asm.Start(ref rsm);
+            return rsm.AsyncBuilder.Task;
+        }
+
+        /// <summary>
         /// 
         /// </summary>
         /// <param name="reader"></param>
@@ -60,6 +85,58 @@ namespace Lucent.Common.Serialization._Internal
 
             asm.Start(ref rsm);
             return rsm.AsyncBuilder.Task;
+        }
+
+        static Func<T, ILucentArrayWriter, ISerializationContext, TaskAwaiter> BuildArrayWriter<T>()
+        {
+            var ret = Expression.Label(typeof(TaskAwaiter));
+
+            var mTypes = (from m in typeof(ILucentArrayWriter).GetMethods()
+                          let ptype = m.GetParameters().LastOrDefault()
+                          where m.Name == "WriteAsync"
+                          select new { PType = ptype, Method = m }).ToDictionary(e => e.PType.ParameterType, e => e.Method);
+
+            var aType = typeof(T);
+            var convert = aType.IsEnum;
+
+            var objParam = Expression.Parameter(typeof(T), "obj");
+            var writerParam = Expression.Parameter(typeof(ILucentArrayWriter), "writer");
+            var contextParam = Expression.Parameter(typeof(ISerializationContext), "context");
+
+            // Find the target method
+            var mInfo = mTypes.GetValueOrDefault(aType, null);
+
+            var valExp = (Expression)objParam;
+
+            var body = new List<Expression>();
+            var awaiter = typeof(Task).GetMethod("GetAwaiter");
+
+            // Handle casting objects
+            if (mInfo == null && convert)
+            {
+                mInfo = mTypes.GetValueOrDefault(typeof(int), null);
+                valExp = Expression.Convert(valExp, typeof(int));
+                body.Add(Expression.Return(ret, Expression.Call(Expression.Call(writerParam, mInfo, objParam), awaiter)));
+            }
+            else if(mInfo != null)
+            {
+                body.Add(Expression.Return(ret, Expression.Call(Expression.Call(writerParam, mInfo, objParam), awaiter)));
+            }
+            else if (!aType.IsValueType && aType.GetConstructor(Type.EmptyTypes) != null)
+            {
+                mInfo = typeof(ISerializationContext).GetMethod("WriteArrayObject").MakeGenericMethod(aType);
+                body.Add(Expression.Return(ret, Expression.Call(Expression.Call(contextParam, mInfo, writerParam, objParam), awaiter)));
+            }
+
+            body.Add(Expression.Label(ret, Expression.Default(typeof(TaskAwaiter))));
+
+            var block = Expression.Block(body);
+            var ftype = typeof(Func<,,,>).MakeGenericType(typeof(T), typeof(ILucentArrayWriter), typeof(ISerializationContext), typeof(TaskAwaiter));
+
+            var compiler = makeLambda.MakeGenericMethod(ftype).Invoke(null, new object[] { block, new ParameterExpression[] { objParam, writerParam, contextParam } });
+
+            return (Func<T, ILucentArrayWriter, ISerializationContext, TaskAwaiter>)compiler.GetType().GetMethod("Compile", Type.EmptyTypes).Invoke(compiler, new object[] { });
+
         }
 
         static Func<T, ILucentObjectWriter, ISerializationContext, ulong, TaskAwaiter> BuildWriter<T>() where T : new()
@@ -100,17 +177,6 @@ namespace Lucent.Common.Serialization._Internal
                     mInfo = mTypes.GetValueOrDefault(typeof(int), null);
                     propExp = Expression.Convert(propExp, typeof(int));
                 }
-                else if (mInfo == null && prop.Property.PropertyType == typeof(Guid))
-                {
-                    mInfo = mTypes.GetValueOrDefault(typeof(string), null);
-                    propExp = Expression.Call(propExp, typeof(Guid).GetMethods().First(m => m.Name == "ToString"));
-                }
-                else if (mInfo == null && prop.Property.PropertyType == typeof(DateTime))
-                {
-                    mInfo = mTypes.GetValueOrDefault(typeof(long), null);
-                    propExp = Expression.Call(propExp, typeof(DateTime).GetMethods().First(m => m.Name == "ToFileTimeUtc"));
-                }
-                // need to handle array/sub object here
 
                 // Validate we found the method
                 if (mInfo != null)
@@ -122,6 +188,19 @@ namespace Lucent.Common.Serialization._Internal
                             Expression.Return(ret,
                                 Expression.Call(
                                     Expression.Call(writerParam, mInfo, Expression.Constant(new PropertyId { Id = prop.Attribute.Id, Name = prop.Attribute.Name }),
+                                    propExp),
+                                awaiter)
+                            ),
+                        Expression.Constant(prop.Attribute.Id)));
+                }
+                else if (prop.Property.PropertyType.IsArray)
+                {
+                    var writeMeth = typeof(ISerializationContext).GetMethod("WriteArray").MakeGenericMethod(prop.Property.PropertyType.GetElementType());
+                    cases.Add(
+                        Expression.SwitchCase(
+                            Expression.Return(ret,
+                                Expression.Call(
+                                    Expression.Call(contextParam, writeMeth, writerParam, Expression.Constant(new PropertyId { Id = prop.Attribute.Id, Name = prop.Attribute.Name }),
                                     propExp),
                                 awaiter)
                             ),

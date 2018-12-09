@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Runtime.CompilerServices;
@@ -71,7 +72,29 @@ namespace Lucent.Common.Serialization
         }
 
         /// <inheritdoc />
+        public async Task WriteArrayObject<T>(ILucentArrayWriter writer, T instance) where T : new()
+        {
+            await Write<T>(await writer.CreateObjectWriter(), instance);
+            await writer.Flush();
+        }
+
+        /// <inheritdoc />
+        public async Task WriteArray<T>(ILucentWriter writer, PropertyId property, T[] instances)
+        {
+            await (await writer.CreateArrayWriter(property)).Write(this, instances);
+            await writer.Flush();
+        }
+
+        /// <inheritdoc />
         public async Task<T> Read<T>(ILucentObjectReader reader) where T : new() => await reader.Read<T>(this);
+
+        /// <inheritdoc />
+        public async Task<T[]> ReadArray<T>(ILucentArrayReader reader) where T : new()
+        {
+            var items = new List<T>();
+
+            return items.ToArray();
+        }
 
         /// <inheritdoc/>
         public async Task<T> ReadObject<T>(ILucentReader reader) where T : new() => await Read<T>(await reader.GetObjectReader());

@@ -50,10 +50,18 @@ namespace Lucent.Common.Serialization.Json
         public async Task WriteEnd() => await jsonWriter.WriteEndArrayAsync();
 
         /// <inheritdoc/>
-        public ILucentObjectWriter CreateObjectWriter() => new LucentJsonObjectWriter(jsonWriter);
+        public async Task<ILucentObjectWriter> CreateObjectWriter()
+        {
+            await jsonWriter.WriteStartObjectAsync();
+            return new LucentJsonObjectWriter(jsonWriter);
+        }
 
         /// <inheritdoc/>
-        public ILucentArrayWriter CreateArrayWriter() => new LucentJsonArrayWriter(jsonWriter);
+        public async Task<ILucentArrayWriter> CreateArrayWriter()
+        {
+            await jsonWriter.WriteStartArrayAsync();
+            return new LucentJsonArrayWriter(jsonWriter);
+        }
 
         /// <inheritdoc/>
         public void Dispose() { }
