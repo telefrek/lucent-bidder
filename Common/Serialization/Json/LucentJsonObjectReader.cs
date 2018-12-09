@@ -13,6 +13,7 @@ namespace Lucent.Common.Serialization.Json
     {
         readonly JsonReader jsonReader;
         volatile bool _readEnd = false;
+        volatile string lastPath = string.Empty;
 
         /// <summary>
         /// Default constructor
@@ -20,14 +21,6 @@ namespace Lucent.Common.Serialization.Json
         /// <param name="reader"></param>
         public LucentJsonObjectReader(JsonReader reader)
             => jsonReader = reader;
-
-        /// <summary>
-        /// Constructor to read an object from a stream
-        /// </summary>
-        /// <param name="target"></param>
-        /// <param name="leaveOpen"></param>
-        public LucentJsonObjectReader(Stream target, bool leaveOpen)
-            => jsonReader = new JsonTextReader(new StreamReader(target, Encoding.UTF8, false, 4096, leaveOpen));
 
         /// <inheritdoc/>
         public SerializationFormat Format { get => SerializationFormat.JSON; }
@@ -42,15 +35,16 @@ namespace Lucent.Common.Serialization.Json
         /// <inheritdoc/>
         public async Task<ILucentObjectReader> GetObjectReader()
         {
-            if(await jsonReader.ReadAsync() && jsonReader.TokenType != JsonToken.Null)
+            lastPath = jsonReader.Path;
+            if (await jsonReader.ReadAsync() && jsonReader.TokenType != JsonToken.Null)
                 return new LucentJsonObjectReader(jsonReader);
-            
+
             // TODO: Fix this
             return null;
         }
 
         /// <inheritdoc/>
-        public Task<bool> IsComplete() => Task.FromResult(_readEnd || (_readEnd = jsonReader.TokenType == JsonToken.EndObject));
+        public Task<bool> IsComplete() => Task.FromResult(_readEnd || (_readEnd = jsonReader.TokenType == JsonToken.EndObject && jsonReader.Path != lastPath));
 
         /// <inheritdoc/>
         public async Task<PropertyId> NextAsync() =>
@@ -89,11 +83,11 @@ namespace Lucent.Common.Serialization.Json
 
         /// <inheritdoc/>
         public async Task<TEnum> NextEnum<TEnum>() => (TEnum)Enum.ToObject(typeof(TEnum), (await jsonReader.ReadAsInt32Async()).GetValueOrDefault());
-        
+
         /// <inheritdoc/>
         public async Task Skip() => await jsonReader.SkipAsync();
 
         /// <inheritdoc/>
-        public void Dispose() => jsonReader.Close();
+        public void Dispose() { }
     }
 }

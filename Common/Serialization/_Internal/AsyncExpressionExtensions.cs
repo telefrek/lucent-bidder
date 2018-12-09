@@ -259,12 +259,11 @@ namespace Lucent.Common.Serialization._Internal
             return (Func<T, ILucentObjectWriter, ISerializationContext, ulong, TaskAwaiter>)compiler.GetType().GetMethod("Compile", Type.EmptyTypes).Invoke(compiler, new object[] { });
         }
 
-
         static Func<ILucentArrayReader, ISerializationContext, TaskAwaiter<T>> BuildArrayReader<T>()
         {
             var ret = Expression.Label(typeof(TaskAwaiter<T>));
 
-            var mTypes = (from m in typeof(ILucentArrayWriter).GetMethods()
+            var mTypes = (from m in typeof(ILucentReader).GetMethods()
                           let ptype = m.ReturnType.GetGenericArguments()
                           where m.Name.StartsWith("Next") && !m.Name.EndsWith("Async") && m.ReturnType.IsGenericType
                           select new { PType = ptype, Method = m }).ToDictionary(e => e.PType.Single(), e => e.Method);
@@ -272,29 +271,46 @@ namespace Lucent.Common.Serialization._Internal
             var aType = typeof(T);
             var convert = aType.IsEnum;
 
-            var objParam = Expression.Parameter(typeof(T), "obj");
             var readerParam = Expression.Parameter(typeof(ILucentArrayReader), "reader");
             var contextParam = Expression.Parameter(typeof(ISerializationContext), "context");
 
-            // Find the target method
-            var mInfo = mTypes.GetValueOrDefault(aType, null);
-
-            var valExp = (Expression)objParam;
-
             var body = new List<Expression>();
-            var awaiter = typeof(Task).GetMethod("GetAwaiter");
+            var awaiter = typeof(Task<>).MakeGenericType(typeof(T)).GetMethod("GetAwaiter");
             var continuation = typeof(Task<>).GetMethods().First(m => m.Name == "ContinueWith" && m.GetParameters().Length == 2 &&
             m.GetParameters()[1].ParameterType == typeof(object));
 
-
             var skip = typeof(ILucentReader).GetMethod("Skip");
+
+            var sType = typeof(T);
+
+            if (!sType.IsValueType && sType.GetConstructor(Type.EmptyTypes) != null)
+            {
+                // Type has to be object and new()
+                var readMethod = typeof(ISerializationContext).GetMethods().First(m => m.Name == "ReadArrayObject" && m.IsGenericMethod).MakeGenericMethod(sType);
+
+                body.Add(Expression.Return(ret, Expression.Call(Expression.Call(readerParam, readMethod), awaiter)));
+            }
+            else
+            {
+                var mInfo = mTypes.GetValueOrDefault(sType, null);
+
+                if (sType.IsEnum)
+                {
+                    mInfo = typeof(ILucentReader).GetMethod("NextEnum").MakeGenericMethod(sType);
+                }
+
+                if (mInfo != null)
+                {
+                    body.Add(Expression.Return(ret, Expression.Call(Expression.Call(readerParam, mInfo), awaiter)));
+                }
+            }
 
             body.Add(Expression.Label(ret, Expression.Default(typeof(TaskAwaiter<T>))));
 
             var block = Expression.Block(body);
             var ftype = typeof(Func<,,>).MakeGenericType(typeof(ILucentArrayReader), typeof(ISerializationContext), typeof(TaskAwaiter<>).MakeGenericType(typeof(T)));
 
-            var compiler = makeLambda.MakeGenericMethod(ftype).Invoke(null, new object[] { block, new ParameterExpression[] { objParam, readerParam, contextParam } });
+            var compiler = makeLambda.MakeGenericMethod(ftype).Invoke(null, new object[] { block, new ParameterExpression[] { readerParam, contextParam } });
 
             return (Func<ILucentArrayReader, ISerializationContext, TaskAwaiter<T>>)compiler.GetType().GetMethod("Compile", Type.EmptyTypes).Invoke(compiler, new object[] { });
         }
@@ -333,10 +349,11 @@ namespace Lucent.Common.Serialization._Internal
                 var sType = prop.Property.PropertyType;
                 Expression propExp = Expression.Property(objParam, prop.Property);
 
-                if (!sType.IsValueType && sType.GetConstructor(Type.EmptyTypes) != null)
+
+                if (sType.IsArray)
                 {
                     // Type has to be object and new()
-                    var readMethod = typeof(ISerializationContext).GetMethods().First(m => m.Name == "ReadObject" && m.IsGenericMethod).MakeGenericMethod(sType);
+                    var readMethod = typeof(ISerializationContext).GetMethods().First(m => m.Name == "ReadArray" && m.IsGenericMethod).MakeGenericMethod(sType.GetElementType());
 
                     // Have to get an object reader from the current one
                     var tParam = Expression.Parameter(typeof(Task<>).MakeGenericType(sType), "t");
@@ -373,10 +390,10 @@ namespace Lucent.Common.Serialization._Internal
                         )
                     );
                 }
-                else if (sType.IsArray)
+                else if (!sType.IsValueType && sType.GetConstructor(Type.EmptyTypes) != null)
                 {
                     // Type has to be object and new()
-                    var readMethod = typeof(ISerializationContext).GetMethods().First(m => m.Name == "ReadArray" && m.IsGenericMethod).MakeGenericMethod(sType.GetElementType());
+                    var readMethod = typeof(ISerializationContext).GetMethods().First(m => m.Name == "ReadObject" && m.IsGenericMethod).MakeGenericMethod(sType);
 
                     // Have to get an object reader from the current one
                     var tParam = Expression.Parameter(typeof(Task<>).MakeGenericType(sType), "t");

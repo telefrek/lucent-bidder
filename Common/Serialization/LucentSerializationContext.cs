@@ -68,7 +68,7 @@ namespace Lucent.Common.Serialization
                 await writer.Write(this, instance);
 
         }
-        
+
         /// <inheritdoc />
         public async Task WriteObject<T>(ILucentWriter writer, PropertyId property, T instance) where T : new()
         {
@@ -94,13 +94,24 @@ namespace Lucent.Common.Serialization
         }
 
         /// <inheritdoc />
-        public async Task<T> Read<T>(ILucentObjectReader reader) where T : new() => await reader.Read<T>(this);
+        public async Task<T> Read<T>(ILucentObjectReader reader) where T : new()
+        {
+            using (reader)
+                return await reader.Read<T>(this);
+        }
 
         /// <inheritdoc />
-        public async Task<T[]> ReadArray<T>(ILucentReader reader) => await (await reader.GetArrayReader()).ReadArray<T>(this);
+        public async Task<T[]> ReadArray<T>(ILucentReader reader)
+        {
+            using (var arrReader = await reader.GetArrayReader())
+                return await arrReader.ReadArray<T>(this);
+        }
 
         /// <inheritdoc/>
         public async Task<T> ReadObject<T>(ILucentReader reader) where T : new() => await Read<T>(await reader.GetObjectReader());
+
+        /// <inheritdoc/>
+        public async Task<T> ReadArrayObject<T>(ILucentArrayReader reader) where T : new() => await Read<T>(await reader.GetObjectReader());
 
         /// <inheritdoc />
         public async Task<T> ReadFrom<T>(Stream target, bool leaveOpen, SerializationFormat format)

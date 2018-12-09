@@ -66,16 +66,16 @@ namespace Lucent.Common.Serialization._Internal
                     if (State == 2)
                     {
                         property = propertyAwaiter.GetResult();
-                        if(property == null)
-                            break;
-
-                        var aw = AwaiterMap(Instance, Reader, Context, property);
                         State = 0;
-
-                        if (!aw.IsCompleted)
+                        if (property != null)
                         {
-                            AsyncBuilder.AwaitUnsafeOnCompleted(ref aw, ref this);
-                            return;
+                            var aw = AwaiterMap(Instance, Reader, Context, property);
+
+                            if (!aw.IsCompleted)
+                            {
+                                AsyncBuilder.AwaitUnsafeOnCompleted(ref aw, ref this);
+                                return;
+                            }
                         }
                     }
                 }

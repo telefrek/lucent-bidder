@@ -83,6 +83,6 @@ namespace Lucent.Common.Serialization.Json
         public async Task Skip() => await jsonReader.SkipAsync();
 
         /// <inheritdoc/>
-        public void Dispose() => jsonReader.Close();
+        public void Dispose() {}
     }
 }
