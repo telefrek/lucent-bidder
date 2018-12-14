@@ -2,12 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Lucent.Common.Entities;
-using Lucent.Common.Entities.Serializers;
-using Lucent.Common.Filters;
-using Lucent.Common.Filters.Serializers;
 using Lucent.Common.OpenRTB;
-using Lucent.Common.Serialization;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Lucent.Common
 {

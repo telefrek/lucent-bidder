@@ -44,7 +44,7 @@ namespace Lucent.Common.Storage.Test
                 }
             }
 
-            if (bid.User != null && (bid.User.Gender == Gender.Unknown ||
+            if (bid.User != null && (bid.User.GenderStr == "U" ||
                 (bid.User.Geo != null && bid.User.Geo.Country == "CAN")))
                 return true;
 
@@ -64,7 +64,7 @@ namespace Lucent.Common.Storage.Test
             var bFilter = new BidFilter
             {
                 ImpressionFilters = new[] { new Filter { Property = "BidCurrency", Value = "CAN" } },
-                UserFilters = new[] { new Filter { Property = "Gender", Value = Gender.Unknown } },
+                UserFilters = new[] { new Filter { Property = "GenderStr", Value = "U" } },
                 GeoFilters = new[] { new Filter { FilterType = FilterType.EQ, Property = "Country", Value = "CAN" } }
             };
 
@@ -90,8 +90,8 @@ namespace Lucent.Common.Storage.Test
 
             var bFilter = new BidFilter
             {
-                SiteFilters = new[] { new Filter { FilterType = FilterType.IN, Property = "SiteCategories", Values = new object[] { "BCAT1" } },
-                    new Filter { FilterType = FilterType.IN, Property = "SiteCategories", Value = "BCAT3" }, new Filter { FilterType = FilterType.IN, Property = "Domain", Values = new object[]{"telefrek.com", "telefrek.co", "bad" }} },
+                SiteFilters = new[] { new Filter { FilterType = FilterType.IN, Property = "SiteCategories", Values = new FilterValue[] { "BCAT1" } },
+                    new Filter { FilterType = FilterType.IN, Property = "SiteCategories", Value = "BCAT3" }, new Filter { FilterType = FilterType.IN, Property = "Domain", Values = new FilterValue[]{"telefrek.com", "telefrek.co", "bad" }} },
             };
 
             var f = bFilter.GenerateCode();

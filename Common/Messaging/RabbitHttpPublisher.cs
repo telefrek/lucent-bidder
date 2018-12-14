@@ -5,9 +5,7 @@ using System.Text;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using Newtonsoft.Json;
-using Lucent.Common.Serialization.Json;
 using System.Dynamic;
-using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 
 namespace Lucent.Common.Messaging
@@ -50,25 +48,30 @@ namespace Lucent.Common.Messaging
         {
             using (var ms = new MemoryStream())
             {
-                using (var jsw = new JsonSerializationStreamWriter(new JsonTextWriter(new StreamWriter(ms)), null, null))
+                using (var jsw = new JsonTextWriter(new StreamWriter(ms)))
                 {
                     dynamic expando = new ExpandoObject();
                     expando.properties = new ExpandoObject();
-                    expando.properties.delivery_mode = 2;
-                    expando.properties.content_type = message.ContentType;
+                    jsw.WritePropertyName("delivery_mode");
+                    jsw.WriteValue(2);
+                    jsw.WritePropertyName("content_type");
+                    jsw.WriteValue(message.ContentType);
 
                     if (message.Headers != null && message.Headers.Count > 0)
                     {
-                        expando.properties.headers = new ExpandoObject();
+                        jsw.WritePropertyName("headers");
+                        jsw.WriteStartArray();
                         foreach (var header in message.Headers)
-                            ((IDictionary<string, object>)expando.properties.headers).Add(header);
+                            jsw.WriteValue(header);
+                        jsw.WriteEndArray();
                     }
 
-                    expando.routing_key = message.Route;
-                    expando.payload = Convert.ToBase64String(message.ToBytes());
-                    expando.payload_encoding = "base64";
-
-                    jsw.Write(expando);
+                    jsw.WritePropertyName("routing_key");
+                    jsw.WriteValue(message.Route);
+                    jsw.WritePropertyName("payload");
+                    jsw.WriteValue(Convert.ToBase64String(message.ToBytes()));
+                    jsw.WritePropertyName("payload_encoding");
+                    jsw.WriteValue("base64");
                     jsw.Flush();
 
                     var msg = Encoding.UTF8.GetString(ms.ToArray());

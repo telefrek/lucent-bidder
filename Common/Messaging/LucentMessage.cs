@@ -95,18 +95,10 @@ namespace Lucent.Common.Messaging
             switch (ContentType.ToLowerInvariant())
             {
                 case "application/x-protobuf":
-                    using (var reader = _serializationContext.CreateReader(new MemoryStream(buffer), false, SerializationFormat.PROTOBUF))
-                    {
-                        if (reader.HasNext())
-                            Body = reader.ReadAs<T>();
-                    }
+                    Body = _serializationContext.ReadFrom<T>(new MemoryStream(buffer), false, SerializationFormat.PROTOBUF).Result;
                     break;
                 default:
-                    using (var reader = _serializationContext.CreateReader(new MemoryStream(buffer), false, SerializationFormat.JSON))
-                    {
-                        if (reader.HasNext())
-                            Body = reader.ReadAs<T>();
-                    }
+                    Body = _serializationContext.ReadFrom<T>(new MemoryStream(buffer), false, SerializationFormat.JSON).Result;
                     break;
             }
         }
@@ -119,17 +111,13 @@ namespace Lucent.Common.Messaging
                 case "application/x-protobuf":
                     using (var ms = new MemoryStream())
                     {
-                        using(var writer = _serializationContext.CreateWriter(ms, true, SerializationFormat.PROTOBUF))
-                            writer.Write(Body);
-
+                        _serializationContext.WriteTo(Body, ms, true, SerializationFormat.PROTOBUF).Wait();
                         return ms.ToArray();
                     }
                 default:
                     using (var ms = new MemoryStream())
                     {
-                        using(var writer = _serializationContext.CreateWriter(ms, true, SerializationFormat.JSON))
-                            writer.Write(Body);
-                            
+                        _serializationContext.WriteTo(Body, ms, true, SerializationFormat.JSON).Wait();
                         return ms.ToArray();
                     }
             }

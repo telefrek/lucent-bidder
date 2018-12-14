@@ -69,16 +69,15 @@ namespace Lucent.Common.Middleware
                 await _nextHandler.Invoke(httpContext);
                 return;
             }
-            else
-            {
-                
-                var instance = _serializerTiming.WithLabels("JSON", "deserialize");
-                var sw = Stopwatch.StartNew();
-                var request = JsonConvert.DeserializeObject(await new StreamReader(httpContext.Request.Body).ReadToEndAsync());
-                instance.Observe(sw.ElapsedTicks * 1d / Stopwatch.Frequency);
-                httpContext.Response.StatusCode = 204;
-                return;
-            }
+            // else
+            // {
+            //     var instance = _serializerTiming.WithLabels("JSON", "deserialize");
+            //     var sw = Stopwatch.StartNew();
+            //     var request = JsonConvert.DeserializeObject(await new StreamReader(httpContext.Request.Body).ReadToEndAsync());
+            //     instance.Observe(sw.ElapsedTicks * 1d / Stopwatch.Frequency);
+            //     httpContext.Response.StatusCode = 204;
+            //     return;
+            // }
 
             // Wrap the body to force the contents to flush
             using (var bodyContents = httpContext.Request.Body)
@@ -90,49 +89,42 @@ namespace Lucent.Common.Middleware
                     if (encoding.Any(e => e.Contains("gzip")))
                         format |= SerializationFormat.COMPRESSED;
 
-                using (var serializationReader = _serializationContext.CreateReader(bodyContents, true, format))
+                var instance = _serializerTiming.WithLabels(format.ToString(), "deserialize");
+                var sw = Stopwatch.StartNew();
+                var request = await _serializationContext.ReadFrom<BidRequest>(bodyContents, true, format);
+                instance.Observe(sw.ElapsedTicks * 1d / Stopwatch.Frequency);
+
+                if (request != null && !_bidFilters.Any(f => f.Invoke(request)))
                 {
-                    if (await serializationReader.HasNextAsync())
+                    // Validate we can find a matching exchange
+                    var exchange = _exchangeRegistry.Exchanges.FirstOrDefault(e => e.IsMatch(httpContext));
+                    if (exchange == null)
                     {
-                        var instance = _serializerTiming.WithLabels(format.ToString(), "deserialize");
-                        var sw = Stopwatch.StartNew();
-                        var request = await serializationReader.ReadAsAsync<BidRequest>();
-                        instance.Observe(sw.ElapsedTicks * 1d / Stopwatch.Frequency);
-
-                        if (request != null && !_bidFilters.Any(f => f.Invoke(request)))
-                        {
-                            // Validate we can find a matching exchange
-                            var exchange = _exchangeRegistry.Exchanges.FirstOrDefault(e => e.IsMatch(httpContext));
-                            if (exchange == null)
-                            {
-                                httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
-                                return;
-                            }
-
-                            httpContext.Items.Add("exchange", exchange);
-                            var response = await exchange.Bid(request, httpContext);
-
-                            // Clear the compression flag and re-validate the accept header
-                            format &= ~SerializationFormat.COMPRESSED;
-                            if (httpContext.Request.Headers.TryGetValue("Accept-Encoding", out encoding))
-                                if (encoding.Any(e => e.Contains("gzip")))
-                                    format |= SerializationFormat.COMPRESSED;
-
-                            if (response != null && (response.Bids ?? new SeatBid[0]).Length > 0)
-                            {
-                                using (var serializationWriter = _serializationContext.CreateWriter(httpContext.Response.Body, true, format))
-                                    await serializationWriter.WriteAsync(response);
-                                httpContext.Response.StatusCode = StatusCodes.Status200OK;
-                            }
-                            else
-                                httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
-                        }
-                        else
-                            httpContext.Response.StatusCode = request == null ? StatusCodes.Status400BadRequest : StatusCodes.Status204NoContent;
+                        httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
+                        return;
                     }
-                    else httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+
+                    httpContext.Items.Add("exchange", exchange);
+                    var response = await exchange.Bid(request, httpContext);
+
+                    // Clear the compression flag and re-validate the accept header
+                    format &= ~SerializationFormat.COMPRESSED;
+                    if (httpContext.Request.Headers.TryGetValue("Accept-Encoding", out encoding))
+                        if (encoding.Any(e => e.Contains("gzip")))
+                            format |= SerializationFormat.COMPRESSED;
+
+                    if (response != null && (response.Bids ?? new SeatBid[0]).Length > 0)
+                    {
+                        await _serializationContext.WriteTo(response, httpContext.Response.Body, true, format);
+                        httpContext.Response.StatusCode = StatusCodes.Status200OK;
+                    }
+                    else
+                        httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
                 }
+                else
+                    httpContext.Response.StatusCode = request == null ? StatusCodes.Status400BadRequest : StatusCodes.Status204NoContent;
             }
+
         }
     }
 }

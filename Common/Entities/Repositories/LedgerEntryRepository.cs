@@ -55,28 +55,7 @@ namespace Lucent.Common.Entities.Repositories
             try
             {
                 var rowSet = await ExecuteAsync(_getAllLedgers, "getAll_ledger");
-
-                return await ReadAsAsync(rowSet, (row) =>
-                    {
-                        var contents = row.GetValue<byte[]>("contents");
-                        var format = Enum.Parse<SerializationFormat>(row.GetValue<string>("format"));
-
-                        using (var ms = new MemoryStream(contents))
-                        {
-                            using (var reader = _serializationContext.CreateReader(ms, false, _serializationFormat))
-                            {
-                                if (reader.HasNext())
-                                {
-                                    var o = reader.ReadAs<LedgerEntry>();
-                                    o.ETag = row.GetValue<string>("etag");
-                                    o.Updated = row.GetValue<DateTime>("updated");
-                                    return o;
-                                }
-                            }
-                        }
-
-                        return null;
-                    });
+                return await ReadAsAsync<LedgerEntry>(rowSet);
             }
             catch (InvalidQueryException queryError)
             {
@@ -97,28 +76,7 @@ namespace Lucent.Common.Entities.Repositories
             try
             {
                 var rowSet = await ExecuteAsync(_getFullLedger.Bind(id.TargetId, id.LedgerTimeId), "get_ledger");
-
-                return (await ReadAsAsync(rowSet, (row) =>
-                    {
-                        var contents = row.GetValue<byte[]>("contents");
-                        var format = Enum.Parse<SerializationFormat>(row.GetValue<string>("format"));
-
-                        using (var ms = new MemoryStream(contents))
-                        {
-                            using (var reader = _serializationContext.CreateReader(ms, false, _serializationFormat))
-                            {
-                                if (reader.HasNext())
-                                {
-                                    var o = reader.ReadAs<LedgerEntry>();
-                                    o.ETag = row.GetValue<string>("etag");
-                                    o.Updated = row.GetValue<DateTime>("updated");
-                                    return o;
-                                }
-                            }
-                        }
-
-                        return null;
-                    })).FirstOrDefault();
+                return (await ReadAsAsync<LedgerEntry>(rowSet)).FirstOrDefault();
             }
             catch (InvalidQueryException queryError)
             {
@@ -141,27 +99,7 @@ namespace Lucent.Common.Entities.Repositories
                 var rowSet = id.LedgerTimeId == null ? await ExecuteAsync(_getFullLedger.Bind(id.TargetId), "getAny_ledger") :
                     await ExecuteAsync(_getLedgerEntry.Bind(id.TargetId, id.LedgerTimeId), "get_ledger");
 
-                return await ReadAsAsync(rowSet, (row) =>
-                    {
-                        var contents = row.GetValue<byte[]>("contents");
-                        var format = Enum.Parse<SerializationFormat>(row.GetValue<string>("format"));
-
-                        using (var ms = new MemoryStream(contents))
-                        {
-                            using (var reader = _serializationContext.CreateReader(ms, false, _serializationFormat))
-                            {
-                                if (reader.HasNext())
-                                {
-                                    var o = reader.ReadAs<LedgerEntry>();
-                                    o.ETag = row.GetValue<string>("etag");
-                                    o.Updated = row.GetValue<DateTime>("updated");
-                                    return o;
-                                }
-                            }
-                        }
-
-                        return null;
-                    });
+                return await ReadAsAsync<LedgerEntry>(rowSet);
             }
             catch (InvalidQueryException queryError)
             {
@@ -188,12 +126,7 @@ namespace Lucent.Common.Entities.Repositories
                 var contents = new byte[0];
                 using (var ms = new MemoryStream())
                 {
-                    using (var writer = _serializationContext.CreateWriter(ms, true, _serializationFormat))
-                    {
-                        writer.Write(obj);
-                        writer.Flush();
-                    }
-
+                    await _serializationContext.WriteTo(obj, ms, true, _serializationFormat);
                     ms.Seek(0, SeekOrigin.Begin);
                     contents = ms.ToArray();
                 }
@@ -250,11 +183,7 @@ namespace Lucent.Common.Entities.Repositories
                 var contents = new byte[0];
                 using (var ms = new MemoryStream())
                 {
-                    using (var writer = _serializationContext.CreateWriter(ms, true, _serializationFormat))
-                    {
-                        writer.Write(obj);
-                    }
-
+                    await _serializationContext.WriteTo(obj, ms, true, _serializationFormat);
                     ms.Seek(0, SeekOrigin.Begin);
                     contents = ms.ToArray();
                 }

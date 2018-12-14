@@ -173,6 +173,7 @@ namespace Lucent.Common.Serialization._Internal
         static Func<T, ILucentObjectWriter, ISerializationContext, ulong, TaskAwaiter> BuildWriter<T>() where T : new()
         {
             var ret = Expression.Label(typeof(TaskAwaiter));
+            var completed = Task.CompletedTask.GetAwaiter();
 
             var list = (from p in typeof(T).GetProperties()
                         let attr = p.GetCustomAttributes(typeof(SerializationPropertyAttribute), true)
@@ -255,7 +256,7 @@ namespace Lucent.Common.Serialization._Internal
 
             // switch(idx) { 0-N in order, followed by default: return default(TaskAwaiter)}
             var body = new List<Expression>();
-            body.Add(Expression.Switch(idParam, Expression.Return(ret, Expression.Default(typeof(TaskAwaiter))), cases.ToArray()));
+            body.Add(Expression.Switch(idParam, Expression.IfThenElse(Expression.LessThanOrEqual(idParam, Expression.Constant(list.Last().Attribute.Id)), Expression.Return(ret, Expression.Constant(completed)), Expression.Return(ret, Expression.Default(typeof(TaskAwaiter)))), cases.ToArray()));
 
             body.Add(Expression.Label(ret, Expression.Default(typeof(TaskAwaiter))));
 
@@ -356,7 +357,6 @@ namespace Lucent.Common.Serialization._Internal
                 // Create a bunch of if statements lol
                 var sType = prop.Property.PropertyType;
                 Expression propExp = Expression.Property(objParam, prop.Property);
-
 
                 if (sType.IsArray)
                 {

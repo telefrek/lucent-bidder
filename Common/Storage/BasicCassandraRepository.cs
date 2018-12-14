@@ -65,28 +65,7 @@ namespace Lucent.Common.Storage
             try
             {
                 var rowSet = await ExecuteAsync(_getAllStatement, "getAll_" + _tableName);
-
-                return await ReadAsAsync(rowSet, (row) =>
-                    {
-                        var contents = row.GetValue<byte[]>("contents");
-                        var format = Enum.Parse<SerializationFormat>(row.GetValue<string>("format"));
-
-                        using (var ms = new MemoryStream(contents))
-                        {
-                            using (var reader = _serializationContext.CreateReader(ms, false, _serializationFormat))
-                            {
-                                if (reader.HasNext())
-                                {
-                                    var o = reader.ReadAs<T>();
-                                    o.ETag = row.GetValue<string>("etag");
-                                    o.Updated = row.GetValue<DateTime>("updated");
-                                    return o;
-                                }
-                            }
-                        }
-
-                        return default(T);
-                    });
+                return await ReadAsAsync<T>(rowSet);
             }
             catch (InvalidQueryException queryError)
             {
@@ -108,27 +87,7 @@ namespace Lucent.Common.Storage
             {
                 var rowSet = await ExecuteAsync(_getStatement.Bind(key), "get_" + _tableName);
 
-                return (await ReadAsAsync(rowSet, (row) =>
-                    {
-                        var contents = row.GetValue<byte[]>("contents");
-                        var format = Enum.Parse<SerializationFormat>(row.GetValue<string>("format"));
-
-                        using (var ms = new MemoryStream(contents))
-                        {
-                            using (var reader = _serializationContext.CreateReader(ms, false, _serializationFormat))
-                            {
-                                if (reader.HasNext())
-                                {
-                                    var o = reader.ReadAs<T>();
-                                    o.ETag = row.GetValue<string>("etag");
-                                    o.Updated = row.GetValue<DateTime>("updated");
-                                    return o;
-                                }
-                            }
-                        }
-
-                        return default(T);
-                    })).FirstOrDefault();
+                return (await ReadAsAsync<T>(rowSet)).FirstOrDefault();
             }
             catch (InvalidQueryException queryError)
             {
@@ -159,12 +118,7 @@ namespace Lucent.Common.Storage
                 var contents = new byte[0];
                 using (var ms = new MemoryStream())
                 {
-                    using (var writer = _serializationContext.CreateWriter(ms, true, _serializationFormat))
-                    {
-                        writer.Write(obj);
-                        writer.Flush();
-                    }
-
+                    await _serializationContext.WriteTo(obj, ms, true, _serializationFormat);
                     ms.Seek(0, SeekOrigin.Begin);
                     contents = ms.ToArray();
                 }
@@ -221,11 +175,7 @@ namespace Lucent.Common.Storage
                 var contents = new byte[0];
                 using (var ms = new MemoryStream())
                 {
-                    using (var writer = _serializationContext.CreateWriter(ms, true, _serializationFormat))
-                    {
-                        writer.Write(obj);
-                    }
-
+                    await _serializationContext.WriteTo(obj, ms, true, _serializationFormat);
                     ms.Seek(0, SeekOrigin.Begin);
                     contents = ms.ToArray();
                 }

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Lucent.Common;
 using Prometheus;
 using System.Collections.Generic;
+using System.IO;
 
 namespace Lucent.Common.Storage
 {
@@ -167,10 +168,9 @@ namespace Lucent.Common.Storage
         /// Reads the rowset completely, using the builder function to create entities
         /// </summary>
         /// <param name="rowSet"></param>
-        /// <param name="builder"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        protected async Task<ICollection<T>> ReadAsAsync<T>(RowSet rowSet, Func<Row, T> builder)
+        protected async Task<ICollection<T>> ReadAsAsync<T>(RowSet rowSet) where T : new()
         {
             var instances = new List<T>();
 
@@ -182,17 +182,36 @@ namespace Lucent.Common.Storage
                     if ((numRows = rowSet.GetAvailableWithoutFetching()) > 0)
                     {
                         for (var i = 0; i < numRows && rowEnum.MoveNext(); ++i)
-                            instances.Add(builder(rowEnum.Current));
+                        {
+                            var contents = rowEnum.Current.GetValue<byte[]>("contents");
+                            var format = Enum.Parse<SerializationFormat>(rowEnum.Current.GetValue<string>("format"));
+
+                            using (var ms = new MemoryStream(contents))
+                            {
+                                instances.Add(await _serializationContext.ReadFrom<T>(ms, false, format));
+                            }
+                        }
                     }
                     else
                         await rowSet.FetchMoreResultsAsync();
                 }
 
                 while (rowEnum.MoveNext())
-                    instances.Add(builder(rowEnum.Current));
-            }
+                {
+                    for (var i = 0; i < numRows && rowEnum.MoveNext(); ++i)
+                    {
+                        var contents = rowEnum.Current.GetValue<byte[]>("contents");
+                        var format = Enum.Parse<SerializationFormat>(rowEnum.Current.GetValue<string>("format"));
 
-            return instances;
+                        using (var ms = new MemoryStream(contents))
+                        {
+                            instances.Add(await _serializationContext.ReadFrom<T>(ms, false, format));
+                        }
+                    }
+                }
+
+                return instances;
+            }
         }
     }
 }

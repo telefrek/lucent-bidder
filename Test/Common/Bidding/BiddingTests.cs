@@ -36,7 +36,7 @@ namespace Lucent.Common.Bidding
         }
 
         [TestMethod]
-        [Ignore]
+        //[Ignore]
         public async Task TestSuccessfulBid()
         {
             var serializationContext = ServiceProvider.GetRequiredService<ISerializationContext>();
@@ -116,20 +116,18 @@ namespace Lucent.Common.Bidding
         {
             httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
 
-            using (var reader = serializationContext.WrapStream(httpContext.Response.Body, false, SerializationFormat.JSON).Reader)
-            {
-                Assert.IsTrue(reader.HasNext(), "Failed to ready body from stream");
-                var response = await reader.ReadAsAsync<BidResponse>();
-                Assert.IsNotNull(response, "Bid response should not be null");
-                Assert.IsNotNull(response.Bids, "Bids should be present");
-                var seatBid = response.Bids.First();
-                Assert.IsNotNull(seatBid.Bids, "Bids must be part of seatbid");
-                var campaignBid = seatBid.Bids.First();
-                Assert.IsNotNull(campaignBid);
-                Assert.AreEqual(campaign.Id, campaignBid.CampaignId, "Only one campaign should exist");
+            var contents = Encoding.UTF8.GetString((httpContext.Response.Body as MemoryStream).ToArray());
 
-                return response;
-            }
+            var response = await serializationContext.ReadFrom<BidResponse>(httpContext.Response.Body, false, SerializationFormat.JSON);
+            Assert.IsNotNull(response, "Bid response should not be null");
+            Assert.IsNotNull(response.Bids, "Bids should be present");
+            var seatBid = response.Bids.First();
+            Assert.IsNotNull(seatBid.Bids, "Bids must be part of seatbid");
+            var campaignBid = seatBid.Bids.First();
+            Assert.IsNotNull(campaignBid);
+            Assert.AreEqual(campaign.Id, campaignBid.CampaignId, "Only one campaign should exist");
+
+            return response;
         }
 
         async Task SetupBidderFilters()
@@ -154,11 +152,9 @@ namespace Lucent.Common.Bidding
             httpContext.Request.Path = "/v1/bidder";
 
             var serializationContext = ServiceProvider.GetRequiredService<ISerializationContext>();
-            await serializationContext.WrapStream(httpContext.Request.Body, true, SerializationFormat.JSON).Writer.WriteAsync(bid);
+            await serializationContext.WriteTo(bid, httpContext.Request.Body, true, SerializationFormat.JSON);
             httpContext.Request.Body.Seek(0, SeekOrigin.Begin);
             httpContext.Request.ContentType = MediaTypeNames.Application.Json;
-
-            var res = Encoding.UTF8.GetString((httpContext.Request.Body as MemoryStream).ToArray());
 
             httpContext.Response.Body = new MemoryStream();
 

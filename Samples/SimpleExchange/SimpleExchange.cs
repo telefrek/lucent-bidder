@@ -24,7 +24,6 @@ namespace Lucent.Samples.SimpleExchange
     {
         IStorageManager _storageManager;
         IMessageFactory _messageFactory;
-        ISerializationRegistry _serializationRegistry;
         IBidFactory _bidFactory;
         IMessageSubscriber<LucentMessage<Campaign>> _campaignSub;
         ILogger<SimpleExchange> _log;
@@ -35,7 +34,6 @@ namespace Lucent.Samples.SimpleExchange
         {
             _storageManager = provider.GetService<IStorageManager>();
             _messageFactory = provider.GetService<IMessageFactory>();
-            _serializationRegistry = provider.GetService<ISerializationRegistry>();
             _bidFactory = provider.GetService<IBidFactory>();
             _log = provider.GetService<ILogger<SimpleExchange>>();
 

@@ -146,46 +146,5 @@ namespace Lucent.Common.Storage.Test
 
             Assert.IsNotNull(request, "request should be deserialized!");
         }
-
-        [TestMethod]
-        public async Task TestProtoSerializer()
-        {
-            var dt = DateTime.Now;
-            var context = ServiceProvider.GetService<ISerializationContext>();
-
-            using (var ms = new MemoryStream())
-            {
-                using (var writer = context.CreateWriter(ms, true, SerializationFormat.PROTOBUF))
-                {
-                    await writer.WriteAsync(dt);
-                    await writer.FlushAsync();
-                }
-
-                ms.Seek(0, SeekOrigin.Begin);
-
-                using (var reader = context.CreateReader(ms, true, SerializationFormat.PROTOBUF))
-                {
-                    var v1 = reader.ReadDateTime();
-                    Assert.AreEqual(dt, v1, "date mismatch");
-                }
-            }
-
-            using (var ms = new MemoryStream())
-            {
-                using (var writer = context.CreateWriter(ms, true, SerializationFormat.JSON))
-                {
-                    await writer.WriteAsync(dt);
-                    await writer.FlushAsync();
-                }
-
-                ms.Seek(0, SeekOrigin.Begin);
-
-                using (var reader = context.CreateReader(ms, true, SerializationFormat.JSON))
-                {
-                    var v1 = reader.ReadDateTime();
-                    Assert.AreEqual(dt, v1, "date mismatch");
-                }
-            }
-        }
     }
 }

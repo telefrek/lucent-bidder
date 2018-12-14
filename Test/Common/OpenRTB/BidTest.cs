@@ -182,12 +182,7 @@ namespace Lucent.Common.OpenRTB.Test
             HttpContent content;
             using (var ms = new MemoryStream())
             {
-                var serializer = ServiceProvider.GetService<ISerializationContext>().WrapStream(ms, true, SerializationFormat.JSON);
-
-                using (var writer = serializer.Writer)
-                {
-                    await ServiceProvider.GetService<ISerializationRegistry>().GetSerializer<BidRequest>().WriteAsync(writer, bid, CancellationToken.None);
-                }
+                await ServiceProvider.GetService<ISerializationContext>().WriteTo(bid, ms, true, SerializationFormat.JSON);
 
                 ms.Seek(0, SeekOrigin.Begin);
 
@@ -201,17 +196,12 @@ namespace Lucent.Common.OpenRTB.Test
 
         async Task<BidResponse> GetResponse(HttpResponseMessage response)
         {
-            var serializer = ServiceProvider.GetService<ISerializationContext>().WrapStream((await response.Content.ReadAsStreamAsync()), false, SerializationFormat.JSON);
-
-            using (var reader = serializer.Reader)
-            {
-                return await reader.ReadAsAsync<BidResponse>();
-            }
+            return await ServiceProvider.GetService<ISerializationContext>().ReadFrom<BidResponse>((await response.Content.ReadAsStreamAsync()), false, SerializationFormat.JSON);
         }
 
         protected override void InitializeDI(IServiceCollection services)
         {
-            services.AddLucentServices(Configuration, localOnly:true);
+            services.AddLucentServices(Configuration, localOnly: true);
         }
     }
 }

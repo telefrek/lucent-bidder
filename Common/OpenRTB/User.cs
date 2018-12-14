@@ -32,8 +32,46 @@ namespace Lucent.Common.OpenRTB
         /// 
         /// </summary>
         /// <value></value>
-        [SerializationProperty(4, "gender")]
         public Gender Gender { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
+        [SerializationProperty(4, "gender")]
+        public string GenderStr
+        {
+            get
+            {
+                switch (Gender)
+                {
+                    case Gender.Male:
+                        return "M";
+                    case Gender.Female:
+                        return "F";
+                    default:
+                        return "O";
+                }
+            }
+            set
+            {
+                switch (value)
+                {
+                    case "M":
+                        Gender = Gender.Male;
+                        break;
+                    case "F":
+                        Gender = Gender.Female;
+                        break;
+                    case "O":
+                        Gender = Gender.Other;
+                        break;
+                    default:
+                        Gender = Gender.Unknown;
+                        break;
+                }
+            }
+        }
 
         /// <summary>
         /// 
