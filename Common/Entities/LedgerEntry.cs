@@ -1,5 +1,6 @@
 using System;
 using Cassandra;
+using Lucent.Common.Serialization;
 using Lucent.Common.Storage;
 
 namespace Lucent.Common.Entities
@@ -13,25 +14,36 @@ namespace Lucent.Common.Entities
         /// Composite key for identifying a ledger
         /// </summary>
         /// <returns></returns>
+        [SerializationProperty(1, "key")]
         public LedgerCompositeEntryKey Id { get; set; } = new LedgerCompositeEntryKey();
 
         /// <summary>
         /// 
         /// </summary>
         /// <value></value>
+        [SerializationProperty(2, "entrytype")]
         public LedgerEntryType EntryType { get; set; }
 
         /// <summary>
         /// 
         /// </summary>
         /// <value></value>
+        [SerializationProperty(3, "original")]
         public double OriginalAmount { get; set; }
 
         /// <summary>
         /// 
         /// </summary>
         /// <value></value>
+        [SerializationProperty(4, "remaining")]
         public double RemainingAmount { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
+        [SerializationProperty(5, "created")]
+        public DateTime Created { get; set; } = DateTime.UtcNow;
 
         /// <summary>
         /// 
@@ -44,12 +56,6 @@ namespace Lucent.Common.Entities
         /// </summary>
         /// <value></value>
         public DateTime Updated { get; set; }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <value></value>
-        public DateTime Created { get; set; } = DateTime.UtcNow;
     }
 
     /// <summary>
@@ -61,12 +67,14 @@ namespace Lucent.Common.Entities
         /// The id for the target type
         /// </summary>
         /// <value></value>
+        [SerializationProperty(1, "targetid")]
         public string TargetId { get; set; }
 
         /// <summary>
         /// The TimeUUID for storing the entry
         /// </summary>
         /// <value></value>
+        [SerializationProperty(2, "ledgerid")]
         public Guid LedgerTimeId { get; set; }
 
         /// <summary>

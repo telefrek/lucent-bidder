@@ -1,3 +1,5 @@
+using Lucent.Common.Serialization;
+
 namespace Lucent.Common.OpenRTB
 {
     /// <summary>
@@ -9,6 +11,7 @@ namespace Lucent.Common.OpenRTB
         /// 
         /// </summary>
         /// <value></value>
+        [SerializationProperty(1, "coppa")]
         public bool ProtectsChildren { get; set; }
     }
 }

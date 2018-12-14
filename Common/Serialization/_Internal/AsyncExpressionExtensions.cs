@@ -296,7 +296,7 @@ namespace Lucent.Common.Serialization._Internal
                 // Type has to be object and new()
                 var readMethod = typeof(ISerializationContext).GetMethods().First(m => m.Name == "ReadArrayObject" && m.IsGenericMethod).MakeGenericMethod(sType);
 
-                body.Add(Expression.Return(ret, Expression.Call(Expression.Call(readerParam, readMethod), awaiter)));
+                body.Add(Expression.Return(ret, Expression.Call(Expression.Call(contextParam, readMethod, readerParam), awaiter)));
             }
             else
             {

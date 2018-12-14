@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Lucent.Common.OpenRTB;
+using Lucent.Common.Serialization;
 using Lucent.Common.Storage;
 
 namespace Lucent.Common.Entities
@@ -15,8 +16,17 @@ namespace Lucent.Common.Entities
         /// 
         /// </summary>
         /// <value></value>
+        [Display(Name = "Id")]
+        [SerializationProperty(1, "id")]
+        public string Id { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
         [Display(Name = "Name")]
         [Required, StringLength(100)]
+        [SerializationProperty(2, "name")]
         public string Name { get; set; }
 
         /// <summary>
@@ -24,20 +34,64 @@ namespace Lucent.Common.Entities
         /// </summary>
         /// <value></value>
         [Display(Name = "Spend")]
+        [SerializationProperty(3, "spend")]
         public double Spend { get; set; }
 
         /// <summary>
         /// 
         /// </summary>
         /// <value></value>
-        [Display(Name = "Id")]
-        public string Id { get; set; }
+        [Display(Name = "Schedule")]
+        [SerializationProperty(4, "schedule")]
+        public CampaignSchedule Schedule { get; set; } = new CampaignSchedule { };
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
+        [SerializationProperty(5, "filters")]
+        public BidFilter BidFilter { get; set; } = new BidFilter { GeoFilters = new Filters.Filter[] { new Filters.Filter { Property = "Country", PropertyType = typeof(string), Value = "USA", FilterType = Filters.FilterType.EQ } } };
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
+        [Display(Name = "Landing Page")]
+        [Required, StringLength(1024)]
+        [SerializationProperty(6, "landing")]
+        public string LandingPage { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
+        [Display(Name = "BuyerId")]
+        [SerializationProperty(7, "buyerid")]
+        public string BuyerId { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
+        [Display(Name = "BundleId")]
+        [SerializationProperty(8, "bundleid")]
+        public string BundleId { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value> 
+        [Display(Name = "Domains")]
+        [UIHint("Domains")]
+        [SerializationProperty(9, "domains")]
+        public List<string> AdDomains { get; set; } = new List<string> { };
 
         /// <summary>
         /// 
         /// </summary>
         /// <value></value>
         [Display(Name = "Status")]
+        [SerializationProperty(10, "status")]
         public CampaignStatus Status { get; set; }
 
         /// <summary>
@@ -49,58 +103,23 @@ namespace Lucent.Common.Entities
         /// <summary>
         /// 
         /// </summary>
-        /// <value></value>
-        [Display(Name = "Landing Page")]
-        [Required, StringLength(1024)]
-        public string LandingPage { get; set; }
+        /// <returns></returns>
+        [SerializationProperty(11, "createiveids")]
+        public List<string> CreativeIds { get; set; } = new List<string>();
 
         /// <summary>
-        /// 
-        /// </summary>
-        /// <value></value> 
-        [Display(Name = "Domains")]
-        [UIHint("Domains")]
-        public List<string> AdDomains { get; set; } = new List<string> { };
-
-        /// <summary>
-        /// 
+        /// O
         /// </summary>
         /// <value></value>
-        public BidFilter BidFilter { get; set; } = new BidFilter { GeoFilters = new Filters.Filter[] { new Filters.Filter { Property = "Country", PropertyType = typeof(string), Value = "USA", FilterType = Filters.FilterType.EQ } } };
+        [Display(Name = "Caps")]
+        [SerializationProperty(12, "spendcap")]
+        public SpendCap SpendCaps { get; set; } = new SpendCap { };
 
         /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
         public Func<BidRequest, bool> IsFiltered { get; set; } = (br) => false;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <value></value>
-        [Display(Name = "Schedule")]
-        public CampaignSchedule Schedule { get; set; } = new CampaignSchedule { };
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <value></value>
-        [Display(Name = "Caps")]
-        public CampaignSpendCaps SpendCaps { get; set; } = new CampaignSpendCaps { };
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <value></value>
-        [Display(Name = "BuyerId")]
-        public string BuyerId { get; set; }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <value></value>
-        [Display(Name = "BundleId")]
-        public string BundleId { get; set; }
 
         /// <summary>
         /// 
@@ -137,13 +156,14 @@ namespace Lucent.Common.Entities
     /// <summary>
     /// 
     /// </summary>
-    public class CampaignSpendCaps
+    public class SpendCap
     {
         /// <summary>
         /// 
         /// </summary>
         /// <value></value>
         [Display(Name = "Hourly Cap")]
+        [SerializationProperty(1, "hourly")]
         public double HourlySpendCap { get; set; } = 100d;
 
         /// <summary>
@@ -151,6 +171,7 @@ namespace Lucent.Common.Entities
         /// </summary>
         /// <value></value>
         [Display(Name = "Daily Cap")]
+        [SerializationProperty(2, "daily")]
         public double DailySpendCap { get; set; } = 100d;
 
         /// <summary>
@@ -158,6 +179,7 @@ namespace Lucent.Common.Entities
         /// </summary>
         /// <value></value>
         [Display(Name = "Weekly Cap")]
+        [SerializationProperty(3, "weekly")]
         public double WeeklySpendCap { get; set; } = 100d;
     }
 
@@ -173,6 +195,7 @@ namespace Lucent.Common.Entities
         [Display(Name = "Start")]
         [DataType(DataType.Date)]
         [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
+        [SerializationProperty(1, "start")]
         public DateTime StartDate { get; set; } = DateTime.Now;
 
         /// <summary>
@@ -182,6 +205,7 @@ namespace Lucent.Common.Entities
         [Display(Name = "End")]
         [DataType(DataType.Date)]
         [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
+        [SerializationProperty(2, "end")]
         public DateTime EndDate { get; set; } = DateTime.Now;
     }
 }

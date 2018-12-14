@@ -12,15 +12,21 @@ namespace Lucent.Common.Serialization.Json
     public class LucentJsonObjectReader : ILucentObjectReader
     {
         readonly JsonReader jsonReader;
-        volatile bool _readEnd = false;
-        volatile string lastPath = string.Empty;
+        volatile int _counter = 1;
+        volatile string objPath;
 
         /// <summary>
         /// Default constructor
         /// </summary>
         /// <param name="reader"></param>
         public LucentJsonObjectReader(JsonReader reader)
-            => jsonReader = reader;
+        {
+            if (reader.TokenType == JsonToken.EndArray)
+                _counter = 0;
+
+            jsonReader = reader;
+            objPath = jsonReader.Path;
+        }
 
         /// <inheritdoc/>
         public SerializationFormat Format { get => SerializationFormat.JSON; }
@@ -35,16 +41,19 @@ namespace Lucent.Common.Serialization.Json
         /// <inheritdoc/>
         public async Task<ILucentObjectReader> GetObjectReader()
         {
-            lastPath = jsonReader.Path;
+            _counter++;
             if (await jsonReader.ReadAsync() && jsonReader.TokenType != JsonToken.Null)
                 return new LucentJsonObjectReader(jsonReader);
 
-            // TODO: Fix this
-            return null;
+            throw new InvalidOperationException("nope");
         }
 
         /// <inheritdoc/>
-        public Task<bool> IsComplete() => Task.FromResult(_readEnd || (_readEnd = jsonReader.TokenType == JsonToken.EndObject && jsonReader.Path != lastPath));
+        public Task<bool> IsComplete()
+        {
+            if (jsonReader.TokenType == JsonToken.EndObject) _counter--;
+            return Task.FromResult(jsonReader.TokenType == JsonToken.None || _counter == 0);
+        }
 
         /// <inheritdoc/>
         public async Task<PropertyId> NextAsync() =>
@@ -85,7 +94,13 @@ namespace Lucent.Common.Serialization.Json
         public async Task<TEnum> NextEnum<TEnum>() => (TEnum)Enum.ToObject(typeof(TEnum), (await jsonReader.ReadAsInt32Async()).GetValueOrDefault());
 
         /// <inheritdoc/>
-        public async Task Skip() => await jsonReader.SkipAsync();
+        public async Task Skip()
+        {
+            //if (jsonReader.Path.EndsWith("ext")) _counter++;
+            await jsonReader.ReadAsync();
+            if(jsonReader.TokenType == JsonToken.StartObject) _counter++;
+            await jsonReader.SkipAsync();
+        }
 
         /// <inheritdoc/>
         public void Dispose() { }

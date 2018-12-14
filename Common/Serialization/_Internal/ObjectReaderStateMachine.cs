@@ -22,6 +22,7 @@ namespace Lucent.Common.Serialization._Internal
         public ISerializationContext Context;
         TaskAwaiter<bool> completeAwaiter;
         TaskAwaiter<PropertyId> propertyAwaiter;
+        bool readOnce;
 
         PropertyId property;
         public Func<T, ILucentObjectReader, ISerializationContext, PropertyId, TaskAwaiter> AwaiterMap;
@@ -50,6 +51,7 @@ namespace Lucent.Common.Serialization._Internal
 
                         if (!Finished)
                         {
+                            readOnce = true;
                             propertyAwaiter = Reader.NextAsync().GetAwaiter();
                             State = 2;
 
@@ -88,7 +90,10 @@ namespace Lucent.Common.Serialization._Internal
             }
 
             State = -1;
-            AsyncBuilder.SetResult(Instance);
+            if (readOnce)
+                AsyncBuilder.SetResult(Instance);
+            else
+                AsyncBuilder.SetResult(default(T));
         }
 
         public void SetStateMachine(IAsyncStateMachine stateMachine) => AsyncBuilder.SetStateMachine(stateMachine);

@@ -11,6 +11,7 @@ namespace Lucent.Common.Serialization.Json
     /// </summary>
     public class LucentJsonArrayReader : ILucentArrayReader
     {
+        volatile int _counter = 1;
         readonly JsonReader jsonReader;
         volatile bool _readEnd = false;
 
@@ -27,6 +28,7 @@ namespace Lucent.Common.Serialization.Json
         /// <inheritdoc/>
         public async Task<ILucentArrayReader> GetArrayReader()
         {
+            _counter++;
             await jsonReader.ReadAsync();
             return new LucentJsonArrayReader(jsonReader);
         }
@@ -39,7 +41,11 @@ namespace Lucent.Common.Serialization.Json
         }
 
         /// <inheritdoc/>
-        public Task<bool> IsComplete() => Task.FromResult(_readEnd || (_readEnd = jsonReader.TokenType == JsonToken.EndArray));
+        public Task<bool> IsComplete()
+        {
+            if (jsonReader.TokenType == JsonToken.EndArray) _counter--;
+            return Task.FromResult(_counter == 0);
+        }
 
         /// <inheritdoc/>
         public async Task<PropertyId> NextAsync() =>
@@ -83,6 +89,6 @@ namespace Lucent.Common.Serialization.Json
         public async Task Skip() => await jsonReader.SkipAsync();
 
         /// <inheritdoc/>
-        public void Dispose() {}
+        public void Dispose() { }
     }
 }

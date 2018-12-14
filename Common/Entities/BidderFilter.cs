@@ -1,4 +1,5 @@
 using System;
+using Lucent.Common.Serialization;
 using Lucent.Common.Storage;
 
 namespace Lucent.Common.Entities
@@ -9,16 +10,18 @@ namespace Lucent.Common.Entities
     public class BidderFilter : IBasicStorageEntity
     {
         /// <summary>
-        /// Filters for incoming bids before exchange evaluation
-        /// </summary>
-        /// <value></value>
-        public BidFilter BidFilter { get; set; }
-
-        /// <summary>
         /// 
         /// </summary>
         /// <value></value>
+        [SerializationProperty(1, "id")]
         public string Id { get; set; }
+        
+        /// <summary>
+        /// Filters for incoming bids before exchange evaluation
+        /// </summary>
+        /// <value></value>
+        [SerializationProperty(2, "bidfilter")]
+        public BidFilter BidFilter { get; set; }
 
         /// <summary>
         /// 
