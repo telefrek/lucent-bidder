@@ -7,7 +7,15 @@ data:
     {
       "Logging": {
         "LogLevel": {
-          "Default": "Information"
+          "Default": "Information",
+          "System": "Information",
+          "Microsoft": "Warning"
+        }
+      },
+      "runtimeOptions": {
+        "configProperties": {
+          "System.GC.Server": true,
+          "System.GC.Concurrent": true
         }
       },
       "AllowedHosts": "*",

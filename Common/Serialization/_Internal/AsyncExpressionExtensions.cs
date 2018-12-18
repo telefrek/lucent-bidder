@@ -175,7 +175,7 @@ namespace Lucent.Common.Serialization._Internal
             var ret = Expression.Label(typeof(TaskAwaiter));
             var completed = Task.CompletedTask.GetAwaiter();
 
-            var list = (from p in typeof(T).GetProperties()
+            var list = (from p in typeof(T).GetProperties(BindingFlags.Instance | BindingFlags.Public)
                         let attr = p.GetCustomAttributes(typeof(SerializationPropertyAttribute), true)
                         where attr.Length == 1
                         orderby (attr[0] as SerializationPropertyAttribute).Id
@@ -328,7 +328,7 @@ namespace Lucent.Common.Serialization._Internal
         {
             var ret = Expression.Label(typeof(TaskAwaiter));
 
-            var list = (from p in typeof(T).GetProperties()
+            var list = (from p in typeof(T).GetProperties(BindingFlags.Instance | BindingFlags.Public)
                         let attr = p.GetCustomAttributes(typeof(SerializationPropertyAttribute), true)
                         where attr.Length == 1
                         orderby (attr[0] as SerializationPropertyAttribute).Id

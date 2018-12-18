@@ -29,6 +29,9 @@ namespace Lucent.Common
         /// <returns>A modified set of services</returns>
         public static IServiceCollection AddLucentServices(this IServiceCollection services, IConfiguration configuration, bool localOnly = false, bool includePortal = false, bool includeBidder = false, bool includeOrchestration = false, bool includeScoring = false)
         {
+            // Enable routing
+            services.AddRouting();
+
             // Add serialization
             services.AddSingleton<ISerializationContext, LucentSerializationContext>();
 

@@ -63,7 +63,7 @@ namespace Lucent.Common.Serialization.Protobuf
         public async Task<ulong> NextULong() => await protobufReader.ReadUInt64Async();
 
         /// <inheritdoc/>
-        public async Task<Guid> NextGuid() => Guid.Parse(await protobufReader.ReadStringAsync());
+        public async Task<Guid> NextGuid() => (await protobufReader.ReadStringAsync()).DecodeGuid();
 
         /// <inheritdoc/>
         public async Task<DateTime> NextDateTime() => DateTime.FromFileTimeUtc(await protobufReader.ReadInt64Async());

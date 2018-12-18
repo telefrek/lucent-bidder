@@ -122,7 +122,7 @@ namespace Portal
             });
 
             _sub = app.ApplicationServices.GetRequiredService<IMessageFactory>().CreateSubscriber<LucentMessage>("campaigns", 0);
-            _sub.OnReceive = (m) =>
+            _sub.OnReceive = async (m) =>
             {
                 if (m != null)
                 {
@@ -130,7 +130,7 @@ namespace Portal
                     var id = Guid.Parse((string)obj.id);
                     var amt = (double)obj.amount;
 
-                    app.ApplicationServices.CreateScope().ServiceProvider.GetService<ICampaignUpdateContext>().UpdateCampaignSpendAsync(id, amt, CancellationToken.None).Wait();
+                    await app.ApplicationServices.CreateScope().ServiceProvider.GetService<ICampaignUpdateContext>().UpdateCampaignSpendAsync(id, amt, CancellationToken.None);
                 }
             };
         }

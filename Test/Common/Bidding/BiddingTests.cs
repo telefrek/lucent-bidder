@@ -45,7 +45,8 @@ namespace Lucent.Common.Bidding
 
             var bid = BidGenerator.GenerateBid();
 
-            RequestDelegate rd = (hc) => { return Task.CompletedTask; };
+            var rd = new RequestDelegate(async (hc) => { await Task.CompletedTask; });
+
             var biddingMiddleware = ServiceProvider.CreateInstance<BiddingMiddleware>(rd);
             Assert.IsNotNull(biddingMiddleware, "Failed to create bidding middleware");
 
@@ -74,7 +75,7 @@ namespace Lucent.Common.Bidding
             msg.Route = "campaign.create";
             msg.ContentType = "application/x-protobuf";
 
-            Assert.IsTrue(publisher.TryPublish(msg), "Failed to publish update");
+            Assert.IsTrue(await publisher.TryPublish(msg), "Failed to publish update");
 
             // Let the campaign reload
             await Task.Delay(500);

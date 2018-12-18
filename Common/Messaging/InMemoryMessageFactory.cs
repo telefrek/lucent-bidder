@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Lucent.Common.Serialization;
 
 namespace Lucent.Common.Messaging
@@ -107,7 +108,7 @@ namespace Lucent.Common.Messaging
 
             public string Filter { get; set; }
 
-            public Action<T> OnReceive { get; set; }
+            public Func<T, Task> OnReceive { get; set; }
 
             public void Dispose()
             {
@@ -128,7 +129,9 @@ namespace Lucent.Common.Messaging
             {
             }
 
-            public bool TryPublish(IMessage message)
+            public async Task<bool> TryBroadcast(IMessage message) => await TryPublish(message);
+
+            public async Task<bool> TryPublish(IMessage message)
             {
                 foreach (dynamic sub in _queue.Subscribers)
                 {
@@ -139,7 +142,7 @@ namespace Lucent.Common.Messaging
                         sub.OnReceive.Method.Invoke(sub.OnReceive.Target, new object[]{message});
                 }
 
-                return true;
+                return await Task.FromResult(true);
             }
         }
     }

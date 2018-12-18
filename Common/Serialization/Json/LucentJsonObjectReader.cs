@@ -85,7 +85,7 @@ namespace Lucent.Common.Serialization.Json
         public async Task<ulong> NextULong() => Convert.ToUInt64((await jsonReader.ReadAsDoubleAsync()).GetValueOrDefault());
 
         /// <inheritdoc/>
-        public async Task<Guid> NextGuid() => Guid.Parse(await jsonReader.ReadAsStringAsync());
+        public async Task<Guid> NextGuid() => (await jsonReader.ReadAsStringAsync()).DecodeGuid();
 
         /// <inheritdoc/>
         public async Task<DateTime> NextDateTime() => DateTime.FromFileTimeUtc(Convert.ToInt64((await jsonReader.ReadAsDoubleAsync()).GetValueOrDefault()));
@@ -98,7 +98,7 @@ namespace Lucent.Common.Serialization.Json
         {
             //if (jsonReader.Path.EndsWith("ext")) _counter++;
             await jsonReader.ReadAsync();
-            if(jsonReader.TokenType == JsonToken.StartObject) _counter++;
+            if (jsonReader.TokenType == JsonToken.StartObject) _counter++;
             await jsonReader.SkipAsync();
         }
 

@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 
 namespace Lucent.Common.Messaging
 {
@@ -17,6 +18,6 @@ namespace Lucent.Common.Messaging
         /// Gets/Sets the action this subscriber should perform when a message is received
         /// </summary>
         /// <value></value>
-        Action<T> OnReceive { get; set; }
+        Func<T, Task> OnReceive { get; set; }
     }
 }

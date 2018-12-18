@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using Lucent.Common.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -40,10 +41,14 @@ namespace Lucent.Common.Messaging
         public IDictionary<string, object> Headers { get; set; } = new Dictionary<string, object>();
 
         /// <inheritdoc />
-        public void Load(byte[] buffer) => Body = Encoding.UTF8.GetString(buffer);
+        public Task Load(byte[] buffer)
+        {
+            Body = Encoding.UTF8.GetString(buffer);
+            return Task.CompletedTask;
+        }
 
         /// <inheritdoc />
-        public byte[] ToBytes() => Encoding.UTF8.GetBytes(Body ?? string.Empty);
+        public Task<byte[]> ToBytes() => Task.FromResult(Encoding.UTF8.GetBytes(Body ?? string.Empty));
     }
 
     /// <summary>
@@ -89,35 +94,35 @@ namespace Lucent.Common.Messaging
         public IDictionary<string, object> Headers { get; set; } = new Dictionary<string, object>();
 
         /// <inheritdoc />
-        public void Load(byte[] buffer)
+        public async Task Load(byte[] buffer)
         {
             Body = null;
-            switch (ContentType.ToLowerInvariant())
+            switch ((ContentType ?? "").ToLowerInvariant())
             {
                 case "application/x-protobuf":
-                    Body = _serializationContext.ReadFrom<T>(new MemoryStream(buffer), false, SerializationFormat.PROTOBUF).Result;
+                    Body = await _serializationContext.ReadFrom<T>(new MemoryStream(buffer), false, SerializationFormat.PROTOBUF);
                     break;
                 default:
-                    Body = _serializationContext.ReadFrom<T>(new MemoryStream(buffer), false, SerializationFormat.JSON).Result;
+                    Body = await _serializationContext.ReadFrom<T>(new MemoryStream(buffer), false, SerializationFormat.JSON);
                     break;
             }
         }
 
         /// <inheritdoc />
-        public byte[] ToBytes()
+        public async Task<byte[]> ToBytes()
         {
             switch (ContentType.ToLowerInvariant())
             {
                 case "application/x-protobuf":
                     using (var ms = new MemoryStream())
                     {
-                        _serializationContext.WriteTo(Body, ms, true, SerializationFormat.PROTOBUF).Wait();
+                        await _serializationContext.WriteTo(Body, ms, true, SerializationFormat.PROTOBUF);
                         return ms.ToArray();
                     }
                 default:
                     using (var ms = new MemoryStream())
                     {
-                        _serializationContext.WriteTo(Body, ms, true, SerializationFormat.JSON).Wait();
+                        await _serializationContext.WriteTo(Body, ms, true, SerializationFormat.JSON);
                         return ms.ToArray();
                     }
             }

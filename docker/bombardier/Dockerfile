@@ -7,6 +7,6 @@ RUN apt-get update && apt-get install -y wget && \
 FROM debian:stretch-slim
 WORKDIR /opt/perf
 COPY --from=0 /opt/perf/bombardier ./
+COPY ./request.json.gz ./
 RUN apt-get update && apt-get install -y --reinstall ca-certificates && chmod a+x bombardier
-ENTRYPOINT [ "./bombardier" ]
-CMD []
+ENTRYPOINT [ "./bombardier", "-m", "POST", "-f", "request.json.gz", "-H", "'Content-Type: application/json'", "-H", "'Content-Encoding: gzip'", "-d", "180s", "-l", "https://west.lucentbid.com/v1/bidder" ]

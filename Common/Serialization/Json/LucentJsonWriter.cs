@@ -21,7 +21,7 @@ namespace Lucent.Common.Serialization.Json
         /// <param name="leaveOpen"></param>
         public LucentJsonWriter(Stream target, bool leaveOpen = false)
         {
-            jsonWriter = new JsonTextWriter(new StreamWriter(target, Encoding.UTF8, 4096, leaveOpen));
+            jsonWriter = new JsonTextWriter(new StreamWriter(target, new UTF8Encoding(false), 4096, leaveOpen) { });
             jsonWriter.WriteStartObject();
         }
 
@@ -127,7 +127,7 @@ namespace Lucent.Common.Serialization.Json
         }
 
         /// <inheritdoc/>
-        public Task<ILucentObjectWriter> AsObjectWriter() 
+        public Task<ILucentObjectWriter> AsObjectWriter()
         {
             _wasObject = true;
             return Task.FromResult((ILucentObjectWriter)new LucentJsonObjectWriter(jsonWriter));
@@ -142,11 +142,11 @@ namespace Lucent.Common.Serialization.Json
         }
 
         /// <inheritdoc/>
-        public void Dispose() 
+        public void Dispose()
         {
-            if(!_wasObject)
+            if (!_wasObject)
                 jsonWriter.WriteEndObject();
-                
+
             jsonWriter.Close();
         }
 

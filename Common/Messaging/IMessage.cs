@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Lucent.Common.Messaging
 {
@@ -51,12 +52,12 @@ namespace Lucent.Common.Messaging
         /// Transforms the message into a byte array for transport
         /// </summary>
         /// <returns>A byte array representing the message</returns>
-        byte[] ToBytes();
+        Task<byte[]> ToBytes();
 
         /// <summary>
         /// Loads a message from the given byte array
         /// </summary>
         /// <param name="buffer">The buffer with the message contents</param>
-        void Load(byte[] buffer);
+        Task Load(byte[] buffer);
     }
 }

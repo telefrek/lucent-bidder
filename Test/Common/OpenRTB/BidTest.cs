@@ -45,7 +45,7 @@ namespace Lucent.Common.OpenRTB.Test
                 },
                 User = new User
                 {
-                    Gender = Gender.Female,
+                    Gender = "F",
                     Geo = new Geo
                     {
                         Country = "USA",
@@ -78,7 +78,7 @@ namespace Lucent.Common.OpenRTB.Test
                 },
                 User = new User
                 {
-                    Gender = Gender.Female,
+                    Gender = "F",
                     Geo = new Geo
                     {
                         Country = "CAN",
@@ -95,7 +95,7 @@ namespace Lucent.Common.OpenRTB.Test
             var message = new LucentMessage { Body = "Hello World", CorrelationId = "unittesting", Route = "event.update" };
             using (var pub = factory.CreatePublisher("campaigns"))
             {
-                Assert.IsTrue(pub.TryPublish(message), "Failed to send message");
+                Assert.IsTrue(await pub.TryPublish(message), "Failed to send message");
             }
 
             // Give it a chance to update
@@ -118,7 +118,7 @@ namespace Lucent.Common.OpenRTB.Test
                 },
                 User = new User
                 {
-                    Gender = Gender.Female,
+                    Gender = "F",
                     Geo = new Geo
                     {
                         Country = "CAN",
@@ -154,7 +154,7 @@ namespace Lucent.Common.OpenRTB.Test
                 },
                 User = new User
                 {
-                    Gender = Gender.Female,
+                    Gender = "F",
                     Geo = new Geo
                     {
                         Country = "USA",

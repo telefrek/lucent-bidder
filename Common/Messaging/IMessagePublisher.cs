@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 
 namespace Lucent.Common.Messaging
 {
@@ -17,6 +18,14 @@ namespace Lucent.Common.Messaging
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        bool TryPublish(IMessage message);
+        Task<bool> TryPublish(IMessage message);
+
+
+        /// <summary>
+        /// Attempts to publish the message for this topic
+        /// </summary>
+        /// <param name="message"></param>
+        /// <returns></returns>
+        Task<bool> TryBroadcast(IMessage message);
     }
 }

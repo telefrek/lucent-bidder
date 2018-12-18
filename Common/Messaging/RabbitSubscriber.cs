@@ -5,20 +5,33 @@ using System.Text;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using System.Threading.Tasks;
 
 namespace Lucent.Common.Messaging
 {
-
-    internal class RabbitSubscriber<T> : IMessageSubscriber<T>
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    public class RabbitSubscriber<T> : IMessageSubscriber<T>
         where T : IMessage
     {
         readonly IConnection _conn;
         readonly IModel _channel;
-        readonly EventingBasicConsumer _consumer;
+        readonly AsyncEventingBasicConsumer _consumer;
         readonly string _queueName;
         readonly IMessageFactory _factory;
         readonly ILogger _log;
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="factory"></param>
+        /// <param name="conn"></param>
+        /// <param name="log"></param>
+        /// <param name="topic"></param>
+        /// <param name="maxConcurrency"></param>
+        /// <param name="filter"></param>
         public RabbitSubscriber(IMessageFactory factory, IConnection conn, ILogger log, string topic, ushort maxConcurrency, string filter)
         {
             _conn = conn;
@@ -38,8 +51,8 @@ namespace Lucent.Common.Messaging
                   exchange: topic,
                   routingKey: filter ?? "#"); // Match everything
 
-            _consumer = new EventingBasicConsumer(_channel);
-            _consumer.Received += (model, ea) =>
+            _consumer = new AsyncEventingBasicConsumer(_channel);
+            _consumer.Received += async (model, ea) =>
             {
                 if (OnReceive != null)
                 {
@@ -60,25 +73,31 @@ namespace Lucent.Common.Messaging
                         }
                         msg.FirstDelivery = !ea.Redelivered;
                         msg.ContentType = ea.BasicProperties.ContentType;
-                        msg.Load(ea.Body);
-
-                        OnReceive.Invoke(msg);
+                        if (ea.Body != null)
+                            await msg.Load(ea.Body);
+                        await OnReceive.Invoke(msg);
+                        _channel.BasicAck(ea.DeliveryTag, false);
                     }
                     catch (Exception e)
                     {
                         _log.LogError(e, "Failed to handle message receipt for topic: {0}", Topic);
+                        _channel.BasicReject(ea.DeliveryTag, true);
                     }
                 }
             };
 
             _channel.BasicConsume(queue: _queueName,
-                                 autoAck: true,
+                                 autoAck: false,
                                  consumer: _consumer);
         }
 
-        public Action<T> OnReceive { get; set; }
+        /// <inheritdoc/>
+        public Func<T, Task> OnReceive { get; set; }
 
+        /// <inheritdoc/>
         public string Topic { get; set; }
+
+        /// <inheritdoc/>
         public void Dispose()
         {
             _channel.Close();

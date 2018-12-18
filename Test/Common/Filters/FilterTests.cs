@@ -44,7 +44,7 @@ namespace Lucent.Common.Storage.Test
                 }
             }
 
-            if (bid.User != null && (bid.User.GenderStr == "U" ||
+            if (bid.User != null && (bid.User.Gender == "U" ||
                 (bid.User.Geo != null && bid.User.Geo.Country == "CAN")))
                 return true;
 
@@ -58,13 +58,13 @@ namespace Lucent.Common.Storage.Test
             var req = new BidRequest
             {
                 Impressions = new Impression[] { new Impression { ImpressionId = "test" } },
-                User = new User { Gender = Gender.Male }
+                User = new User { Gender = "M" }
             };
 
             var bFilter = new BidFilter
             {
                 ImpressionFilters = new[] { new Filter { Property = "BidCurrency", Value = "CAN" } },
-                UserFilters = new[] { new Filter { Property = "GenderStr", Value = "U" } },
+                UserFilters = new[] { new Filter { Property = "Gender", Value = "U" } },
                 GeoFilters = new[] { new Filter { FilterType = FilterType.EQ, Property = "Country", Value = "CAN" } }
             };
 
@@ -84,7 +84,7 @@ namespace Lucent.Common.Storage.Test
             var req = new BidRequest
             {
                 Impressions = new Impression[] { new Impression { ImpressionId = "test" } },
-                User = new User { Gender = Gender.Male },
+                User = new User { Gender = "M" },
                 Site = new Site { SiteCategories = new string[] { "BCAT1" }, Domain = "lucentbid.com" }
             };
 

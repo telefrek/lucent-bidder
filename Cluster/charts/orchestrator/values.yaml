@@ -23,6 +23,7 @@ resources:
    cpu: 1
   requests:
    memory: 256Mi
+   cpu: .25
 
 hostAlias: {}
 

@@ -25,46 +25,16 @@ namespace Orchestration
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.Configure<CookiePolicyOptions>(options =>
-            {
-                options.CheckConsentNeeded = context => true;
-                options.MinimumSameSitePolicy = SameSiteMode.None;
-            });
-
-
-            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
-            services.ConfigureLoadShedding(Configuration);
-            services.AddLucentServices(Configuration, includeOrchestration:true);
-            services.AddSingleton<ICampaignProcessor, CampaignManager>();  
+            services.AddLucentServices(Configuration, includeOrchestration: true);
         }
 
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
-            if (env.IsDevelopment())
+            app.ConfigureHealth();
+            app.Map("/api/campaigns", (a) =>
             {
-                app.UseDeveloperExceptionPage();
-            }
-
-            app.UseCookiePolicy();
-            app.UseLoadShedding();
-
-            var routeBuilder = new RouteBuilder(app);
-
-            routeBuilder.MapGet("/health", (context) =>
-            {
-                context.Response.StatusCode = 200;
-                return Task.CompletedTask;
+                a.UseMiddleware<CampaignOrchestrator>();
             });
-
-            routeBuilder.MapGet("/ready", (context) =>
-            {
-                context.Response.StatusCode = 200;
-                return Task.CompletedTask;
-            });
-
-            app.UseRouter(routeBuilder.Build());
-
-            app.ApplicationServices.GetService<ICampaignProcessor>().Start();
         }
     }
 }

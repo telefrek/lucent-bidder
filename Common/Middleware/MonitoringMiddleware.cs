@@ -20,8 +20,6 @@ namespace Lucent.Common.Middleware
             Buckets = new double[] { 0.005, 0.010, 0.015, 0.025, 0.050, 0.075, 0.100, 0.125, 0.150, 0.200, 0.25, 0.5, 0.75, 1.0 },
         });
 
-        int _next = 0;
-
         /// <summary>
         /// Default constructor
         /// </summary>

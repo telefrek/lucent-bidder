@@ -24,7 +24,6 @@ namespace Bidder
                 {
                     libuvopts.ThreadCount = 16;
                 })
-                .UseContentRoot(Directory.GetCurrentDirectory())
                 .ConfigureAppConfiguration((hostingContext, config) =>
                 {
                     var env = hostingContext.HostingEnvironment;

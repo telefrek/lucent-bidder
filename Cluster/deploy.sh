@@ -4,20 +4,27 @@ set -e
 if [ "${1:-infra}" == "infra" ]; then
     echo 'Setting up helm'
 
+    # create the namespace
+    [[ -z "$(kubectl get namespaces | grep lucent)" ]] && kubectl create namespace lucent
+
     # setup roles for kubernetes
-    kubectl update -f create_admin_role.yaml
+    kubectl apply -f create_admin_role.yaml
 
     # add the storage class
-    kubectl create -f ./setup/content_file_store_sc.yaml -n lucent
+    [[ -z "$(kubectl get storageclasses | grep azurefile)" ]] && kubectl create -f ./setup/content_file_store_sc.yaml -n lucent
 
     # Helm and nginx ingress
     helm init --tiller-namespace lucent --service-account helm
     helm repo update charts/stable
     sleep 10
-    helm install stable/nginx-ingress --name ingress --namespace kube-system --tiller-namespace lucent
 
     helm upgrade --install --tiller-namespace=lucent --namespace=lucent cassandra ./charts/cassandra
     helm upgrade --install --tiller-namespace=lucent --namespace=lucent rabbitmq ./charts/rabbitmq-ha
+fi
+
+if [ "${1:-ldap}" == "ingress" ]; then
+    # setup monitoring
+    helm install stable/nginx-ingress --name ingress --namespace kube-system --tiller-namespace lucent --set controller.service.loadBalancerIP="$2" --set controller.stats.enabled=true --set controller.metrics.enabled=true
 fi
 
 if [ "${1:-ldap}" == "monitoring" ]; then

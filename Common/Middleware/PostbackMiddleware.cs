@@ -25,8 +25,6 @@ namespace Lucent.Common.Middleware
         ISerializationContext _serializationContext;
         IStorageManager _storageManager;
 
-        int _next = 0;
-
         /// <summary>
         /// Default constructor
         /// </summary>

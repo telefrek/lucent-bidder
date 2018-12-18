@@ -45,7 +45,8 @@ namespace Lucent.Common.Exchanges
             {
                 lock (_syncLock)
                 {
-                    LoadExchange(e.FullPath);
+                    if (e.ChangeType == WatcherChangeTypes.Changed)
+                        LoadExchange(e.FullPath);
                 }
             };
 
@@ -54,7 +55,8 @@ namespace Lucent.Common.Exchanges
             {
                 lock (_syncLock)
                 {
-                    RemoveExchange(e.FullPath);
+                    if (e.ChangeType == WatcherChangeTypes.Deleted)
+                        RemoveExchange(e.FullPath);
                 }
             };
 

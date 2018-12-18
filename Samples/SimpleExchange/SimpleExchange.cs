@@ -47,22 +47,19 @@ namespace Lucent.Samples.SimpleExchange
             _campaignSub.OnReceive = ProcessMessage;
         }
 
-        void ProcessMessage(LucentMessage<Campaign> message)
+        async Task ProcessMessage(LucentMessage<Campaign> message)
         {
             _log.LogInformation("Received new message {0}", message.MessageId);
             var camp = message.Body;
             if (camp != null)
             {
-                Task.Factory.StartNew(async () =>
-                {
-                    _log.LogInformation("Campaign {0} updateded, reloading", camp.Id);
-                    var bidder = _bidders.FirstOrDefault(b => b.Campaign.Id.Equals(camp.Id, StringComparison.InvariantCultureIgnoreCase));
-                    if (bidder != null)
-                        _bidders.Remove(bidder);
+                _log.LogInformation("Campaign {0} updateded, reloading", camp.Id);
+                var bidder = _bidders.FirstOrDefault(b => b.Campaign.Id.Equals(camp.Id, StringComparison.InvariantCultureIgnoreCase));
+                if (bidder != null)
+                    _bidders.Remove(bidder);
 
-                    var newCamp = await _storageManager.GetBasicRepository<Campaign>().Get(camp.Id);
-                    _bidders.Add(_bidFactory.CreateBidder(newCamp));
-                }).Unwrap();
+                var newCamp = await _storageManager.GetBasicRepository<Campaign>().Get(camp.Id);
+                _bidders.Add(_bidFactory.CreateBidder(newCamp));
             }
         }
 

@@ -2,11 +2,14 @@ using System;
 using System.IO;
 using System.Net;
 using System.Text;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using Newtonsoft.Json;
 using System.Dynamic;
 using Microsoft.Extensions.Logging;
+using System.Threading.Tasks;
+using Lucent.Common.Serialization;
 
 namespace Lucent.Common.Messaging
 {
@@ -22,16 +25,20 @@ namespace Lucent.Common.Messaging
 
         Uri _publishEndpoint;
         RabbitCluster _cluster;
+        IMessageFactory _factory;
         readonly ILogger _log;
+        ISerializationContext _serializationContext;
 
-        public RabbitHttpPublisher(IMessageFactory factory, ILogger log, RabbitCluster clusterInfo, string topic)
+        public RabbitHttpPublisher(IMessageFactory factory, ILogger log, RabbitCluster clusterInfo, ISerializationContext serializationContext, string topic)
         {
             _log = log;
+            _serializationContext = serializationContext;
+            _factory = factory;
             _publishEndpoint = new UriBuilder
             {
                 Scheme = "https",
                 Host = clusterInfo.Host,
-                Path = "/api/exchanges/%2f/{0}/publish".FormatWith(topic)
+                Path = "/api/exchanges/{0}/{1}/publish".FormatWith(WebUtility.UrlEncode(clusterInfo.VHost), topic)
             }.Uri;
             _cluster = clusterInfo;
 
@@ -44,50 +51,99 @@ namespace Lucent.Common.Messaging
         {
         }
 
-        public bool TryPublish(IMessage message)
+        /// <inheritdoc/>
+        public async Task<bool> TryBroadcast(IMessage message)
+        {
+            var res = await _factory.CreatePublisher(Topic).TryPublish(message);
+            foreach (var cluster in _factory.GetClusters())
+                res &= await _factory.CreatePublisher(cluster, Topic).TryPublish(message);
+            return res;
+        }
+
+        /// <inheritdoc/>
+        public async Task<bool> TryPublish(IMessage message)
         {
             using (var ms = new MemoryStream())
             {
-                using (var jsw = new JsonTextWriter(new StreamWriter(ms)))
+                if (message.ContentType != null)
+                    message.Headers.Add("Content-Type", message.ContentType);
+
+                var httpMessage = new RabbitHttpMessage
                 {
-                    dynamic expando = new ExpandoObject();
-                    expando.properties = new ExpandoObject();
-                    jsw.WritePropertyName("delivery_mode");
-                    jsw.WriteValue(2);
-                    jsw.WritePropertyName("content_type");
-                    jsw.WriteValue(message.ContentType);
-
-                    if (message.Headers != null && message.Headers.Count > 0)
+                    VHost = _cluster.VHost,
+                    Properties = new RabbitHttpMessageProperties
                     {
-                        jsw.WritePropertyName("headers");
-                        jsw.WriteStartArray();
-                        foreach (var header in message.Headers)
-                            jsw.WriteValue(header);
-                        jsw.WriteEndArray();
-                    }
-
-                    jsw.WritePropertyName("routing_key");
-                    jsw.WriteValue(message.Route);
-                    jsw.WritePropertyName("payload");
-                    jsw.WriteValue(Convert.ToBase64String(message.ToBytes()));
-                    jsw.WritePropertyName("payload_encoding");
-                    jsw.WriteValue("base64");
-                    jsw.Flush();
-
-                    var msg = Encoding.UTF8.GetString(ms.ToArray());
-
-                    _log.LogInformation("Sending : {0}", msg);
-
-                    using (var req = new HttpRequestMessage(HttpMethod.Post, _publishEndpoint.ToString()))
+                        ContentType = message.ContentType,
+                        Headers = new RabbitHttpHeaders
+                        {
+                            ContentType = message.ContentType,
+                        },
+                    },
+                    RoutingKey = message.Route,
+                    Payload = Convert.ToBase64String(await message.ToBytes()),
+                    Headers = new RabbitHttpHeaders
                     {
-                        req.Content = new StringContent(msg, Encoding.UTF8, "application/json");
-                        req.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes("{0}:{1}".FormatWith(_cluster.User, _cluster.Credentials))));
-                        var response = _client.SendAsync(req).Result;
+                        ContentType = message.ContentType,
+                    },
+                };
 
-                        return response.IsSuccessStatusCode;
-                    }
+                await _serializationContext.WriteTo(httpMessage, ms, true, SerializationFormat.JSON);
+
+                var msg = Encoding.UTF8.GetString(ms.ToArray());
+
+                _log.LogInformation("Sending : {0} ({1})", msg, _publishEndpoint.ToString());
+
+                using (var req = new HttpRequestMessage(HttpMethod.Post, _publishEndpoint.ToString()))
+                {
+                    req.Content = new StringContent(msg, Encoding.UTF8, "application/json");
+                    req.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes("{0}:{1}".FormatWith(_cluster.User, _cluster.Credentials))));
+                    var response = await _client.SendAsync(req);
+
+                    return response.IsSuccessStatusCode;
                 }
             }
         }
+    }
+
+    internal class RabbitHttpMessage
+    {
+        [SerializationProperty(1, "vhost")]
+        public string VHost { get; set; }
+
+        [SerializationProperty(2, "name")]
+        public string Name { get; set; }
+
+        [SerializationProperty(3, "properties")]
+        public RabbitHttpMessageProperties Properties { get; set; }
+
+        [SerializationProperty(4, "routing_key")]
+        public string RoutingKey { get; set; }
+
+        [SerializationProperty(5, "payload")]
+        public string Payload { get; set; }
+
+        [SerializationProperty(6, "payload_encoding")]
+        public string PayloadEncoding { get; set; } = "base64";
+
+        [SerializationProperty(7, "headers")]
+        public RabbitHttpHeaders Headers { get; set; }
+    }
+
+    internal class RabbitHttpMessageProperties
+    {
+        [SerializationProperty(1, "deliver_mode")]
+        public int DeliveryMode { get; set; } = 2;
+
+        [SerializationProperty(2, "content_type")]
+        public string ContentType { get; set; }
+
+        [SerializationProperty(3, "headers")]
+        public RabbitHttpHeaders Headers { get; set; }
+    }
+
+    internal class RabbitHttpHeaders
+    {
+        [SerializationProperty(1, "Content-Type")]
+        public string ContentType { get; set; }
     }
 }

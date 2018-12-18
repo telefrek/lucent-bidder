@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucent.Common.Entities;
+using Lucent.Common.Events;
 using Lucent.Common.Exchanges;
 using Lucent.Common.Messaging;
 using Lucent.Common.OpenRTB;
@@ -26,6 +28,7 @@ namespace Lucent.Common.Middleware
     {
         ILogger<BiddingMiddleware> _log;
         ISerializationContext _serializationContext;
+        IMessageFactory _messageFactory;
         IExchangeRegistry _exchangeRegistry;
         IStorageManager _storageManager;
         List<Func<BidRequest, bool>> _bidFilters;
@@ -36,25 +39,40 @@ namespace Lucent.Common.Middleware
             Buckets = new double[] { 0.001, 0.002, 0.005, 0.007, 0.01, 0.015 },
         });
 
-        int _next = 0;
-
         /// <summary>
         /// Default constructor
         /// </summary>
         /// <param name="next"></param>
-        /// <param name="log"></param>
-        /// <param name="factory"></param>
+        /// <param name="logger"></param>
+        /// <param name="messageFactory"></param>
         /// <param name="serializationContext"></param>
         /// <param name="exchangeRegistry"></param>
         /// <param name="storageManager"></param>
-        public BiddingMiddleware(RequestDelegate next, ILogger<BiddingMiddleware> log, IMessageFactory factory, ISerializationContext serializationContext, IExchangeRegistry exchangeRegistry, IStorageManager storageManager)
+        public BiddingMiddleware(RequestDelegate next, ILogger<BiddingMiddleware> logger, IMessageFactory messageFactory, ISerializationContext serializationContext, IExchangeRegistry exchangeRegistry, IStorageManager storageManager)
         {
-            _log = log;
+            _log = logger;
             _serializationContext = serializationContext;
             _exchangeRegistry = exchangeRegistry;
             _storageManager = storageManager;
             _bidFilters = _storageManager.GetRepository<BidderFilter, string>().GetAll().Result.Where(f => f.BidFilter != null).Select(f => f.BidFilter.GenerateCode()).ToList();
-            _nextHandler = next;
+            _messageFactory = messageFactory;
+
+            // Let's listen for events...
+            _messageFactory.CreateSubscriber<LucentMessage<EntityEvent>>("entities", 0, "#").OnReceive += TrackEntities;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="entityEvent"></param>
+        /// <returns></returns>
+        public async Task TrackEntities(LucentMessage<EntityEvent> entityEvent)
+        {
+            using (var ms = new MemoryStream())
+            {
+                await _serializationContext.WriteTo(entityEvent.Body, ms, true, SerializationFormat.JSON);
+                _log.LogInformation("Received Event:\n{0}", Encoding.UTF8.GetString(ms.ToArray()));
+            }
         }
 
         /// <summary>
@@ -64,67 +82,31 @@ namespace Lucent.Common.Middleware
         /// <returns>A completed pipeline step</returns>
         public async Task InvokeAsync(HttpContext httpContext)
         {
-            if (!httpContext.Request.Path.StartsWithSegments("/v1/bidder"))
+            var request = await _serializationContext.ReadAs<BidRequest>(httpContext);
+
+            if (request != null && !_bidFilters.Any(f => f.Invoke(request)))
             {
-                await _nextHandler.Invoke(httpContext);
-                return;
-            }
-            // else
-            // {
-            //     var instance = _serializerTiming.WithLabels("JSON", "deserialize");
-            //     var sw = Stopwatch.StartNew();
-            //     var request = JsonConvert.DeserializeObject(await new StreamReader(httpContext.Request.Body).ReadToEndAsync());
-            //     instance.Observe(sw.ElapsedTicks * 1d / Stopwatch.Frequency);
-            //     httpContext.Response.StatusCode = 204;
-            //     return;
-            // }
-
-            // Wrap the body to force the contents to flush
-            using (var bodyContents = httpContext.Request.Body)
-            {
-                var format = (httpContext.Request.ContentType ?? "").Contains("protobuf") ? SerializationFormat.PROTOBUF : SerializationFormat.JSON;
-
-                var encoding = StringValues.Empty;
-                if (httpContext.Request.Headers.TryGetValue("Content-Encoding", out encoding))
-                    if (encoding.Any(e => e.Contains("gzip")))
-                        format |= SerializationFormat.COMPRESSED;
-
-                var instance = _serializerTiming.WithLabels(format.ToString(), "deserialize");
-                var sw = Stopwatch.StartNew();
-                var request = await _serializationContext.ReadFrom<BidRequest>(bodyContents, true, format);
-                instance.Observe(sw.ElapsedTicks * 1d / Stopwatch.Frequency);
-
-                if (request != null && !_bidFilters.Any(f => f.Invoke(request)))
+                // Validate we can find a matching exchange
+                var exchange = _exchangeRegistry.Exchanges.FirstOrDefault(e => e.IsMatch(httpContext));
+                if (exchange == null)
                 {
-                    // Validate we can find a matching exchange
-                    var exchange = _exchangeRegistry.Exchanges.FirstOrDefault(e => e.IsMatch(httpContext));
-                    if (exchange == null)
-                    {
-                        httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
-                        return;
-                    }
+                    httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
+                    return;
+                }
 
-                    httpContext.Items.Add("exchange", exchange);
-                    var response = await exchange.Bid(request, httpContext);
+                httpContext.Items.Add("exchange", exchange);
+                var response = await exchange.Bid(request, httpContext);
 
-                    // Clear the compression flag and re-validate the accept header
-                    format &= ~SerializationFormat.COMPRESSED;
-                    if (httpContext.Request.Headers.TryGetValue("Accept-Encoding", out encoding))
-                        if (encoding.Any(e => e.Contains("gzip")))
-                            format |= SerializationFormat.COMPRESSED;
-
-                    if (response != null && (response.Bids ?? new SeatBid[0]).Length > 0)
-                    {
-                        await _serializationContext.WriteTo(response, httpContext.Response.Body, true, format);
-                        httpContext.Response.StatusCode = StatusCodes.Status200OK;
-                    }
-                    else
-                        httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
+                if (response != null && (response.Bids ?? new SeatBid[0]).Length > 0)
+                {
+                    await _serializationContext.WriteTo(httpContext, response);
+                    httpContext.Response.StatusCode = StatusCodes.Status200OK;
                 }
                 else
-                    httpContext.Response.StatusCode = request == null ? StatusCodes.Status400BadRequest : StatusCodes.Status204NoContent;
+                    httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
             }
-
+            else
+                httpContext.Response.StatusCode = request == null ? StatusCodes.Status400BadRequest : StatusCodes.Status204NoContent;
         }
     }
 }

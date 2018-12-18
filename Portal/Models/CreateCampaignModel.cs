@@ -60,7 +60,7 @@ namespace Lucent.Portal.Models
                     msg.ContentType = "application/x-protobuf";
                     msg.Headers.Add("x-lucent-action-type", "create");
 
-                    if (_factory.CreatePublisher(cluster, "campaign-updates").TryPublish(msg))
+                    if (await _factory.CreatePublisher(cluster, "campaign-updates").TryPublish(msg))
                         _log.LogInformation("published message for cross cluster");
                     else
                         _log.LogWarning("Failed to publish to secondary cluster");

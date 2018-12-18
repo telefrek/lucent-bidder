@@ -2,11 +2,15 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using Lucent.Common.Serialization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
 
 namespace Lucent.Common
 {
@@ -15,6 +19,54 @@ namespace Lucent.Common
     /// </summary>
     public static partial class LucentExtensions
     {
+        /// <summary>
+        /// Get a reader from the current context
+        /// </summary>
+        /// <param name="serializationContext"></param>
+        /// <param name="httpContext"></param>
+        /// <returns></returns>
+        public static async Task<T> ReadAs<T>(this ISerializationContext serializationContext, HttpContext httpContext) where T : class, new()
+        {
+            using (var body = httpContext.Request.Body)
+            {
+                var format = (httpContext.Request.ContentType ?? "").Contains("protobuf") ? SerializationFormat.PROTOBUF : SerializationFormat.JSON;
+
+                var encoding = StringValues.Empty;
+                if (httpContext.Request.Headers.TryGetValue("Content-Encoding", out encoding))
+                    if (encoding.Any(e => e.Contains("gzip")))
+                        format |= SerializationFormat.COMPRESSED;
+
+                return await serializationContext.ReadFrom<T>(body, false, format);
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        public static async Task WriteTo<T>(this ISerializationContext serializationContext, HttpContext httpContext, T instance) where T : class, new()
+        {
+            var format = (httpContext.Request.ContentType ?? "").Contains("protobuf") ? SerializationFormat.PROTOBUF : SerializationFormat.JSON;
+
+            // Write the response encoding
+            switch (format)
+            {
+                case SerializationFormat.PROTOBUF:
+                    httpContext.Response.ContentType = "application/x-protobuf";
+                    break;
+                default:
+                    httpContext.Response.ContentType = "application/json";
+                    break;
+            }
+
+            var encoding = StringValues.Empty;
+            if (httpContext.Request.Headers.TryGetValue("Accept-Encoding", out encoding))
+                if (encoding.Any(e => e.Contains("gzip")))
+                    format |= SerializationFormat.COMPRESSED;
+
+            await serializationContext.WriteTo(instance, httpContext.Response.Body, false, format);
+        }
+
         /// <summary>
         /// Validates if an object is the default for it's type
         /// </summary>

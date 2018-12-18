@@ -31,10 +31,13 @@ namespace Lucent.Common.Messaging
             var configuration = options.Value;
             _log = log;
 
-            _factory = new ConnectionFactory();
-            _factory.HostName = configuration.Host;
-            _factory.UserName = configuration.User;
-            _factory.Password = configuration.Credentials;
+            _factory = new ConnectionFactory
+            {
+                DispatchConsumersAsync = true,
+                HostName = configuration.Host,
+                UserName = configuration.User,
+                Password = configuration.Credentials,
+            };
 
             _clusters = new Dictionary<string, RabbitCluster>();
             _serializationContext = serializationContext;
@@ -67,7 +70,7 @@ namespace Lucent.Common.Messaging
         /// <inheritdoc />
         public IMessagePublisher CreatePublisher(string cluster, string topic)
         {
-            return new RabbitHttpPublisher(this, _log, _clusters[cluster], topic);
+            return new RabbitHttpPublisher(this, _log, _clusters[cluster], _serializationContext, topic);
         }
 
         /// <inheritdoc />
