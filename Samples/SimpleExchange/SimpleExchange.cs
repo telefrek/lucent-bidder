@@ -30,7 +30,8 @@ namespace Lucent.Samples.SimpleExchange
 
         List<ICampaignBidder> _bidders = new List<ICampaignBidder>();
 
-        public void Initialize(IServiceProvider provider)
+        /// <inheritdoc/>
+        public Task Initialize(IServiceProvider provider)
         {
             _storageManager = provider.GetService<IStorageManager>();
             _messageFactory = provider.GetService<IMessageFactory>();
@@ -45,6 +46,8 @@ namespace Lucent.Samples.SimpleExchange
             // Setup the bid state update
             _campaignSub = _messageFactory.CreateSubscriber<LucentMessage<Campaign>>("bidstate", 0, "campaign.#");
             _campaignSub.OnReceive = ProcessMessage;
+
+            return Task.CompletedTask;
         }
 
         async Task ProcessMessage(LucentMessage<Campaign> message)
@@ -73,7 +76,7 @@ namespace Lucent.Samples.SimpleExchange
         public int Order => int.MinValue;
 
         /// <inheritdoc/>
-        public Guid ExchangeId => Guid.Parse("9363aae4-a305-43e6-b0be-a2f5cda1edff");
+        public Guid ExchangeId { get; set; }
 
         /// <inheritdoc/>
         public async Task<BidResponse> Bid(BidRequest request, HttpContext httpContext)

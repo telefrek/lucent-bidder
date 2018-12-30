@@ -31,14 +31,14 @@ namespace Lucent.Common.Entities.Repositories
         }
 
         /// <inheritdoc/>
-        protected override void Initialize()
+        protected override async Task Initialize()
         {
             _getAllLedgers = new SimpleStatement("SELECT etag, format, updated, contents FROM {0}".FormatWith(_tableName));
-            _getLedgerEntry = Prepare("SELECT etag, format, updated, contents FROM {0} WHERE id = ? AND ledgerid = ?".FormatWith(_tableName));
-            _getFullLedger = Prepare("SELECT etag, format, updated, contents FROM {0} WHERE id = ?".FormatWith(_tableName));
-            _insertLedgerEntry = Prepare("INSERT INTO {0} (id, ledgerid, etag, format, updated, contents) VALUES (?, ?, ?, ?, ?, ?) IF NOT EXISTS".FormatWith(_tableName));
-            _updateLedgerEntry = Prepare("UPDATE {0} SET etag=?, updated=?, contents=?, format=? WHERE id=? AND ledgerid=? IF etag=?".FormatWith(_tableName));
-            _deleteLedgerEntry = Prepare("DELETE FROM {0} WHERE id=? AND ledgerid=? IF etag=?".FormatWith(_tableName));
+            _getLedgerEntry = await PrepareAsync("SELECT etag, format, updated, contents FROM {0} WHERE id = ? AND ledgerid = ?".FormatWith(_tableName));
+            _getFullLedger = await PrepareAsync("SELECT etag, format, updated, contents FROM {0} WHERE id = ?".FormatWith(_tableName));
+            _insertLedgerEntry = await PrepareAsync("INSERT INTO {0} (id, ledgerid, etag, format, updated, contents) VALUES (?, ?, ?, ?, ?, ?) IF NOT EXISTS".FormatWith(_tableName));
+            _updateLedgerEntry = await PrepareAsync("UPDATE {0} SET etag=?, updated=?, contents=?, format=? WHERE id=? AND ledgerid=? IF etag=?".FormatWith(_tableName));
+            _deleteLedgerEntry = await PrepareAsync("DELETE FROM {0} WHERE id=? AND ledgerid=? IF etag=?".FormatWith(_tableName));
         }
 
         /// <summary>
@@ -55,7 +55,7 @@ namespace Lucent.Common.Entities.Repositories
             try
             {
                 var rowSet = await ExecuteAsync(_getAllLedgers, "getAll_ledger");
-                return await ReadAsAsync<LedgerEntry>(rowSet);
+                return await ReadAsAsync<LedgerEntry, LedgerCompositeEntryKey>(rowSet);
             }
             catch (InvalidQueryException queryError)
             {
@@ -76,7 +76,7 @@ namespace Lucent.Common.Entities.Repositories
             try
             {
                 var rowSet = await ExecuteAsync(_getFullLedger.Bind(id.TargetId, id.LedgerTimeId), "get_ledger");
-                return (await ReadAsAsync<LedgerEntry>(rowSet)).FirstOrDefault();
+                return (await ReadAsAsync<LedgerEntry, LedgerCompositeEntryKey>(rowSet)).FirstOrDefault();
             }
             catch (InvalidQueryException queryError)
             {
@@ -99,7 +99,7 @@ namespace Lucent.Common.Entities.Repositories
                 var rowSet = id.LedgerTimeId == null ? await ExecuteAsync(_getFullLedger.Bind(id.TargetId), "getAny_ledger") :
                     await ExecuteAsync(_getLedgerEntry.Bind(id.TargetId, id.LedgerTimeId), "get_ledger");
 
-                return await ReadAsAsync<LedgerEntry>(rowSet);
+                return await ReadAsAsync<LedgerEntry, LedgerCompositeEntryKey>(rowSet);
             }
             catch (InvalidQueryException queryError)
             {
