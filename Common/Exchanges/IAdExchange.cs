@@ -15,7 +15,7 @@ namespace Lucent.Common.Exchanges
         /// Initializes the exchange with the current provider
         /// </summary>
         /// <param name="provider">The current provider</param>
-        void Initialize(IServiceProvider provider);
+        Task Initialize(IServiceProvider provider);
 
         /// <summary>
         /// Determines if the context is a match for the given exchange
@@ -40,7 +40,7 @@ namespace Lucent.Common.Exchanges
         /// <summary>
         /// Gets the identifier for the exchange
         /// </summary>
-        Guid ExchangeId { get; }
+        Guid ExchangeId { get; set; }
 
         /// <summary>
         /// Gets the exchange name

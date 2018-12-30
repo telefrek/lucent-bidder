@@ -76,10 +76,10 @@ namespace Lucent.Common.Storage
         /// <param name="logger">A logger to use for queries</param>
         /// <typeparam name="T">The type of base repository to create</typeparam>
         /// <returns>An initialized repository of the given type</returns>
-        public static T CreateAsync<T>(ISession session, SerializationFormat serializationFormat, ISerializationContext serializationContext, ILogger logger)
+        public static async Task<T> CreateAsync<T>(ISession session, SerializationFormat serializationFormat, ISerializationContext serializationContext, ILogger logger)
         {
             var repo = (T)Activator.CreateInstance(typeof(T), session, serializationFormat, serializationContext, logger);
-            (repo as CassandraBaseRepository).Initialize();
+            await (repo as CassandraBaseRepository).Initialize();
             return repo;
         }
 
@@ -87,7 +87,7 @@ namespace Lucent.Common.Storage
         /// Initialize the repository
         /// </summary>
         /// <returns></returns>
-        protected abstract void Initialize();
+        protected abstract Task Initialize();
 
         /// <summary>
         /// Sync method
@@ -165,12 +165,23 @@ namespace Lucent.Common.Storage
         }
 
         /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="row"></param>
+        /// <param name="instance"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="K"></typeparam>
+        /// <returns></returns>
+        protected virtual async Task ReadExtraAsync<T, K>(Row row, T instance) where T : IStorageEntity<K>, new() => await Task.CompletedTask;
+
+        /// <summary>
         /// Reads the rowset completely, using the builder function to create entities
         /// </summary>
         /// <param name="rowSet"></param>
         /// <typeparam name="T"></typeparam>
+        /// <typeparam name="K"></typeparam>
         /// <returns></returns>
-        protected async Task<ICollection<T>> ReadAsAsync<T>(RowSet rowSet) where T : new()
+        protected async Task<ICollection<T>> ReadAsAsync<T, K>(RowSet rowSet) where T : IStorageEntity<K>, new()
         {
             var instances = new List<T>();
 
@@ -188,7 +199,9 @@ namespace Lucent.Common.Storage
 
                             using (var ms = new MemoryStream(contents))
                             {
-                                instances.Add(await _serializationContext.ReadFrom<T>(ms, false, format));
+                                var obj = await _serializationContext.ReadFrom<T>(ms, false, format);
+                                await ReadExtraAsync<T, K>(rowEnum.Current, obj);
+                                instances.Add(obj);
                             }
                         }
                     }
@@ -205,7 +218,9 @@ namespace Lucent.Common.Storage
 
                         using (var ms = new MemoryStream(contents))
                         {
-                            instances.Add(await _serializationContext.ReadFrom<T>(ms, false, format));
+                            var obj = await _serializationContext.ReadFrom<T>(ms, false, format);
+                            await ReadExtraAsync<T, K>(rowEnum.Current, obj);
+                            instances.Add(obj);
                         }
                     }
                 }

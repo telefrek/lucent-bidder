@@ -58,7 +58,7 @@ namespace Lucent.Common.Middleware
             _messageFactory = messageFactory;
 
             // Let's listen for events...
-            _messageFactory.CreateSubscriber<LucentMessage<EntityEvent>>("entities", 0, "#").OnReceive += TrackEntities;
+            _messageFactory.CreateSubscriber<LucentMessage<EntityEvent>>("bidding", 0, "#").OnReceive += TrackEntities;
         }
 
         /// <summary>
@@ -72,6 +72,34 @@ namespace Lucent.Common.Middleware
             {
                 await _serializationContext.WriteTo(entityEvent.Body, ms, true, SerializationFormat.JSON);
                 _log.LogInformation("Received Event:\n{0}", Encoding.UTF8.GetString(ms.ToArray()));
+            }
+
+            switch (entityEvent.Body.EventType)
+            {
+                case EventType.EntityAdd:
+                case EventType.EntityUpdate:
+                    switch (entityEvent.Body.EntityType)
+                    {
+                        case EntityType.Campaign:
+                            var campaign = await _storageManager.GetBasicRepository<Campaign>().Get(entityEvent.Body.EntityId);
+                            if (campaign != null)
+                            {
+                                using (var ms = new MemoryStream())
+                                {
+                                    await _serializationContext.WriteTo(campaign, ms, true, SerializationFormat.JSON);
+                                    _log.LogInformation("Received Campaign:\n{0}", Encoding.UTF8.GetString(ms.ToArray()));
+                                }
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                    break;
+                case EventType.EntityDelete:
+                    break;
+                default:
+                    _log.LogWarning("Invalid event type: {0}", entityEvent.Body.EventType);
+                    break;
             }
         }
 

@@ -54,7 +54,7 @@ namespace Lucent.Common.Messaging
         /// <inheritdoc/>
         public async Task<bool> TryBroadcast(IMessage message)
         {
-            var res = await _factory.CreatePublisher(Topic).TryPublish(message);
+            var res = true;
             foreach (var cluster in _factory.GetClusters())
                 res &= await _factory.CreatePublisher(cluster, Topic).TryPublish(message);
             return res;

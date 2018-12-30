@@ -44,18 +44,18 @@ namespace Lucent.Common.Storage
             await ExecuteAsync("CREATE TABLE IF NOT EXISTS {0} (id text PRIMARY KEY, etag text, format text, updated timestamp, contents blob );".FormatWith(_tableName), "create_table_" + _tableName);
 
         /// <inheritdoc/>
-        protected override void Initialize()
+        protected override async Task Initialize()
         {
             _getAllStatement = new SimpleStatement("SELECT etag, format, updated, contents FROM {0}".FormatWith(_tableName));
 
-            _getStatement = Prepare("SELECT etag, format, updated, contents FROM {0} WHERE id=?".FormatWith(_tableName));
-            _insertStatement = Prepare("INSERT INTO {0} (id, etag, format, updated, contents) VALUES (?, ?, ?, ?, ?) IF NOT EXISTS".FormatWith(_tableName));
+            _getStatement = await PrepareAsync("SELECT etag, format, updated, contents FROM {0} WHERE id=?".FormatWith(_tableName));
+            _insertStatement = await PrepareAsync("INSERT INTO {0} (id, etag, format, updated, contents) VALUES (?, ?, ?, ?, ?) IF NOT EXISTS".FormatWith(_tableName));
 
             // Check etag
-            _updateStatement = Prepare("UPDATE {0} SET etag=?, updated=?, contents=?, format=? WHERE id=? IF etag=?".FormatWith(_tableName));
+            _updateStatement = await PrepareAsync("UPDATE {0} SET etag=?, updated=?, contents=?, format=? WHERE id=? IF etag=?".FormatWith(_tableName));
 
             // Check etag
-            _deleteStatement = Prepare("DELETE FROM {0} WHERE id=? IF etag=?".FormatWith(_tableName));
+            _deleteStatement = await PrepareAsync("DELETE FROM {0} WHERE id=? IF etag=?".FormatWith(_tableName));
         }
 
         /// <inheritdoc/>
@@ -65,7 +65,7 @@ namespace Lucent.Common.Storage
             try
             {
                 var rowSet = await ExecuteAsync(_getAllStatement, "getAll_" + _tableName);
-                return await ReadAsAsync<T>(rowSet);
+                return await ReadAsAsync<T, string>(rowSet);
             }
             catch (InvalidQueryException queryError)
             {
@@ -87,7 +87,7 @@ namespace Lucent.Common.Storage
             {
                 var rowSet = await ExecuteAsync(_getStatement.Bind(key), "get_" + _tableName);
 
-                return (await ReadAsAsync<T>(rowSet)).FirstOrDefault();
+                return (await ReadAsAsync<T, string>(rowSet)).FirstOrDefault();
             }
             catch (InvalidQueryException queryError)
             {
