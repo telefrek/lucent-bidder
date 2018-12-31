@@ -26,6 +26,9 @@ namespace Lucent.Common.Messaging
         Dictionary<string, InMemoryQueue> _queues = new Dictionary<string, InMemoryQueue>();
 
         /// <inheritdoc/>
+        public string WildcardFilter => "*";
+
+        /// <inheritdoc/>
         public T CreateMessage<T>()
             where T : IMessage
         {
@@ -139,7 +142,7 @@ namespace Lucent.Common.Messaging
                         continue;
 
                     else if (sub.OnReceive != null)
-                        sub.OnReceive.Method.Invoke(sub.OnReceive.Target, new object[]{message});
+                        sub.OnReceive.Method.Invoke(sub.OnReceive.Target, new object[] { message });
                 }
 
                 return await Task.FromResult(true);

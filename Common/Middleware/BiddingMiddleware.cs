@@ -58,7 +58,7 @@ namespace Lucent.Common.Middleware
             _messageFactory = messageFactory;
 
             // Let's listen for events...
-            _messageFactory.CreateSubscriber<LucentMessage<EntityEvent>>("bidding", 0, "#").OnReceive += TrackEntities;
+            _messageFactory.CreateSubscriber<EntityEventMessage>("bidding", 0, "#").OnReceive += TrackEntities;
         }
 
         /// <summary>
@@ -66,7 +66,7 @@ namespace Lucent.Common.Middleware
         /// </summary>
         /// <param name="entityEvent"></param>
         /// <returns></returns>
-        public async Task TrackEntities(LucentMessage<EntityEvent> entityEvent)
+        public async Task TrackEntities(EntityEventMessage entityEvent)
         {
             using (var ms = new MemoryStream())
             {
@@ -115,7 +115,7 @@ namespace Lucent.Common.Middleware
             if (request != null && !_bidFilters.Any(f => f.Invoke(request)))
             {
                 // Validate we can find a matching exchange
-                var exchange = _exchangeRegistry.Exchanges.FirstOrDefault(e => e.IsMatch(httpContext));
+                var exchange = _exchangeRegistry.GetExchange(httpContext);
                 if (exchange == null)
                 {
                     httpContext.Response.StatusCode = StatusCodes.Status204NoContent;

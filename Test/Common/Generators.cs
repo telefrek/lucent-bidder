@@ -14,18 +14,14 @@ namespace Lucent.Common.Test
                 Id = SequentialGuid.NextGuid().ToString(),
                 Name = "Test Campaign",
                 LandingPage = "https://www.lucentbid.com",
-                AdDomains = new List<string> { "lucentbid.com", "lucentbid.co" },
+                AdDomains = new string[] { "lucentbid.com", "lucentbid.co" },
                 BuyerId = "buyerid",
                 BundleId = "bundle_1",
                 BidFilter = new BidFilter
                 {
                     GeoFilters = new Filters.Filter[]
                     {
-                        new Filter
-                        {
-                            Property = "Country",
-                            Value = "USA"
-                        }
+                        typeof(Geo).CreateFilter(FilterType.IN, "Country", "USA"),
                     }
                 },
                 Creatives = new List<Creative>()

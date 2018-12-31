@@ -84,7 +84,7 @@ namespace Lucent.Common.Entities
         [Display(Name = "Domains")]
         [UIHint("Domains")]
         [SerializationProperty(9, "domains")]
-        public List<string> AdDomains { get; set; } = new List<string> { };
+        public string[] AdDomains { get; set; }
 
         /// <summary>
         /// 
@@ -105,7 +105,7 @@ namespace Lucent.Common.Entities
         /// </summary>
         /// <returns></returns>
         [SerializationProperty(11, "createiveids")]
-        public List<string> CreativeIds { get; set; } = new List<string>();
+        public string[] CreativeIds { get; set; }
 
         /// <summary>
         /// O

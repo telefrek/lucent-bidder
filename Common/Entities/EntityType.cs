@@ -13,5 +13,7 @@ namespace Lucent.Common.Entities
         Creative = 2,
         /// <value></value>
         CreativeContent = 3,
+        /// <value></value>
+        Exchange = 4,
     }
 }

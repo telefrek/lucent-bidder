@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.Loader;
 using System.Threading.Tasks;
+using Lucent.Common.Entities;
+using Lucent.Common.Events;
+using Lucent.Common.Messaging;
+using Lucent.Common.Storage;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace Lucent.Common.Exchanges
 {
@@ -17,54 +17,51 @@ namespace Lucent.Common.Exchanges
     public class ExchangeRegistry : IExchangeRegistry
     {
         ILogger<ExchangeRegistry> _log;
-        FileSystemWatcher _watcher;
         Dictionary<string, AdExchange> _exchangeMap = new Dictionary<string, AdExchange>();
-        IServiceProvider _provider;
-        ExchangeConfig _config;
+        IMessageFactory _messageFactory;
+        IStorageRepository<Exchange, Guid> _storageRepository;
+        IMessageSubscriber<EntityEventMessage> _subscriber;
 
         object _syncLock = new object();
 
         /// <summary>
         /// Default constructor
         /// </summary>
-        /// <param name="config"></param>
         /// <param name="logger"></param>
-        /// <param name="provider"></param>
-        public ExchangeRegistry(IOptions<ExchangeConfig> config, ILogger<ExchangeRegistry> logger, IServiceProvider provider)
+        /// <param name="messageFactory"></param>
+        /// <param name="storageManager"></param>
+        public ExchangeRegistry(ILogger<ExchangeRegistry> logger, IMessageFactory messageFactory, IStorageManager storageManager)
         {
             _log = logger;
-            _provider = provider;
-            _config = config.Value ?? new ExchangeConfig();
-            if (!Directory.Exists(_config.ExchangeLocation))
-                Directory.CreateDirectory(_config.ExchangeLocation);
+            _messageFactory = messageFactory;
+            _storageRepository = storageManager.GetRepository<Exchange, Guid>();
+            _subscriber = messageFactory.CreateSubscriber<EntityEventMessage>("exchanges", 0, "#");
 
-            _watcher = new FileSystemWatcher(_config.ExchangeLocation, "*.dll");
-
-            // Watch for exchanges that change
-            _watcher.Changed += (o, e) =>
+            _subscriber.OnReceive = async (message) =>
             {
-                lock (_syncLock)
+                var evt = message.Body;
+
+                if (evt.EntityType != EntityType.Exchange) return;
+
+                switch (evt.EventType)
                 {
-                    if (e.ChangeType == WatcherChangeTypes.Changed)
-                        LoadExchange(e.FullPath);
+                    case EventType.EntityAdd:
+                    case EventType.EntityUpdate:
+                        Guid id;
+                        if (!Guid.TryParse(evt.EntityId, out id)) return;
+                        var entity = await _storageRepository.Get(id);
+                        if (entity.Instance != null)
+                        {
+                            _log.LogInformation("Loaded exchange : {0}", entity.Id);
+                            _exchangeMap[evt.EntityId] = entity.Instance;
+                        }
+                        break;
+                    case EventType.EntityDelete:
+                        if (_exchangeMap.Remove(evt.EntityId))
+                            _log.LogInformation("Unloaded : {0}", evt.EntityId);
+                        break;
                 }
             };
-
-            // Watch for exchanges to remove
-            _watcher.Deleted += (o, e) =>
-            {
-                lock (_syncLock)
-                {
-                    if (e.ChangeType == WatcherChangeTypes.Deleted)
-                        RemoveExchange(e.FullPath);
-                }
-            };
-
-            // Load any existing exchanges
-            foreach (var file in new DirectoryInfo(_config.ExchangeLocation).GetFileSystemInfos("*.dll"))
-                LoadExchange(file.FullName);
-
-            _watcher.EnableRaisingEvents = true;
         }
 
         /// <inheritdoc/>
@@ -76,45 +73,19 @@ namespace Lucent.Common.Exchanges
             return null;
         }
 
-        void LoadExchange(string exchangePath)
-        {
-            _log.LogInformation("Loading exchange : {0}", exchangePath);
-            try
-            {
-                var asm = AssemblyLoadContext.Default.LoadFromAssemblyPath(exchangePath);
-                if (asm != null)
-                {
-                    var exchgType = asm.GetTypes().FirstOrDefault(t => typeof(AdExchange).IsAssignableFrom(t));
-                    if (exchgType != null)
-                    {
-                        _log.LogInformation("Creating exchange type : {0}", exchgType.FullName);
-                        var exchg = _provider.CreateInstance(exchgType) as AdExchange;
-                        if (exchg != null)
-                        {
-                            _log.LogInformation("Loaded {0} ({1})", exchg.Name, exchg.ExchangeId);
-                            exchg.Initialize(_provider);
-                            _exchangeMap.Remove(exchangePath);
-                            _exchangeMap.Add(exchangePath, exchg);
-                        }
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                _log.LogError(e, "Failed to load exchange : {0}", exchangePath);
-            }
-        }
+        /// <inheritdoc/>
+        public bool HasExchange(Guid id) => _exchangeMap.ContainsKey(id.ToString());
 
-        void RemoveExchange(string exchangePath)
+        /// <inheritdoc/>
+        public async Task Initialize()
         {
-            _log.LogInformation("Removing exchange : {0}", exchangePath);
-            try
+            foreach (var exchange in await _storageRepository.GetAll())
             {
-                _exchangeMap.Remove(exchangePath);
-            }
-            catch (Exception e)
-            {
-                _log.LogError(e, "Failed to remove : {0}", exchangePath);
+                if (exchange.Instance != null)
+                {
+                    _log.LogInformation("Loaded exchange : {0}", exchange.Id);
+                    _exchangeMap[exchange.Id.ToString()] = exchange.Instance;
+                }
             }
         }
     }

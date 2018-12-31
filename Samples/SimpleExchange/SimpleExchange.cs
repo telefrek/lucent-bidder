@@ -21,54 +21,22 @@ namespace Lucent.Samples.SimpleExchange
     /// </summary>
     public class SimpleExchange : AdExchange
     {
-        IStorageManager _storageManager;
-        IMessageFactory _messageFactory;
-        IBidFactory _bidFactory;
-        IMessageSubscriber<LucentMessage<Campaign>> _campaignSub;
+        IBiddingManager _bidManager;
         ILogger<SimpleExchange> _log;
-
-        List<ICampaignBidder> _bidders = new List<ICampaignBidder>();
 
         /// <inheritdoc/>
         public override Task Initialize(IServiceProvider provider)
         {
-            _storageManager = provider.GetService<IStorageManager>();
-            _messageFactory = provider.GetService<IMessageFactory>();
-            _bidFactory = provider.GetService<IBidFactory>();
-            _log = provider.GetService<ILogger<SimpleExchange>>();
-
-            var basic = _storageManager.GetBasicRepository<Campaign>();
-
-            // Get the current campaign bidders
-            _bidders.AddRange(basic.GetAll().Result.Select(c => _bidFactory.CreateBidder(c)));
-
-            // Setup the bid state update
-            _campaignSub = _messageFactory.CreateSubscriber<LucentMessage<Campaign>>("bidstate", 0, "campaign.#");
-            _campaignSub.OnReceive = ProcessMessage;
-
+            _log = provider.GetRequiredService<ILogger<SimpleExchange>>();
+            _bidManager = provider.GetRequiredService<IBiddingManager>();
+            
             return Task.CompletedTask;
-        }
-
-        async Task ProcessMessage(LucentMessage<Campaign> message)
-        {
-            _log.LogInformation("Received new message {0}", message.MessageId);
-            var camp = message.Body;
-            if (camp != null)
-            {
-                _log.LogInformation("Campaign {0} updateded, reloading", camp.Id);
-                var bidder = _bidders.FirstOrDefault(b => b.Campaign.Id.Equals(camp.Id, StringComparison.InvariantCultureIgnoreCase));
-                if (bidder != null)
-                    _bidders.Remove(bidder);
-
-                var newCamp = await _storageManager.GetBasicRepository<Campaign>().Get(camp.Id);
-                _bidders.Add(_bidFactory.CreateBidder(newCamp));
-            }
         }
 
         /// <inheritdoc/>
         public override async Task<BidResponse> Bid(BidRequest request, HttpContext httpContext)
         {
-            if (_bidders.Count == 0)
+            if (_bidManager.Bidders.Count == 0)
                 return null;
 
             var resp = new BidResponse
@@ -78,7 +46,7 @@ namespace Lucent.Samples.SimpleExchange
                 CorrelationId = SequentialGuid.NextGuid().ToString(),
             };
 
-            var bids = _bidders.Select(b => b.BidAsync(request, httpContext));
+            var bids = _bidManager.Bidders.Select(b => b.BidAsync(request, httpContext));
 
             // Probably make this not wait on everything...
             await Task.WhenAll(bids);

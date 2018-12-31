@@ -115,7 +115,7 @@ namespace Lucent.Common.Messaging.Test
         {
             var factory = ServiceProvider.GetRequiredService<IMessageFactory>();
             var pub = factory.CreatePublisher("blah");
-            var sub = factory.CreateSubscriber<LucentMessage<EntityEvent>>("blah", 0);
+            var sub = factory.CreateSubscriber<EntityEventMessage>("blah", 0);
             var received = false;
             var are = new AutoResetEvent(false);
             var id = SequentialGuid.NextGuid();
@@ -123,14 +123,14 @@ namespace Lucent.Common.Messaging.Test
             sub.OnReceive = async (m) =>
             {
                 received = true;
-                var tm = m as LucentMessage<EntityEvent>;
+                var tm = m as EntityEventMessage;
                 Assert.IsNotNull(tm, "Failed to receive message successfully");
                 Assert.AreEqual(id, tm.Body.Id, "Wrong message returned");
                 are.Set();
                 await Task.CompletedTask;
             };
 
-            var msg = factory.CreateMessage<LucentMessage<EntityEvent>>();
+            var msg = factory.CreateMessage<EntityEventMessage>();
             msg.Body = new EntityEvent { Id = id, EntityId = "1", EntityType = EntityType.Campaign, };
             msg.Route = "hello.world";
             msg.ContentType = "application/json";

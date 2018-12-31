@@ -13,7 +13,13 @@ namespace Lucent.Common.Messaging
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
         T CreateMessage<T>()
-        where T: IMessage;
+        where T : IMessage;
+
+        /// <summary>
+        /// Get the wildcard filter
+        /// </summary>
+        /// <value></value>
+        string WildcardFilter { get; }
 
         /// <summary>
         /// Creates a new publisher for the given topic

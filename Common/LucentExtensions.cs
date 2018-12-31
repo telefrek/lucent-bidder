@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Security;
 using System.Security.Cryptography;
 using Lucent.Common;
+using Lucent.Common.Filters;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Prometheus;
@@ -32,6 +33,38 @@ public static partial class LucentExtensions
     /// <param name="buffer"></param>
     /// <returns></returns>
     public static string CalculateETag(this byte[] buffer) => _md5.ComputeHash(buffer).ToHex();
+
+    /// <summary>
+    /// Create a filter for the type
+    /// </summary>
+    /// <param name="type"></param>
+    /// <param name="filterType"></param>
+    /// <param name="property"></param>
+    /// <param name="value"></param>
+    /// <returns></returns>
+    public static Filter CreateFilter(this Type type, FilterType filterType, string property, FilterValue value) => new Filter
+    {
+        FilterType = filterType,
+        Property = property,
+        PropertyType = type.GetProperty(property).PropertyType,
+        Value = value,
+    };
+
+    /// <summary>
+    /// Create a filter for the type
+    /// </summary>
+    /// <param name="type"></param>
+    /// <param name="filterType"></param>
+    /// <param name="property"></param>
+    /// <param name="values"></param>
+    /// <returns></returns>
+    public static Filter CreateFilter(this Type type, FilterType filterType, string property, FilterValue[] values) => new Filter
+    {
+        FilterType = filterType,
+        Property = property,
+        PropertyType = type.GetProperty(property).PropertyType,
+        Values = values,
+    };
 
     /// <summary>
     /// Encode the value with URL safe characters

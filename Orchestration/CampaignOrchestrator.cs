@@ -66,7 +66,7 @@ namespace Lucent.Orchestration
                 // Notify
                 if (evt.EventType != EventType.Unknown)
                 {
-                    var msg = _messageFactory.CreateMessage<LucentMessage<EntityEvent>>();
+                    var msg = _messageFactory.CreateMessage<EntityEventMessage>();
                     msg.Body = evt;
                     msg.Route = "campaign";
                     using (var ms = new MemoryStream())
@@ -134,7 +134,7 @@ namespace Lucent.Orchestration
                 // Notify
                 if (evt.EventType != EventType.Unknown)
                 {
-                    var msg = _messageFactory.CreateMessage<LucentMessage<EntityEvent>>();
+                    var msg = _messageFactory.CreateMessage<EntityEventMessage>();
                     msg.Body = evt;
                     msg.Route = "campaign";
                     using (var ms = new MemoryStream())

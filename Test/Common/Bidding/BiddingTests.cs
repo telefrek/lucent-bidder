@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Mime;
+using System.Runtime.Loader;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucent.Common.Entities;
+using Lucent.Common.Events;
 using Lucent.Common.Exchanges;
 using Lucent.Common.Filters;
 using Lucent.Common.Messaging;
@@ -41,7 +43,8 @@ namespace Lucent.Common.Bidding
         {
             var serializationContext = ServiceProvider.GetRequiredService<ISerializationContext>();
             await SetupBidderFilters();
-            await SetupExchange();
+            var exchangeId = SequentialGuid.NextGuid();
+            await SetupExchange(exchangeId);
 
             var bid = BidGenerator.GenerateBid();
 
@@ -54,7 +57,7 @@ namespace Lucent.Common.Bidding
             Assert.IsNotNull(postbackMiddleware, "Failed to create postback middleware");
 
             // No campaigns, should fail
-            var httpContext = await SetupContext(bid);
+            var httpContext = await SetupContext(bid, exchangeId);
             await biddingMiddleware.InvokeAsync(httpContext);
             Assert.AreEqual(204, httpContext.Response.StatusCode, "Invalid status code");
             Assert.IsFalse(httpContext.Request.Body.CanRead, "Body should have been read and closed");
@@ -62,26 +65,32 @@ namespace Lucent.Common.Bidding
             var campaign = await SetupCampaign();
 
             // Campaign setup, but no notification yet
-            httpContext = await SetupContext(bid);
+            httpContext = await SetupContext(bid, exchangeId);
             await biddingMiddleware.InvokeAsync(httpContext);
             Assert.AreEqual(204, httpContext.Response.StatusCode, "Invalid status code");
             Assert.IsFalse(httpContext.Request.Body.CanRead, "Body should have been read and closed");
 
             var messageFactory = ServiceProvider.GetRequiredService<IMessageFactory>();
-            var publisher = messageFactory.CreatePublisher("bidstate");
+            var publisher = messageFactory.CreatePublisher("bidding");
 
-            var msg = messageFactory.CreateMessage<LucentMessage<Campaign>>();
-            msg.Body = campaign;
-            msg.Route = "campaign.create";
+            var msg = messageFactory.CreateMessage<EntityEventMessage>();
+            msg.Body = new EntityEvent
+            {
+                EntityType = EntityType.Campaign,
+                EntityId = campaign.Id,
+                EventType = EventType.EntityAdd
+            };
+
+            msg.Route = "campaign";
             msg.ContentType = "application/x-protobuf";
 
-            Assert.IsTrue(await publisher.TryPublish(msg), "Failed to publish update");
+            Assert.IsTrue(await publisher.TryBroadcast(msg), "Failed to broadcast update");
 
             // Let the campaign reload
             await Task.Delay(500);
 
             // Now we should get a bid
-            httpContext = await SetupContext(bid);
+            httpContext = await SetupContext(bid, exchangeId);
             await biddingMiddleware.InvokeAsync(httpContext);
             Assert.AreEqual(200, httpContext.Response.StatusCode, "Invalid status code");
             Assert.IsFalse(httpContext.Request.Body.CanRead, "Request body should have been read and closed");
@@ -99,7 +108,7 @@ namespace Lucent.Common.Bidding
 
             // Ensure we filter out an invalid bid
             bid.Impressions.First().Banner.H = 101;
-            httpContext = await SetupContext(bid);
+            httpContext = await SetupContext(bid, exchangeId);
             await biddingMiddleware.InvokeAsync(httpContext);
             Assert.AreEqual(204, httpContext.Response.StatusCode, "Invalid status code");
             Assert.IsFalse(httpContext.Request.Body.CanRead, "Request body should have been read and closed");
@@ -107,7 +116,7 @@ namespace Lucent.Common.Bidding
             // Ensure we filter out a global bid
             bid.Impressions.First().Banner.H = 100;
             bid.Site = new Site { Domain = "telefrek.com" };
-            httpContext = await SetupContext(bid);
+            httpContext = await SetupContext(bid, exchangeId);
             await biddingMiddleware.InvokeAsync(httpContext);
             Assert.AreEqual(204, httpContext.Response.StatusCode, "Invalid status code");
             Assert.IsFalse(httpContext.Request.Body.CanRead, "Request body should have been read and closed");
@@ -139,18 +148,19 @@ namespace Lucent.Common.Bidding
                 Id = SequentialGuid.NextGuid().ToString(),
                 BidFilter = new BidFilter
                 {
-                    SiteFilters = new[] { new Filter { FilterType = FilterType.IN, Property = "Domain", Value = "telefrek" } }
+                    SiteFilters = new[] { typeof(Site).CreateFilter(FilterType.IN, "Domain", "telefrek") }
                 }
             }));
         }
 
-        async Task<HttpContext> SetupContext(BidRequest bid)
+        async Task<HttpContext> SetupContext(BidRequest bid, Guid exchangeId)
         {
             var httpContext = new DefaultHttpContext();
             httpContext.Request.Body = new MemoryStream();
             httpContext.Request.Host = new HostString("localhost");
             httpContext.Request.Scheme = "https";
             httpContext.Request.Path = "/v1/bidder";
+            httpContext.Request.QueryString = new QueryString("?exchg={0}".FormatWith(exchangeId));
 
             var serializationContext = ServiceProvider.GetRequiredService<ISerializationContext>();
             await serializationContext.WriteTo(bid, httpContext.Request.Body, true, SerializationFormat.JSON);
@@ -210,18 +220,62 @@ namespace Lucent.Common.Bidding
             return await Task.FromResult(httpContext);
         }
 
-        async Task SetupExchange()
+        async Task SetupExchange(Guid id)
         {
             var registry = ServiceProvider.GetRequiredService<IExchangeRegistry>();
+            await registry.Initialize();
             var exchangePath = Path.Combine(Directory.GetCurrentDirectory(), "exchanges");
             var target = Path.Combine(Directory.GetCurrentDirectory(), "SimpleExchange.dll");
             Assert.IsTrue(File.Exists(target), "Corrupt test environment");
 
-            var newPath = Path.Combine(exchangePath, "SimpleExchange.dll");
-            File.Copy(target, newPath);
+            var manager = ServiceProvider.GetRequiredService<IStorageManager>();
+            var repo = manager.GetRepository<Exchange, Guid>();
+            var entity = new Exchange
+            {
+                Name = "test",
+                Id = id,
+                Code = new MemoryStream(await File.ReadAllBytesAsync(target)),
+                LastCodeUpdate = DateTime.UtcNow,
+            };
 
-            while (registry.Exchanges.Count == 0)
-                await Task.Delay(200);
+            var res = await repo.TryInsert(entity);
+            Assert.IsTrue(res, "Failed to create exchange");
+            var pub = ServiceProvider.GetRequiredService<IMessageFactory>().CreatePublisher("exchanges");
+            var msg = ServiceProvider.GetRequiredService<IMessageFactory>().CreateMessage<EntityEventMessage>();
+
+            var asm = AssemblyLoadContext.Default.LoadFromStream(entity.Code);
+            if (asm != null)
+            {
+                var exchgType = asm.GetTypes().FirstOrDefault(t => typeof(AdExchange).IsAssignableFrom(t));
+                if (exchgType != null)
+                {
+                    var exchg = ServiceProvider.CreateInstance(exchgType) as AdExchange;
+                    if (exchg != null)
+                    {
+                        exchg.ExchangeId = (Guid)(object)entity.Id;
+                        await exchg.Initialize(ServiceProvider);
+                        entity.Instance = exchg;
+                    }
+                }
+            }
+
+            msg.Body = new EntityEvent
+            {
+                EntityId = id.ToString(),
+                EventType = EventType.EntityAdd,
+                EntityType = EntityType.Exchange,
+            };
+            msg.Route = "update";
+            Assert.IsTrue(await pub.TryBroadcast(msg), "failed to broadcast message");
+
+            for (var i = 0; i < 10; ++i)
+            {
+                if (registry.HasExchange(id))
+                    return;
+                await Task.Delay(250);
+            }
+
+            Assert.Fail("Failed to load the exchange");
         }
 
         async Task<Campaign> SetupCampaign()

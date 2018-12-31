@@ -27,8 +27,10 @@ namespace Lucent.Common.Test
         {
             var services = new ServiceCollection();
 
-            services.AddSingleton<ILoggerFactory>(new LoggerFactory().AddConsole());
-            services.AddLogging();
+            services.AddLogging((cfg) =>
+            {
+                cfg.AddConsole();
+            });
 
             InitializeDI(services);
 

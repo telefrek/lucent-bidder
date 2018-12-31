@@ -50,6 +50,9 @@ namespace Lucent.Common.Messaging
         }
 
         /// <inheritdoc/>
+        public string WildcardFilter => "#";
+
+        /// <inheritdoc/>
         public T CreateMessage<T>()
             where T : IMessage
         {

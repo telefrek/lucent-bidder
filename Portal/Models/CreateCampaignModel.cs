@@ -31,8 +31,8 @@ namespace Lucent.Portal.Models
 
         public IActionResult OnPostAddDomain(string domain)
         {
-            if(!string.IsNullOrWhiteSpace(domain) && !Campaign.AdDomains.Contains(domain))
-                Campaign.AdDomains.Add(domain);
+            if (!string.IsNullOrWhiteSpace(domain) && !Campaign.AdDomains.Contains(domain))
+                Campaign.AdDomains = Campaign.AdDomains.Concat(new string[] { domain }).ToArray();
 
             return Page();
         }
