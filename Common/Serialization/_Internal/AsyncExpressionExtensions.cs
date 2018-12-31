@@ -358,7 +358,49 @@ namespace Lucent.Common.Serialization._Internal
                 var sType = prop.Property.PropertyType;
                 Expression propExp = Expression.Property(objParam, prop.Property);
 
-                if (sType.IsArray)
+                // Read extensions
+                if(prop.Attribute.Name.Equals("ext"))
+                {
+                    var mInfo = typeof(ILucentReader).GetMethod("NextObjBytes");
+
+                    if (mInfo != null)
+                    {
+                        var tParam = Expression.Parameter(typeof(Task<>).MakeGenericType(sType), "t");
+                        var cObjParam = Expression.Parameter(typeof(object), "o");
+                        var tRes = Expression.Property(tParam, "Result");
+
+                        var read = Expression.Call(readerParam, mInfo);
+                        var lambda = (Expression)makeLambda.MakeGenericMethod(typeof(Action<,>).MakeGenericType(typeof(Task<>).MakeGenericType(sType), typeof(object))).Invoke(null, new object[] { Expression.Block(new[] { Expression.Assign(Expression.Property(Expression.Convert(cObjParam, typeof(T)), prop.Property), tRes) }), new[] { tParam, cObjParam } });
+
+                        var tcont = typeof(Task<>).MakeGenericType(sType).GetMethods().First(m => m.Name == "ContinueWith" && m.GetParameters().Length == 2 &&
+                        m.GetParameters()[1].ParameterType == typeof(object));
+
+                        var cont = Expression.Call(
+                                            read,
+                                            tcont,
+
+                                            // Hook the Task.ContinueWith((t,o)=>((T)o).Prop = t.Result, obj)
+                                            lambda,
+                                            objParam
+                                        );
+
+                        body.Add(Expression.IfThen(
+                            // Test the property value
+                            Expression.OrElse(Expression.Equal(Expression.Property(idParam, "Id"), Expression.Constant(prop.Attribute.Id)), Expression.Equal(Expression.Property(idParam, "Name"), Expression.Constant(prop.Attribute.Name))),
+                                // Return the awaiter
+                                Expression.Return(ret,
+                                    // Get the awaiter
+                                    Expression.Call(
+                                        // Call the reader method
+                                        cont,
+                                        awaiter
+                                    )
+                                )
+                            )
+                        );
+                    }
+                }
+                else if (sType.IsArray)
                 {
                     // Type has to be object and new()
                     var readMethod = typeof(ISerializationContext).GetMethods().First(m => m.Name == "ReadArray" && m.IsGenericMethod).MakeGenericMethod(sType.GetElementType());
