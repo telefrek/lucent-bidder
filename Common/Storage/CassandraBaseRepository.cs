@@ -129,13 +129,18 @@ namespace Lucent.Common.Storage
                     return await _session.ExecuteAsync(statement);
                 }
             }
-            catch (InvalidQueryException)
+            catch (InvalidQueryException queryError)
             {
-                await CreateTableAsync();
-                using (var context = _queryLatency.CreateContext(queryName))
+                _log.LogError(queryError, "Checking for table missing error");
+
+                if ((queryError.Message ?? "").ToLowerInvariant().Contains("columnfamily") ||
+                (queryError.Message ?? "").ToLowerInvariant().Contains("table"))
                 {
+                    // Recreate
+                    await CreateTableAsync();
                     return await _session.ExecuteAsync(statement);
                 }
+                throw;
             }
         }
 

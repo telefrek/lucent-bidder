@@ -10,9 +10,10 @@ namespace Lucent.Common.Exchanges
     public interface IExchangeRegistry
     {
         /// <summary>
-        /// Gets the current set of exchanges
+        /// 
         /// </summary>
-        /// <value></value>
-        List<IAdExchange> Exchanges { get; }
+        /// <param name="context"></param>
+        /// <returns></returns>
+        AdExchange GetExchange(HttpContext context);
     }
 }

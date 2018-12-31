@@ -9,7 +9,6 @@ using Lucent.Common.Formatters;
 using Lucent.Common.Exchanges;
 using Lucent.Common.Messaging;
 using Lucent.Common.OpenRTB;
-using Lucent.Common.Serialization;
 using Lucent.Common.Storage;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,7 +19,7 @@ namespace Lucent.Samples.SimpleExchange
     /// <summary>
     /// Implementation of a very basic exchange
     /// </summary>
-    public class SimpleExchange : IAdExchange
+    public class SimpleExchange : AdExchange
     {
         IStorageManager _storageManager;
         IMessageFactory _messageFactory;
@@ -31,7 +30,7 @@ namespace Lucent.Samples.SimpleExchange
         List<ICampaignBidder> _bidders = new List<ICampaignBidder>();
 
         /// <inheritdoc/>
-        public Task Initialize(IServiceProvider provider)
+        public override Task Initialize(IServiceProvider provider)
         {
             _storageManager = provider.GetService<IStorageManager>();
             _messageFactory = provider.GetService<IMessageFactory>();
@@ -67,19 +66,7 @@ namespace Lucent.Samples.SimpleExchange
         }
 
         /// <inheritdoc/>
-        public bool SuppressBOM => true;
-
-        /// <inheritdoc/>
-        public string Name => "SimpleExchange";
-
-        /// <inheritdoc/>
-        public int Order => int.MinValue;
-
-        /// <inheritdoc/>
-        public Guid ExchangeId { get; set; }
-
-        /// <inheritdoc/>
-        public async Task<BidResponse> Bid(BidRequest request, HttpContext httpContext)
+        public override async Task<BidResponse> Bid(BidRequest request, HttpContext httpContext)
         {
             if (_bidders.Count == 0)
                 return null;
@@ -121,10 +108,7 @@ namespace Lucent.Samples.SimpleExchange
         }
 
         /// <inheritdoc/>
-        public bool IsMatch(HttpContext context) => true;
-
-        /// <inheritdoc/>
-        public Bid FormatBid(BidMatch match, HttpContext httpContext)
+        public override Bid FormatBid(BidMatch match, HttpContext httpContext)
         {
             var bidContext = new BidContext
             {

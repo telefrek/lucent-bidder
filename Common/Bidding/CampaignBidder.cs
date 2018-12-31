@@ -85,7 +85,7 @@ namespace Lucent.Common.Bidding
                     BidDate = DateTime.UtcNow,
                     BidId = SequentialGuid.NextGuid(),
                     CampaignId = Guid.Parse(bm.Campaign.Id),
-                    ExchangeId = (httpContext.Items["exchange"] as IAdExchange).ExchangeId,
+                    ExchangeId = (httpContext.Items["exchange"] as AdExchange).ExchangeId,
                     CPM = bm.Impression.BidFloor,
                 };
 

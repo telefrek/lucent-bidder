@@ -54,17 +54,12 @@ namespace Lucent.Common.Entities.Repositories
         {
             try
             {
-                var rowSet = await ExecuteAsync(_getAllLedgers, "getAll_ledger");
+                var rowSet = await ExecuteAsync(_getAllLedgers, "getAll_" + _tableName);
                 return await ReadAsAsync<LedgerEntry, LedgerCompositeEntryKey>(rowSet);
             }
-            catch (InvalidQueryException queryError)
+            catch (DriverException queryError)
             {
-                _log.LogError(queryError, "Checking for table missing error");
-
-                if ((queryError.Message ?? "").ToLowerInvariant().Contains("columnfamily") ||
-                (queryError.Message ?? "").ToLowerInvariant().Contains("table"))
-                    // Recreate
-                    await CreateTableAsync();
+                _log.LogError(queryError, "Failed to execute query");
             }
 
             return new List<LedgerEntry>();
@@ -75,17 +70,12 @@ namespace Lucent.Common.Entities.Repositories
         {
             try
             {
-                var rowSet = await ExecuteAsync(_getFullLedger.Bind(id.TargetId, id.LedgerTimeId), "get_ledger");
+                var rowSet = await ExecuteAsync(_getFullLedger.Bind(id.TargetId, id.LedgerTimeId), "get_" + _tableName);
                 return (await ReadAsAsync<LedgerEntry, LedgerCompositeEntryKey>(rowSet)).FirstOrDefault();
             }
-            catch (InvalidQueryException queryError)
+            catch (DriverException queryError)
             {
-                _log.LogError(queryError, "Checking for table missing error");
-
-                if ((queryError.Message ?? "").ToLowerInvariant().Contains("columnfamily") ||
-                (queryError.Message ?? "").ToLowerInvariant().Contains("table"))
-                    // Recreate
-                    await CreateTableAsync();
+                _log.LogError(queryError, "Failed to execute query");
             }
 
             return null;
@@ -96,19 +86,14 @@ namespace Lucent.Common.Entities.Repositories
         {
             try
             {
-                var rowSet = id.LedgerTimeId == null ? await ExecuteAsync(_getFullLedger.Bind(id.TargetId), "getAny_ledger") :
-                    await ExecuteAsync(_getLedgerEntry.Bind(id.TargetId, id.LedgerTimeId), "get_ledger");
+                var rowSet = id.LedgerTimeId == null ? await ExecuteAsync(_getFullLedger.Bind(id.TargetId), "getAny_" + _tableName) :
+                    await ExecuteAsync(_getLedgerEntry.Bind(id.TargetId, id.LedgerTimeId), "get_" + _tableName);
 
                 return await ReadAsAsync<LedgerEntry, LedgerCompositeEntryKey>(rowSet);
             }
-            catch (InvalidQueryException queryError)
+            catch (DriverException queryError)
             {
-                _log.LogError(queryError, "Checking for table missing error");
-
-                if ((queryError.Message ?? "").ToLowerInvariant().Contains("columnfamily") ||
-                (queryError.Message ?? "").ToLowerInvariant().Contains("table"))
-                    // Recreate
-                    await CreateTableAsync();
+                _log.LogError(queryError, "Failed to execute query");
             }
 
             return new List<LedgerEntry>();
@@ -133,18 +118,13 @@ namespace Lucent.Common.Entities.Repositories
 
                 obj.ETag = contents.CalculateETag();
 
-                var rowSet = await ExecuteAsync(_insertLedgerEntry.Bind(obj.Id.TargetId, obj.Id.LedgerTimeId, obj.ETag, _serializationFormat.ToString(), DateTime.UtcNow, contents), "insert_leger");
+                var rowSet = await ExecuteAsync(_insertLedgerEntry.Bind(obj.Id.TargetId, obj.Id.LedgerTimeId, obj.ETag, _serializationFormat.ToString(), DateTime.UtcNow, contents), "insert_" + _tableName);
 
                 return rowSet != null;
             }
-            catch (InvalidQueryException queryError)
+            catch (DriverException queryError)
             {
-                _log.LogError(queryError, "Checking for table missing error");
-
-                if ((queryError.Message ?? "").ToLowerInvariant().Contains("columnfamily") ||
-                (queryError.Message ?? "").ToLowerInvariant().Contains("table"))
-                    // Recreate
-                    await CreateTableAsync();
+                _log.LogError(queryError, "Failed to execute query");
             }
 
             return false;
@@ -156,18 +136,13 @@ namespace Lucent.Common.Entities.Repositories
             try
             {
                 _log.LogInformation("Removing ledger from {0}", obj.Id.TargetId);
-                var rowSet = await ExecuteAsync(_deleteLedgerEntry.Bind(obj.Id.TargetId, obj.Id.LedgerTimeId, obj.ETag), "delete_ledger");
+                var rowSet = await ExecuteAsync(_deleteLedgerEntry.Bind(obj.Id.TargetId, obj.Id.LedgerTimeId, obj.ETag), "delete_" + _tableName);
 
                 return rowSet != null;
             }
-            catch (InvalidQueryException queryError)
+            catch (DriverException queryError)
             {
-                _log.LogError(queryError, "Checking for table missing error");
-
-                if ((queryError.Message ?? "").ToLowerInvariant().Contains("columnfamily") ||
-                (queryError.Message ?? "").ToLowerInvariant().Contains("table"))
-                    // Recreate
-                    await CreateTableAsync();
+                _log.LogError(queryError, "Failed to execute query");
             }
 
             return false;
@@ -194,14 +169,9 @@ namespace Lucent.Common.Entities.Repositories
 
                 return rowSet != null;
             }
-            catch (InvalidQueryException queryError)
+            catch (DriverException queryError)
             {
-                _log.LogError(queryError, "Checking for table missing error");
-
-                if ((queryError.Message ?? "").ToLowerInvariant().Contains("columnfamily") ||
-                (queryError.Message ?? "").ToLowerInvariant().Contains("table"))
-                    // Recreate
-                    await CreateTableAsync();
+                _log.LogError(queryError, "Failed to execute query");
             }
 
             return false;
