@@ -79,11 +79,10 @@ namespace Lucent.Common.Protobuf
                         _raw.Position += len;
                     break;
                 default:
-                    ReadVarint();
+                    ReadVariant();
                     break;
             }
         }
-
 
         /// <summary>
         /// Check if there is more data on the stream
@@ -96,7 +95,7 @@ namespace Lucent.Common.Protobuf
                 return false;
 
             // Read the packed field information
-            var v = ReadVarint();
+            var v = ReadVariant();
             _fieldType = (WireType)(v & 0x7);
             _fieldNumber = (v >> 3);
 
@@ -118,7 +117,7 @@ namespace Lucent.Common.Protobuf
         /// Read a boolean (1/0) byte off the stream.
         /// </summary>
         /// <returns>True if the byte value is 1</returns>
-        public bool ReadBool() => ReadVarint() == 1;
+        public bool ReadBool() => ReadVariant() == 1;
 
         /// <summary>
         /// Read a fixed 32 bit field from the stream
@@ -179,13 +178,13 @@ namespace Lucent.Common.Protobuf
         /// Read a single int32 (signed) value from the stream
         /// </summary>
         /// <returns>A signed integer</returns>
-        public int ReadInt32() => (int)(ReadVarint() & 0xFFFFFFFF);
+        public int ReadInt32() => (int)(ReadVariant() & 0xFFFFFFFF);
 
         /// <summary>
         /// Read a single uint32 (unsigned) value from the stream
         /// </summary>
         /// <returns>An unsigned integer</returns>
-        public uint ReadUInt32() => (uint)(ReadVarint() & 0xFFFFFFFF);
+        public uint ReadUInt32() => (uint)(ReadVariant() & 0xFFFFFFFF);
 
         /// <summary>
         /// Read a single zigzag encoded int32 value from the stream
@@ -201,13 +200,13 @@ namespace Lucent.Common.Protobuf
         /// Read a single long (signed) value from the stream
         /// </summary>
         /// <returns>A signed long</returns>
-        public long ReadInt64() => (long)ReadVarint();
+        public long ReadInt64() => (long)ReadVariant();
 
         /// <summary>
         /// Read a single ulong (unsigned) value from the stream
         /// </summary>
         /// <returns>An unsigned long</returns>
-        public ulong ReadUInt64() => ReadVarint();
+        public ulong ReadUInt64() => ReadVariant();
 
         /// <summary>
         /// Read a single zigzag encoded long (signed) value from the stream
@@ -215,7 +214,7 @@ namespace Lucent.Common.Protobuf
         /// <returns>A signed long</returns>
         public long ReadSInt64()
         {
-            var v = ReadVarint();
+            var v = ReadVariant();
             return (long)((v >> 1) ^ (~(v & 1) + 1));
         }
 
@@ -223,13 +222,13 @@ namespace Lucent.Common.Protobuf
         /// Utility method to get an object reader for embedded messages
         /// </summary>
         /// <returns></returns>
-        public virtual ProtobufReader GetNextMessageReader() => new LenEncodedReader(this._raw, (long)ReadVarint());
+        public virtual ProtobufReader GetNextMessageReader() => new LenEncodedReader(this._raw, (long)ReadVariant());
 
         /// <summary>
         /// Read the next variable sized numeric value from the stream
         /// </summary>
         /// <returns>The raw bytes representing the number</returns>
-        protected virtual ulong ReadVarint()
+        protected virtual ulong ReadVariant()
         {
             var v = 0UL;
 
@@ -410,6 +409,20 @@ namespace Lucent.Common.Protobuf
         /// <returns></returns>
         public virtual async Task<ProtobufReader> GetNextMessageReaderAsync() => new LenEncodedReader(this._raw, (long)await ReadVarintAsync());
 
+
+        /// <summary>
+        /// Utility method to get the raw bytes for the next reader
+        /// </summary>
+        /// <returns></returns>
+        public async Task<byte[]> GetNextReaderBytesAsync()
+        {
+            var buffer = new byte[(int)ReadVariant()];
+            int rem = buffer.Length;
+            while (rem > 0)
+                rem -= await this._raw.ReadAsync(buffer, buffer.Length - rem, rem);
+            return buffer;
+        }
+        
         /// <summary>
         /// Read the next variable sized numeric value from the stream
         /// </summary>

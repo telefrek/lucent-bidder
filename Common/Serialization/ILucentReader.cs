@@ -88,6 +88,12 @@ namespace Lucent.Common.Serialization
         Task<TEnum> NextEnum<TEnum>();
 
         /// <summary>
+        /// Read the next object as a collection of bytes
+        /// </summary>
+        /// <returns></returns>
+        Task<byte[]> NextObjBytes();
+
+        /// <summary>
         /// Skip the next item in the reader asynchronously
         /// </summary>
         /// <returns></returns>

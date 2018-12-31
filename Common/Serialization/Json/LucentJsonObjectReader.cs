@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Lucent.Common.Serialization.Json
 {
@@ -93,6 +94,16 @@ namespace Lucent.Common.Serialization.Json
         /// <inheritdoc/>
         public async Task<TEnum> NextEnum<TEnum>() => (TEnum)Enum.ToObject(typeof(TEnum), (await jsonReader.ReadAsInt32Async()).GetValueOrDefault());
 
+        /// <inheritdoc/>
+        public async Task<byte[]> NextObjBytes()
+        {
+            var obj = await JObject.LoadAsync(jsonReader);
+            if (obj != null)
+                return Encoding.UTF8.GetBytes(obj.ToString(Formatting.None));
+
+            return Encoding.UTF8.GetBytes("{}");
+        }
+        
         /// <inheritdoc/>
         public async Task Skip()
         {

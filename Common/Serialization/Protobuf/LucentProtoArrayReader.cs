@@ -70,6 +70,10 @@ namespace Lucent.Common.Serialization.Protobuf
 
         /// <inheritdoc/>
         public async Task<TEnum> NextEnum<TEnum>() => (TEnum)Enum.ToObject(typeof(TEnum), await protobufReader.ReadInt32Async());
+
+        /// <inheritdoc/>
+        public async Task<byte[]> NextObjBytes() => await protobufReader.GetNextReaderBytesAsync();
+        
         /// <inheritdoc/>
         public async Task Skip() => await protobufReader.SkipAsync();
 
