@@ -27,6 +27,14 @@ namespace Lucent.Common.Serialization
         /// </summary>
         /// <param name="property"></param>
         /// <param name="value"></param>
+        /// <returns></returns>
+        Task WriteAsync(PropertyId property, bool value);
+
+        /// <summary>
+        /// Writes the property and value to the underlying stream with the appropriate format
+        /// </summary>
+        /// <param name="property"></param>
+        /// <param name="value"></param>
         /// <returns></returns>        Task WriteAsync(PropertyId property, uint value);
         Task WriteAsync(PropertyId property, long value);
 
@@ -86,12 +94,6 @@ namespace Lucent.Common.Serialization
         Task<ILucentObjectWriter> CreateObjectWriter(PropertyId property);
 
         /// <summary>
-        /// Cast the current stream as an object writer
-        /// </summary>
-        /// <returns>The current stream as an object writer</returns>
-        Task<ILucentObjectWriter> AsObjectWriter();
-
-        /// <summary>
         /// Create a new array writer
         /// </summary>
         /// <param name="property"></param>
@@ -122,6 +124,12 @@ namespace Lucent.Common.Serialization
     /// </summary>
     public interface ILucentArrayWriter : IDisposable
     {
+        /// <summary>
+        /// Writes the value to the underlying stream with the appropriate format
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        Task WriteAsync(bool value);
 
         /// <summary>
         /// Writes the value to the underlying stream with the appropriate format

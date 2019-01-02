@@ -24,6 +24,16 @@ namespace Lucent.Common.Serialization.Protobuf
         public SerializationFormat Format { get { return SerializationFormat.PROTOBUF; } }
 
         /// <inheritdoc/>
+        public async Task WriteAsync(PropertyId property, bool value)
+        {
+            if (!value.IsNullOrDefault())
+            {
+                await protobufWriter.WriteFieldAsync(property.Id, WireType.VARINT);
+                await protobufWriter.WriteAsync(value);
+            }
+        }
+
+        /// <inheritdoc/>
         public async Task WriteAsync(PropertyId property, int value)
         {
             if (!value.IsNullOrDefault())

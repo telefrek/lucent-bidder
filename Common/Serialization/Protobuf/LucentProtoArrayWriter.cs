@@ -25,6 +25,9 @@ namespace Lucent.Common.Serialization.Protobuf
         }
 
         /// <inheritdoc/>
+        public async Task WriteAsync(bool value) => await protoWriter.WriteAsync(value);
+
+        /// <inheritdoc/>
         public async Task WriteAsync(int value) => await protoWriter.WriteAsync(value);
 
         /// <inheritdoc/>

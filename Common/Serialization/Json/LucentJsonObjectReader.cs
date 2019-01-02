@@ -62,7 +62,7 @@ namespace Lucent.Common.Serialization.Json
                     new PropertyId { Name = (string)jsonReader.Value } : null;
 
         /// <inheritdoc/>
-        public async Task<bool> NextBoolean() => (await jsonReader.ReadAsBooleanAsync()).GetValueOrDefault();
+        public async Task<bool> NextBoolean() => jsonReader.TokenType == JsonToken.Boolean ? (await jsonReader.ReadAsBooleanAsync()).GetValueOrDefault() : (await jsonReader.ReadAsInt32Async()).GetValueOrDefault() == 1;
 
         /// <inheritdoc/>
         public async Task<double> NextDouble() => (await jsonReader.ReadAsDoubleAsync()).GetValueOrDefault();

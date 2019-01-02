@@ -113,7 +113,7 @@ namespace Lucent.Common.Serialization
                         await Write<T>(writer, instance);
                     break;
                 default:
-                    using (var writer = await new LucentJsonWriter(target, leaveOpen).AsObjectWriter())
+                    using (var writer = await target.CreateJsonObjectWriter(leaveOpen))
                         await Write<T>(writer, instance);
                     break;
             }

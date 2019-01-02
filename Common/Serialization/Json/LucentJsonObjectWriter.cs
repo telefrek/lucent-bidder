@@ -11,24 +11,40 @@ namespace Lucent.Common.Serialization.Json
     /// </summary>
     public class LucentJsonObjectWriter : ILucentObjectWriter
     {
-        readonly JsonWriter jsonWriter;
+        readonly JsonWriter _jsonWriter;
+        readonly JsonFormat _format;
 
         /// <summary>
         /// Default constructor
         /// </summary>
-        /// <param name="target"></param>
-        public LucentJsonObjectWriter(JsonWriter target) => jsonWriter = target;
+        /// <param name="jsonWriter"></param>
+        /// <param name="format"></param>
+        public LucentJsonObjectWriter(JsonWriter jsonWriter, JsonFormat format = default(JsonFormat)) 
+        {
+            _jsonWriter = jsonWriter;
+            _format = format;
+        }
 
         /// <inheritdoc/>
         public SerializationFormat Format { get { return SerializationFormat.PROTOBUF; } }
+
+        /// <inheritdoc/>
+        public async Task WriteAsync(PropertyId property, bool value)
+        {
+            if (!value.IsNullOrDefault())
+            {
+                await _jsonWriter.WritePropertyNameAsync(property.Name);
+                await (_format == JsonFormat.OpenRTB ? _jsonWriter.WriteValueAsync(value ? 1 : 0) : _jsonWriter.WriteValueAsync(value));
+            }
+        }
 
         /// <inheritdoc/>
         public async Task WriteAsync(PropertyId property, int value)
         {
             if (!value.IsNullOrDefault())
             {
-                await jsonWriter.WritePropertyNameAsync(property.Name);
-                await jsonWriter.WriteValueAsync(value);
+                await _jsonWriter.WritePropertyNameAsync(property.Name);
+                await _jsonWriter.WriteValueAsync(value);
             }
         }
 
@@ -37,8 +53,8 @@ namespace Lucent.Common.Serialization.Json
         {
             if (!value.IsNullOrDefault())
             {
-                await jsonWriter.WritePropertyNameAsync(property.Name);
-                await jsonWriter.WriteValueAsync(value);
+                await _jsonWriter.WritePropertyNameAsync(property.Name);
+                await _jsonWriter.WriteValueAsync(value);
             }
         }
 
@@ -47,8 +63,8 @@ namespace Lucent.Common.Serialization.Json
         {
             if (!value.IsNullOrDefault())
             {
-                await jsonWriter.WritePropertyNameAsync(property.Name);
-                await jsonWriter.WriteValueAsync(value);
+                await _jsonWriter.WritePropertyNameAsync(property.Name);
+                await _jsonWriter.WriteValueAsync(value);
             }
         }
 
@@ -57,8 +73,8 @@ namespace Lucent.Common.Serialization.Json
         {
             if (!value.IsNullOrDefault())
             {
-                await jsonWriter.WritePropertyNameAsync(property.Name);
-                await jsonWriter.WriteValueAsync(value);
+                await _jsonWriter.WritePropertyNameAsync(property.Name);
+                await _jsonWriter.WriteValueAsync(value);
             }
         }
 
@@ -67,8 +83,8 @@ namespace Lucent.Common.Serialization.Json
         {
             if (!value.IsNullOrDefault())
             {
-                await jsonWriter.WritePropertyNameAsync(property.Name);
-                await jsonWriter.WriteValueAsync(value);
+                await _jsonWriter.WritePropertyNameAsync(property.Name);
+                await _jsonWriter.WriteValueAsync(value);
             }
         }
 
@@ -77,8 +93,8 @@ namespace Lucent.Common.Serialization.Json
         {
             if (!value.IsNullOrDefault())
             {
-                await jsonWriter.WritePropertyNameAsync(property.Name);
-                await jsonWriter.WriteValueAsync(value);
+                await _jsonWriter.WritePropertyNameAsync(property.Name);
+                await _jsonWriter.WriteValueAsync(value);
             }
         }
 
@@ -87,8 +103,8 @@ namespace Lucent.Common.Serialization.Json
         {
             if (!value.IsNullOrDefault())
             {
-                await jsonWriter.WritePropertyNameAsync(property.Name);
-                await jsonWriter.WriteValueAsync(value);
+                await _jsonWriter.WritePropertyNameAsync(property.Name);
+                await _jsonWriter.WriteValueAsync(value);
             }
         }
 
@@ -97,8 +113,8 @@ namespace Lucent.Common.Serialization.Json
         {
             if (!value.IsNullOrDefault())
             {
-                await jsonWriter.WritePropertyNameAsync(property.Name);
-                await jsonWriter.WriteValueAsync(value.EncodeGuid());
+                await _jsonWriter.WritePropertyNameAsync(property.Name);
+                await _jsonWriter.WriteValueAsync(value.EncodeGuid());
             }
         }
 
@@ -107,37 +123,34 @@ namespace Lucent.Common.Serialization.Json
         {
             if (!value.IsNullOrDefault())
             {
-                await jsonWriter.WritePropertyNameAsync(property.Name);
-                await jsonWriter.WriteValueAsync(value.ToFileTimeUtc());
+                await _jsonWriter.WritePropertyNameAsync(property.Name);
+                await _jsonWriter.WriteValueAsync(value.ToFileTimeUtc());
             }
         }
 
         /// <inheritdoc/>
         public async Task<ILucentObjectWriter> CreateObjectWriter(PropertyId property)
         {
-            await jsonWriter.WritePropertyNameAsync(property.Name);
-            await jsonWriter.WriteStartObjectAsync();
-            return new LucentJsonObjectWriter(jsonWriter);
+            await _jsonWriter.WritePropertyNameAsync(property.Name);
+            await _jsonWriter.WriteStartObjectAsync();
+            return new LucentJsonObjectWriter(_jsonWriter);
         }
-
-        /// <inheritdoc/>
-        public Task<ILucentObjectWriter> AsObjectWriter() => Task.FromResult((ILucentObjectWriter)this);
 
         /// <inheritdoc/>
         public async Task<ILucentArrayWriter> CreateArrayWriter(PropertyId property)
         {
-            await jsonWriter.WritePropertyNameAsync(property.Name);
-            await jsonWriter.WriteStartArrayAsync();
-            return new LucentJsonArrayWriter(jsonWriter);
+            await _jsonWriter.WritePropertyNameAsync(property.Name);
+            await _jsonWriter.WriteStartArrayAsync();
+            return new LucentJsonArrayWriter(_jsonWriter);
         }
 
         /// <inheritdoc/>
-        public async Task EndObject() => await jsonWriter.WriteEndObjectAsync();
+        public async Task EndObject() => await _jsonWriter.WriteEndObjectAsync();
 
         /// <inheritdoc/>
         public void Dispose() { }
 
         /// <inheritdoc/>
-        public async Task Flush() => await jsonWriter.FlushAsync();
+        public async Task Flush() => await _jsonWriter.FlushAsync();
     }
 }
