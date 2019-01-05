@@ -1,7 +1,7 @@
 using Lucent.Common.Messaging;
 using Lucent.Common.Serialization;
 
-namespace Lucent.Common.Events
+namespace Lucent.Common.Entities.Events
 {
     /// <summary>
     /// Event specific message

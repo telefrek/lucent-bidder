@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Lucent.Common.Entities;
+using Lucent.Common.Entities.Events;
 using Lucent.Common.Events;
 using Lucent.Common.Messaging;
 using Lucent.Common.Storage;

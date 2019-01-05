@@ -3,6 +3,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Lucent.Common;
 using Lucent.Common.Entities;
+using Lucent.Common.Entities.Events;
 using Lucent.Common.Events;
 using Lucent.Common.Messaging;
 using Lucent.Common.Serialization;

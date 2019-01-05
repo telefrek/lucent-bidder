@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucent.Common.Entities;
+using Lucent.Common.Entities.Events;
 using Lucent.Common.Events;
 using Lucent.Common.Exchanges;
 using Lucent.Common.Filters;

@@ -1,7 +1,8 @@
 using Lucent.Common.Entities;
+using Lucent.Common.Events;
 using Lucent.Common.Serialization;
 
-namespace Lucent.Common.Events
+namespace Lucent.Common.Entities.Events
 {
     /// <summary>
     /// 

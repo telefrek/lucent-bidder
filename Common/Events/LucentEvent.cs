@@ -6,7 +6,7 @@ namespace Lucent.Common.Events
     /// <summary>
     /// Base event
     /// </summary>
-    public class LucentEvent
+    public class LucentEvent : EventArgs
     {
         /// <summary>
         /// Event Id
