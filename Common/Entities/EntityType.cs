@@ -15,5 +15,9 @@ namespace Lucent.Common.Entities
         CreativeContent = 3,
         /// <value></value>
         Exchange = 4,
+        /// <value></value>
+        Ledger = 5,
+        /// <value></value>
+        BidFilter = 6,
     }
 }

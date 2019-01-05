@@ -1,4 +1,5 @@
 using System;
+using Lucent.Common.Entities;
 
 namespace Lucent.Common.Storage
 {
@@ -13,7 +14,7 @@ namespace Lucent.Common.Storage
         /// </summary>
         /// <value></value>
         K Id { get; set; }
-        
+
         /// <summary>
         /// The object ETag for detecting invalid changes
         /// </summary>
@@ -25,5 +26,11 @@ namespace Lucent.Common.Storage
         /// </summary>
         /// <value></value>
         DateTime Updated { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
+        EntityType EntityType { get; set; }
     }
 }

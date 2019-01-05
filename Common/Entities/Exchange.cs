@@ -46,5 +46,8 @@ namespace Lucent.Common.Entities
         /// </summary>
         /// <value></value>
         public MemoryStream Code { get; set; }
+
+        /// <inheritdoc/>
+        public EntityType EntityType { get; set; } = EntityType.Exchange;
     }
 }

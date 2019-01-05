@@ -56,6 +56,9 @@ namespace Lucent.Common.Entities
         /// </summary>
         /// <value></value>
         public DateTime Updated { get; set; }
+
+        /// <inheritdoc/>
+        public EntityType EntityType { get; set; } = EntityType.Ledger;
     }
 
     /// <summary>
