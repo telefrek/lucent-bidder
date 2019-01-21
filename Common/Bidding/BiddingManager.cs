@@ -37,8 +37,15 @@ namespace Lucent.Common.Bidding
             _storageManager = storageManager;
             _messageFactory = messageFactory;
             _bidFactory = bidFactory;
-            _entityEvents = _messageFactory.CreateSubscriber<EntityEventMessage>("bidding", 0, "campaign");
+            _entityEvents = _messageFactory.CreateSubscriber<EntityEventMessage>("bidding", 0, _messageFactory.WildcardFilter);
             _entityEvents.OnReceive = HandleMessage;
+
+            foreach (var campaign in _storageManager.GetBasicRepository<Campaign>().GetAll().Result)
+            {
+                _log.LogInformation("Added bidder for campaign : {0}", campaign.Id);
+                Bidders.Add(_bidFactory.CreateBidder(campaign));
+
+            }
         }
 
         /// <summary>

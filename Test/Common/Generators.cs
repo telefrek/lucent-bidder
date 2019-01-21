@@ -24,7 +24,7 @@ namespace Lucent.Common.Test
                         typeof(Geo).CreateFilter(FilterType.IN, "Country", "USA"),
                     }
                 },
-                Creatives = new List<Creative>()
+                Creatives = new Creative[]
                 {
                     CreativeGenerator.GenerateCreative(),
                 }
@@ -39,7 +39,7 @@ namespace Lucent.Common.Test
             return new Creative
             {
                 Id = "crid1",
-                Contents = new List<CreativeContent>()
+                Contents = new CreativeContent[]
                 {
                     GenerateContent(),
                 }

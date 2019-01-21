@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Lucent.Common.Bootstrap;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -20,9 +21,9 @@ namespace Bidder
         public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
                 .UseKestrel()
-                .UseLibuv(libuvopts =>
+                .UseSockets(socketTransportOptions =>
                 {
-                    libuvopts.ThreadCount = 16;
+                    socketTransportOptions.IOQueueCount = 16;
                 })
                 .ConfigureAppConfiguration((hostingContext, config) =>
                 {
@@ -37,6 +38,6 @@ namespace Bidder
                     logging.AddConsole();
                     logging.AddDebug();
                 })
-                .UseStartup<Startup>();
+                .UseStartup<BidderStartup>();
     }
 }

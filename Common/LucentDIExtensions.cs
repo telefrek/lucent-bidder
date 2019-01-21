@@ -8,6 +8,7 @@ using Lucent.Common.Exchanges;
 using Lucent.Common.Entities;
 using Lucent.Common.Media;
 using Lucent.Common.Entities.Repositories;
+using System;
 
 namespace Lucent.Common
 {
@@ -56,6 +57,7 @@ namespace Lucent.Common
 
                 // Register custom repositories
                 storageManager.RegisterRepository<LedgerEntryRepository, LedgerEntry, LedgerCompositeEntryKey>();
+                storageManager.RegisterRepository<ExchangeEntityRespositry, Exchange, Guid>();
             }
 
             if (includePortal)

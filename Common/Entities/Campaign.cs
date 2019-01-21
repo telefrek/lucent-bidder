@@ -98,7 +98,9 @@ namespace Lucent.Common.Entities
         /// 
         /// </summary>
         /// <returns></returns>
-        public List<Creative> Creatives { get; set; } = new List<Creative>();
+        /// 
+        [SerializationProperty(12, "creatives")]
+        public Creative[] Creatives { get; set; }
 
         /// <summary>
         /// 

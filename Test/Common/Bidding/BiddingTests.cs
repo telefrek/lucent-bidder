@@ -1,12 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Net.Mime;
 using System.Runtime.Loader;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Lucent.Common.Bootstrap;
 using Lucent.Common.Entities;
 using Lucent.Common.Entities.Events;
 using Lucent.Common.Events;
@@ -25,111 +30,99 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Lucent.Common.Bidding
 {
     [TestClass]
-    public class BiddingTests : BaseTestClass
+    public class BiddingTests
     {
-        [TestInitialize]
-        public override void TestInitialize()
-        {
-            var exchangePath = Path.Combine(Directory.GetCurrentDirectory(), "exchanges");
-            if (Directory.Exists(exchangePath))
-                Directory.Delete(exchangePath, true);
-            Directory.CreateDirectory(exchangePath);
+        LucentTestWebHost<OrchestrationStartup> _orchestrationHost;
+        LucentTestWebHost<BidderStartup> _biddingHost;
+        HttpClient _orchestrationClient;
+        HttpClient _biddingClient;
 
-            base.TestInitialize();
+        [TestInitialize]
+        public void TestInitialize()
+        {
+            _orchestrationHost = new LucentTestWebHost<OrchestrationStartup>();
+            _biddingHost = new LucentTestWebHost<BidderStartup>();
+
+            _orchestrationClient = _orchestrationHost.CreateClient();
+            _biddingClient = _biddingHost.CreateClient();
         }
+
+
 
         [TestMethod]
         //[Ignore]
         public async Task TestSuccessfulBid()
         {
-            var serializationContext = ServiceProvider.GetRequiredService<ISerializationContext>();
             await SetupBidderFilters();
             var exchangeId = SequentialGuid.NextGuid();
-            await SetupExchange(exchangeId);
 
             var bid = BidGenerator.GenerateBid();
 
-            var rd = new RequestDelegate(async (hc) => { await Task.CompletedTask; });
+            var serializationContext = _biddingHost.Provider.GetRequiredService<ISerializationContext>();
 
-            var biddingMiddleware = ServiceProvider.CreateInstance<BiddingMiddleware>(rd);
-            Assert.IsNotNull(biddingMiddleware, "Failed to create bidding middleware");
+            // Bid, no campaign or exchange should fail
+            using (var ms = new MemoryStream())
+            {
+                await serializationContext.WriteTo(bid, ms, true, SerializationFormat.JSON);
+                ms.Seek(0, SeekOrigin.Begin);
 
-            var postbackMiddleware = ServiceProvider.CreateInstance<PostbackMiddleware>(rd);
-            Assert.IsNotNull(postbackMiddleware, "Failed to create postback middleware");
-
-            // No campaigns, should fail
-            var httpContext = await SetupContext(bid, exchangeId);
-            await biddingMiddleware.InvokeAsync(httpContext);
-            Assert.AreEqual(204, httpContext.Response.StatusCode, "Invalid status code");
-            Assert.IsFalse(httpContext.Request.Body.CanRead, "Body should have been read and closed");
+                using (var bidContent = new StreamContent(ms, 4096))
+                {
+                    var resp = await _biddingClient.PostAsync("/v1/bidder?exchg={0}".FormatWith(exchangeId), bidContent);
+                    Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
+                }
+            }
 
             var campaign = await SetupCampaign();
 
-            // Campaign setup, but no notification yet
-            httpContext = await SetupContext(bid, exchangeId);
-            await biddingMiddleware.InvokeAsync(httpContext);
-            Assert.AreEqual(204, httpContext.Response.StatusCode, "Invalid status code");
-            Assert.IsFalse(httpContext.Request.Body.CanRead, "Body should have been read and closed");
-
-            var messageFactory = ServiceProvider.GetRequiredService<IMessageFactory>();
-            var publisher = messageFactory.CreatePublisher("bidding");
-
-            var msg = messageFactory.CreateMessage<EntityEventMessage>();
-            msg.Body = new EntityEvent
+            // Bid again, should be failed
+            using (var ms = new MemoryStream())
             {
-                EntityType = EntityType.Campaign,
-                EntityId = campaign.Id,
-                EventType = EventType.EntityAdd
-            };
+                await serializationContext.WriteTo(bid, ms, true, SerializationFormat.JSON);
+                ms.Seek(0, SeekOrigin.Begin);
 
-            msg.Route = "campaign";
-            msg.ContentType = "application/x-protobuf";
+                using (var bidContent = new StreamContent(ms, 4096))
+                {
+                    var resp = await _biddingClient.PostAsync("/v1/bidder?exchg={0}".FormatWith(exchangeId), bidContent);
+                    Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
+                }
+            }
 
-            Assert.IsTrue(await publisher.TryBroadcast(msg), "Failed to broadcast update");
+            await SetupExchange(exchangeId);
 
             // Let the campaign reload
             await Task.Delay(500);
 
-            // Now we should get a bid
-            httpContext = await SetupContext(bid, exchangeId);
-            await biddingMiddleware.InvokeAsync(httpContext);
-            Assert.AreEqual(200, httpContext.Response.StatusCode, "Invalid status code");
-            Assert.IsFalse(httpContext.Request.Body.CanRead, "Request body should have been read and closed");
-            Assert.IsTrue(httpContext.Response.Body.CanRead, "Response body should be readable");
+            // Bid again, should succeed
+            using (var ms = new MemoryStream())
+            {
+                await serializationContext.WriteTo(bid, ms, true, SerializationFormat.JSON);
+                ms.Seek(0, SeekOrigin.Begin);
 
-            // Verify the response
-            var bidResponse = await VerifyBidResponse(httpContext, serializationContext, campaign);
+                using (var bidContent = new StreamContent(ms, 4096))
+                {
+                    var resp = await _biddingClient.PostAsync("/v1/bidder?exchg={0}".FormatWith(exchangeId), bidContent);
+                    Assert.AreEqual(HttpStatusCode.OK, resp.StatusCode);
 
-            // Simulate win/loss
-            var winBid = bidResponse.Bids.First().Bids.First();
-            var billContext = await SetupBillContext(winBid);
+                    // Verify the response
+                    var bidResponse = await VerifyBidResponse(resp, serializationContext, campaign);
+                    Assert.IsNotNull(bidResponse);
+                }
+            }
 
-            await postbackMiddleware.HandleAsync(billContext);
-            Assert.AreEqual(200, httpContext.Response.StatusCode);
 
             // Ensure we filter out an invalid bid
             bid.Impressions.First().Banner.H = 101;
-            httpContext = await SetupContext(bid, exchangeId);
-            await biddingMiddleware.InvokeAsync(httpContext);
-            Assert.AreEqual(204, httpContext.Response.StatusCode, "Invalid status code");
-            Assert.IsFalse(httpContext.Request.Body.CanRead, "Request body should have been read and closed");
 
             // Ensure we filter out a global bid
             bid.Impressions.First().Banner.H = 100;
             bid.Site = new Site { Domain = "telefrek.com" };
-            httpContext = await SetupContext(bid, exchangeId);
-            await biddingMiddleware.InvokeAsync(httpContext);
-            Assert.AreEqual(204, httpContext.Response.StatusCode, "Invalid status code");
-            Assert.IsFalse(httpContext.Request.Body.CanRead, "Request body should have been read and closed");
+
         }
 
-        async Task<BidResponse> VerifyBidResponse(HttpContext httpContext, ISerializationContext serializationContext, Campaign campaign)
+        async Task<BidResponse> VerifyBidResponse(HttpResponseMessage responseMessage, ISerializationContext serializationContext, Campaign campaign)
         {
-            httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
-
-            var contents = Encoding.UTF8.GetString((httpContext.Response.Body as MemoryStream).ToArray());
-
-            var response = await serializationContext.ReadFrom<BidResponse>(httpContext.Response.Body, false, SerializationFormat.JSON);
+            var response = await serializationContext.ReadFrom<BidResponse>(await responseMessage.Content.ReadAsStreamAsync(), false, SerializationFormat.JSON);
             Assert.IsNotNull(response, "Bid response should not be null");
             Assert.IsNotNull(response.Bids, "Bids should be present");
             var seatBid = response.Bids.First();
@@ -143,7 +136,7 @@ namespace Lucent.Common.Bidding
 
         async Task SetupBidderFilters()
         {
-            var fiters = ServiceProvider.GetRequiredService<IStorageManager>().GetRepository<BidderFilter, string>();
+            var fiters = _biddingHost.Provider.GetRequiredService<IStorageManager>().GetRepository<BidderFilter, string>();
             Assert.IsTrue(await fiters.TryInsert(new BidderFilter
             {
                 Id = SequentialGuid.NextGuid().ToString(),
@@ -154,143 +147,73 @@ namespace Lucent.Common.Bidding
             }));
         }
 
-        async Task<HttpContext> SetupContext(BidRequest bid, Guid exchangeId)
-        {
-            var httpContext = new DefaultHttpContext();
-            httpContext.Request.Body = new MemoryStream();
-            httpContext.Request.Host = new HostString("localhost");
-            httpContext.Request.Scheme = "https";
-            httpContext.Request.Path = "/v1/bidder";
-            httpContext.Request.QueryString = new QueryString("?exchg={0}".FormatWith(exchangeId));
-
-            var serializationContext = ServiceProvider.GetRequiredService<ISerializationContext>();
-            await serializationContext.WriteTo(bid, httpContext.Request.Body, true, SerializationFormat.JSON);
-            httpContext.Request.Body.Seek(0, SeekOrigin.Begin);
-            httpContext.Request.ContentType = MediaTypeNames.Application.Json;
-
-            httpContext.Response.Body = new MemoryStream();
-
-            return httpContext;
-        }
-
-        async Task<HttpContext> SetupWinContext(Bid bid)
-        {
-            Uri uri;
-            Uri.TryCreate(bid.WinUrl, UriKind.Absolute, out uri);
-
-            var httpContext = new DefaultHttpContext();
-            httpContext.Request.ContentType = MediaTypeNames.Application.Json;
-
-            httpContext.Request.Host = new HostString(uri.Host);
-            httpContext.Request.Scheme = uri.Scheme;
-            httpContext.Request.Path = uri.AbsolutePath;
-            httpContext.Request.QueryString = new QueryString(uri.Query);
-
-            return await Task.FromResult(httpContext);
-        }
-
-        async Task<HttpContext> SetupBillContext(Bid bid)
-        {
-            Uri uri;
-            Uri.TryCreate(bid.BillingUrl, UriKind.Absolute, out uri);
-
-            var httpContext = new DefaultHttpContext();
-            httpContext.Request.ContentType = MediaTypeNames.Application.Json;
-
-            httpContext.Request.Host = new HostString(uri.Host);
-            httpContext.Request.Scheme = uri.Scheme;
-            httpContext.Request.Path = uri.AbsolutePath;
-            httpContext.Request.QueryString = new QueryString(uri.Query);
-
-            return await Task.FromResult(httpContext);
-        }
-
-        async Task<HttpContext> SetupLossContext(Bid bid)
-        {
-            Uri uri;
-            Uri.TryCreate(bid.LossUrl, UriKind.Absolute, out uri);
-
-            var httpContext = new DefaultHttpContext();
-            httpContext.Request.ContentType = MediaTypeNames.Application.Json;
-
-            httpContext.Request.Host = new HostString(uri.Host);
-            httpContext.Request.Scheme = uri.Scheme;
-            httpContext.Request.Path = uri.AbsolutePath;
-            httpContext.Request.QueryString = new QueryString(uri.Query);
-
-            return await Task.FromResult(httpContext);
-        }
-
         async Task SetupExchange(Guid id)
         {
-            var registry = ServiceProvider.GetRequiredService<IExchangeRegistry>();
-            await registry.Initialize();
-            var exchangePath = Path.Combine(Directory.GetCurrentDirectory(), "exchanges");
             var target = Path.Combine(Directory.GetCurrentDirectory(), "SimpleExchange.dll");
             Assert.IsTrue(File.Exists(target), "Corrupt test environment");
 
-            var manager = ServiceProvider.GetRequiredService<IStorageManager>();
-            var repo = manager.GetRepository<Exchange, Guid>();
             var entity = new Exchange
             {
                 Name = "test",
                 Id = id,
-                Code = new MemoryStream(await File.ReadAllBytesAsync(target)),
                 LastCodeUpdate = DateTime.UtcNow,
             };
 
-            var res = await repo.TryInsert(entity);
-            Assert.IsTrue(res, "Failed to create exchange");
-            var pub = ServiceProvider.GetRequiredService<IMessageFactory>().CreatePublisher("exchanges");
-            var msg = ServiceProvider.GetRequiredService<IMessageFactory>().CreateMessage<EntityEventMessage>();
-
-            var asm = AssemblyLoadContext.Default.LoadFromStream(entity.Code);
-            if (asm != null)
+            using (var client = _orchestrationHost.CreateClient())
             {
-                var exchgType = asm.GetTypes().FirstOrDefault(t => typeof(AdExchange).IsAssignableFrom(t));
-                if (exchgType != null)
+                var context = _orchestrationHost.Provider.GetRequiredService<ISerializationContext>();
+
+                using (var ms = new MemoryStream())
                 {
-                    var exchg = ServiceProvider.CreateInstance(exchgType) as AdExchange;
-                    if (exchg != null)
+                    await context.WriteTo(entity, ms, true, SerializationFormat.JSON);
+                    ms.Seek(0, SeekOrigin.Begin);
+
+                    using (var content =
+                        new StreamContent(ms, 4092))
                     {
-                        exchg.ExchangeId = (Guid)(object)entity.Id;
-                        await exchg.Initialize(ServiceProvider);
-                        entity.Instance = exchg;
+                        content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+
+                        var resp = await client.PostAsync("/api/exchanges", content);
+                        Assert.AreEqual(HttpStatusCode.Created, resp.StatusCode);
+                    }
+                }
+
+                using (var content =
+                    new MultipartFormDataContent("Upload----" + DateTime.Now.ToString(CultureInfo.InvariantCulture)))
+                {
+                    content.Add(new StreamContent(File.OpenRead(target)), "exchange", "simple.dll");
+
+                    using (
+                       var message =
+                           await client.PutAsync("/api/exchanges/{0}".FormatWith(id), content))
+                    {
+                        Assert.AreEqual(HttpStatusCode.Accepted, message.StatusCode);
                     }
                 }
             }
-
-            msg.Body = new EntityEvent
-            {
-                EntityId = id.ToString(),
-                EventType = EventType.EntityAdd,
-                EntityType = EntityType.Exchange,
-            };
-            msg.Route = "update";
-            Assert.IsTrue(await pub.TryBroadcast(msg), "failed to broadcast message");
-
-            for (var i = 0; i < 10; ++i)
-            {
-                if (registry.HasExchange(id))
-                    return;
-                await Task.Delay(250);
-            }
-
-            Assert.Fail("Failed to load the exchange");
         }
 
         async Task<Campaign> SetupCampaign()
         {
-            var campaigns = ServiceProvider.GetRequiredService<IStorageManager>().GetBasicRepository<Campaign>();
-            var camp = CampaignGenerator.GenerateCampaign();
-            Assert.IsTrue(await campaigns.TryInsert(camp), "Failed to insert campaign");
+            var entity = CampaignGenerator.GenerateCampaign();
+            var context = _orchestrationHost.Provider.GetRequiredService<ISerializationContext>();
 
-            return camp;
-        }
+            using (var ms = new MemoryStream())
+            {
+                await context.WriteTo(entity, ms, true, SerializationFormat.JSON);
+                ms.Seek(0, SeekOrigin.Begin);
 
-        protected override void InitializeDI(IServiceCollection services)
-        {
-            services.AddLucentServices(Configuration, localOnly: true, includeBidder: true);
+                using (var content =
+                    new StreamContent(ms, 4092))
+                {
+                    content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+
+                    var resp = await _orchestrationClient.PostAsync("/api/campaigns", content);
+                    Assert.AreEqual(HttpStatusCode.Created, resp.StatusCode);
+                }
+            }
+
+            return entity;
         }
     }
 }

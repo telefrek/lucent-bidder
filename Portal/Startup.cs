@@ -1,24 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Lucent.Portal.Data;
-using System.Threading;
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Telefrek.LDAP;
-using Lucent.Portal.Hubs;
-using Microsoft.AspNetCore.Routing;
-using System.IO;
-using Newtonsoft.Json;
+using Lucent.Common.Hubs;
 using Lucent.Common;
-using Lucent.Common.Messaging;
-using Newtonsoft.Json.Linq;
 using Prometheus;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
@@ -28,15 +16,13 @@ using Lucent.Portal;
 
 namespace Portal
 {
-    public class Startup
+    public class PortalStartup
     {
-        public Startup(IConfiguration configuration, IHostingEnvironment env)
+        public PortalStartup(IConfiguration configuration, IHostingEnvironment env)
         {
             Configuration = configuration;
             HostingEnvironment = env;
         }
-
-        IMessageSubscriber<LucentMessage> _sub;
 
         public IConfiguration Configuration { get; }
         public IHostingEnvironment HostingEnvironment { get; }
@@ -52,15 +38,13 @@ namespace Portal
             });
 
             services.AddMediaScanner(Configuration);
-            services.AddDbContext<PortalDbContext>(options =>
-                              options.UseInMemoryDatabase("local"));
-
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
 
             services.AddMvc().AddRazorOptions(options =>
             {
                 options.PageViewLocationFormats.Add("/Pages/Partials/{0}.cshtml");
             });
+
             services.AddAntiforgery(o => o.HeaderName = "XSRF-TOKEN");
 
             services.AddScoped<ICampaignUpdateContext, CampaignUpdateContext>();
@@ -120,19 +104,6 @@ namespace Portal
             {
                 routes.MapHub<CampaignHub>("/campaignHub");
             });
-
-            _sub = app.ApplicationServices.GetRequiredService<IMessageFactory>().CreateSubscriber<LucentMessage>("campaigns", 0);
-            _sub.OnReceive = async (m) =>
-            {
-                if (m != null)
-                {
-                    dynamic obj = JObject.Parse(m.Body);
-                    var id = Guid.Parse((string)obj.id);
-                    var amt = (double)obj.amount;
-
-                    await app.ApplicationServices.CreateScope().ServiceProvider.GetService<ICampaignUpdateContext>().UpdateCampaignSpendAsync(id, amt, CancellationToken.None);
-                }
-            };
         }
     }
 }

@@ -23,7 +23,7 @@ namespace Lucent.Common.Messaging
             _serializationContext = serializationContext;
         }
 
-        Dictionary<string, InMemoryQueue> _queues = new Dictionary<string, InMemoryQueue>();
+        static Dictionary<string, InMemoryQueue> _queues = new Dictionary<string, InMemoryQueue>();
 
         /// <inheritdoc/>
         public string WildcardFilter => "*";
@@ -136,13 +136,16 @@ namespace Lucent.Common.Messaging
 
             public async Task<bool> TryPublish(IMessage message)
             {
-                foreach (dynamic sub in _queue.Subscribers)
+                foreach (dynamic sub in _queue.Subscribers.ToList())
                 {
                     if (sub.Filter != null && message.Route != null && !Regex.IsMatch(message.Route, "^" + Regex.Escape(sub.Filter.Replace("#", "*")).Replace("\\?", ".").Replace("\\*", ".*") + "$"))
                         continue;
 
                     else if (sub.OnReceive != null)
-                        sub.OnReceive.Method.Invoke(sub.OnReceive.Target, new object[] { message });
+                    {
+                        if (sub.OnReceive.Method.GetParameters()[0].ParameterType.IsAssignableFrom(message.GetType()))
+                            sub.OnReceive.Method.Invoke(sub.OnReceive.Target, new object[] { message });
+                    }
                 }
 
                 return await Task.FromResult(true);

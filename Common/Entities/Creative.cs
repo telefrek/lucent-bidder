@@ -46,7 +46,7 @@ namespace Lucent.Common.Entities
         /// </summary>
         /// <returns></returns>
         [SerializationProperty(5, "contents")]
-        public List<CreativeContent> Contents { get; set; } = new List<CreativeContent>();
+        public CreativeContent[] Contents { get; set; }
 
         /// <summary>
         /// 

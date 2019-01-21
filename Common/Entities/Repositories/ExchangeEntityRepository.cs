@@ -205,32 +205,16 @@ namespace Lucent.Common.Entities.Repositories
             {
                 var contents = row.GetValue<byte[]>("code");
                 if (contents != null)
-                    using (var ms = new MemoryStream(contents))
+                    try
                     {
-                        try
-                        {
-                            var asm = AssemblyLoadContext.Default.LoadFromStream(ms);
-                            if (asm != null)
-                            {
-                                var exchgType = asm.GetTypes().FirstOrDefault(t => typeof(AdExchange).IsAssignableFrom(t));
-                                if (exchgType != null)
-                                {
-                                    _log.LogInformation("Creating exchange type : {0}", exchgType.FullName);
-                                    var exchg = _provider.CreateInstance(exchgType) as AdExchange;
-                                    if (exchg != null)
-                                    {
-                                        exchg.ExchangeId = (Guid)(object)instance.Id; // <-- this is proof something is ugly with this code...
-                                        _log.LogInformation("Loaded {0} ({1})", exchg.Name, exchg.ExchangeId);
-                                        await exchg.Initialize(_provider);
-                                        (instance as Exchange).Instance = exchg;
-                                    }
-                                }
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            _log.LogError(e, "Failed to load exchange : {0}", instance.Id);
-                        }
+                        var exchange = ((Exchange)(object)instance);
+                        await exchange.LoadExchange(_provider, contents);
+                        if (exchange.Instance != null)
+                            _log.LogInformation("Loaded {0} ({1})", exchange.Instance.Name, exchange.Id);
+                    }
+                    catch (Exception e)
+                    {
+                        _log.LogError(e, "Failed to load exchange : {0}", instance.Id);
                     }
             }
 

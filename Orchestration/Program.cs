@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using Lucent.Common.Bootstrap;
+using Lucent.Common;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 
 namespace Orchestration
 {
@@ -19,6 +15,9 @@ namespace Orchestration
 
         public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
-                .UseStartup<Startup>();
+            .ConfigureServices(services =>
+            {
+                services.AddLucentServices(new ConfigurationBuilder().Build(), includeOrchestration: true);
+            }).UseStartup<OrchestrationStartup>();
     }
 }

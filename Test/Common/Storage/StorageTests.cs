@@ -30,7 +30,7 @@ namespace Lucent.Common.Storage.Test
 
         protected override void InitializeDI(IServiceCollection services)
         {
-            services.AddLucentServices(Configuration, localOnly:true);
+            services.AddLucentServices(Configuration, localOnly: true);
         }
 
         [TestMethod]
@@ -46,12 +46,13 @@ namespace Lucent.Common.Storage.Test
             Assert.IsNull(res, "No object should be returned");
             var tObj = new Creative { Id = Guid.NewGuid().ToString(), Name = "item" };
 
-            tObj.Contents.Add(new CreativeContent {
+            tObj.Contents = new CreativeContent[]{
+                new CreativeContent {
                 CreativeUri = "https://google.com/mycreative",
                 ContentLocation = "/mnt/somepath",
                 RawUri = "https://google.com/rawcreative",
                 Duration = 100
-            });
+            }};
 
             var success = await testRepo.TryInsert(tObj);
             Assert.IsTrue(success);
@@ -59,7 +60,7 @@ namespace Lucent.Common.Storage.Test
             res = await testRepo.Get(tObj.Id);
             Assert.IsNotNull(res);
             Assert.AreEqual(tObj.Id, res.Id, "mismatch id");
-            Assert.AreEqual(tObj.Contents.Count, 1, "mismatch count");
+            Assert.AreEqual(tObj.Contents.Length, 1, "mismatch count");
             Assert.AreEqual(tObj.Contents[0].Duration, 100, "bad duration");
 
             tObj.Name = "Updated";

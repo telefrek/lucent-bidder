@@ -1,4 +1,6 @@
+using System;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Lucent.Common;
@@ -9,36 +11,40 @@ using Lucent.Common.Messaging;
 using Lucent.Common.Serialization;
 using Lucent.Common.Storage;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
+using Microsoft.Net.Http.Headers;
 
-namespace Lucent.Orchestration
+namespace Lucent.Common.Middleware
 {
     /// <summary>
-    /// Handle Campaign API management
+    /// Handle Exxchange API management
     /// </summary>
-    public class CampaignOrchestrator
+    public class ExchangeOrchestrator
     {
         readonly IStorageManager _storageManager;
         readonly ISerializationContext _serializationContext;
-        readonly ILogger<CampaignOrchestrator> _logger;
-        readonly IBasicStorageRepository<Campaign> _campaignRepository;
+        readonly ILogger<ExchangeOrchestrator> _logger;
+        readonly IStorageRepository<Exchange, Guid> _exchangeRepository;
         readonly IMessageFactory _messageFactory;
 
         /// <summary>
         /// Default constructor
         /// </summary>
+        /// <param name="next"></param>
         /// <param name="storageManager"></param>
+        /// <param name="messageFactory"></param>
         /// <param name="serializationContext"></param>
         /// <param name="logger"></param>
-        public CampaignOrchestrator(RequestDelegate next, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<CampaignOrchestrator> logger)
+        public ExchangeOrchestrator(RequestDelegate next, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<ExchangeOrchestrator> logger)
         {
             _storageManager = storageManager;
-            _campaignRepository = storageManager.GetBasicRepository<Campaign>();
+            _exchangeRepository = storageManager.GetRepository<Exchange, Guid>();
             _serializationContext = serializationContext;
             _messageFactory = messageFactory;
             _logger = logger;
 
-            _messageFactory.CreateSubscriber<LucentMessage<Campaign>>("entities", 0, "campaign").OnReceive += UpdateCampaigns;
+            _messageFactory.CreateSubscriber<LucentMessage<Exchange>>("entities", 0, "exchange").OnReceive += UpdateExchanges;
         }
 
         /// <summary>
@@ -46,22 +52,22 @@ namespace Lucent.Orchestration
         /// </summary>
         /// <param name="campaignEvent"></param>
         /// <returns></returns>
-        async Task UpdateCampaigns(LucentMessage<Campaign> campaignEvent)
+        async Task UpdateExchanges(LucentMessage<Exchange> campaignEvent)
         {
             if (campaignEvent.Body != null)
             {
                 var evt = new EntityEvent
                 {
                     EntityType = EntityType.Campaign,
-                    EntityId = campaignEvent.Body.Id,
+                    EntityId = campaignEvent.Body.Id.ToString(),
                 };
 
                 // This is awful, don't do this for real
-                if (await _campaignRepository.TryUpdate(campaignEvent.Body))
+                if (await _exchangeRepository.TryUpdate(campaignEvent.Body))
                     evt.EventType = EventType.EntityUpdate;
-                else if (await _campaignRepository.TryInsert(campaignEvent.Body))
+                else if (await _exchangeRepository.TryInsert(campaignEvent.Body))
                     evt.EventType = EventType.EntityAdd;
-                else if (await _campaignRepository.TryRemove(campaignEvent.Body))
+                else if (await _exchangeRepository.TryRemove(campaignEvent.Body))
                     evt.EventType = EventType.EntityDelete;
 
                 // Notify
@@ -69,7 +75,7 @@ namespace Lucent.Orchestration
                 {
                     var msg = _messageFactory.CreateMessage<EntityEventMessage>();
                     msg.Body = evt;
-                    msg.Route = "campaign";
+                    msg.Route = "exchange";
                     using (var ms = new MemoryStream())
                     {
                         await _serializationContext.WriteTo(evt, ms, true, SerializationFormat.JSON);
@@ -81,6 +87,42 @@ namespace Lucent.Orchestration
             }
         }
 
+        async Task<Exchange> ReadExchange(HttpContext httpContext)
+        {
+            Exchange exchange = null;
+
+            if (httpContext.Request.ContentType.Contains("multipart"))
+            {
+                // /api/exchanges/id
+                exchange = await _exchangeRepository.Get(Guid.Parse(httpContext.Request.Path.Value.Split("/").Last()));
+                if (exchange != null)
+                {
+                    var header = MediaTypeHeaderValue.Parse(httpContext.Request.ContentType);
+                    var boundary = HeaderUtilities.RemoveQuotes(header.Boundary).Value;
+                    var reader = new MultipartReader(boundary, httpContext.Request.Body);
+
+                    var section = await reader.ReadNextSectionAsync();
+                    if (section != null)
+                    {
+                        ContentDispositionHeaderValue contentDisposition;
+                        if (ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out contentDisposition))
+                        {
+                            exchange.Code = new MemoryStream();
+                            await httpContext.Request.Body.CopyToAsync(exchange.Code);
+                            exchange.Code.Seek(0, SeekOrigin.Begin);
+                            exchange.LastCodeUpdate = DateTime.UtcNow;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                exchange = await _serializationContext.ReadAs<Exchange>(httpContext);
+            }
+
+            return exchange;
+        }
+
 
         /// <summary>
         /// Handle the call asynchronously
@@ -89,40 +131,41 @@ namespace Lucent.Orchestration
         /// <returns></returns>
         public async Task InvokeAsync(HttpContext httpContext)
         {
-            var c = await _serializationContext.ReadAs<Campaign>(httpContext);
-            if (c != null)
+            var exchange = await ReadExchange(httpContext);
+            if (exchange != null)
             {
                 // Validate
                 var evt = new EntityEvent
                 {
-                    EntityType = EntityType.Campaign,
-                    EntityId = c.Id,
+                    EntityType = EntityType.Exchange,
+                    EntityId = exchange.Id.ToString(),
                 };
 
                 switch (httpContext.Request.Method.ToLowerInvariant())
                 {
                     case "post":
-                        if (await _campaignRepository.TryInsert(c))
+                        if (await _exchangeRepository.TryInsert(exchange))
                         {
+                            httpContext.Response.StatusCode = 201;
                             evt.EventType = EventType.EntityAdd;
-                            evt.EntityId = c.Id;
-                            await _serializationContext.WriteTo(httpContext, c);
+                            await _serializationContext.WriteTo(httpContext, exchange);
                         }
                         else
                             httpContext.Response.StatusCode = 409;
                         break;
                     case "put":
                     case "patch":
-                        if (await _campaignRepository.TryUpdate(c))
+                        if (await _exchangeRepository.TryUpdate(exchange))
                         {
+                            httpContext.Response.StatusCode = 202;
                             evt.EventType = EventType.EntityUpdate;
-                            await _serializationContext.WriteTo(httpContext, c);
+                            await _serializationContext.WriteTo(httpContext, exchange);
                         }
                         else
                             httpContext.Response.StatusCode = 409;
                         break;
                     case "delete":
-                        if (await _campaignRepository.TryRemove(c))
+                        if (await _exchangeRepository.TryRemove(exchange))
                         {
                             evt.EventType = EventType.EntityDelete;
                             httpContext.Response.StatusCode = 204;
@@ -137,7 +180,7 @@ namespace Lucent.Orchestration
                 {
                     var msg = _messageFactory.CreateMessage<EntityEventMessage>();
                     msg.Body = evt;
-                    msg.Route = "campaign";
+                    msg.Route = "exchange";
                     using (var ms = new MemoryStream())
                     {
                         await _serializationContext.WriteTo(evt, ms, true, SerializationFormat.JSON);
@@ -146,9 +189,9 @@ namespace Lucent.Orchestration
 
                     await _messageFactory.CreatePublisher("bidding").TryPublish(msg);
 
-                    var sync = _messageFactory.CreateMessage<LucentMessage<Campaign>>();
-                    sync.Body = c;
-                    sync.Route = "campaign";
+                    var sync = _messageFactory.CreateMessage<LucentMessage<Exchange>>();
+                    sync.Body = exchange;
+                    sync.Route = "exchange";
                     using (var ms = new MemoryStream())
                     {
                         await _serializationContext.WriteTo(evt, ms, true, SerializationFormat.JSON);

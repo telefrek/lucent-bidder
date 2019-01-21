@@ -57,9 +57,6 @@ namespace Lucent.Common.Middleware
             _storageManager = storageManager;
             _bidFilters = _storageManager.GetRepository<BidderFilter, string>().GetAll().Result.Where(f => f.BidFilter != null).Select(f => f.BidFilter.GenerateCode()).ToList();
             _messageFactory = messageFactory;
-
-            // Let's listen for events...
-            _messageFactory.CreateSubscriber<EntityEventMessage>("bidding", 0, "#").OnReceive += TrackEntities;
         }
 
         /// <summary>
@@ -81,14 +78,14 @@ namespace Lucent.Common.Middleware
                 case EventType.EntityUpdate:
                     switch (entityEvent.Body.EntityType)
                     {
-                        case EntityType.Campaign:
-                            var campaign = await _storageManager.GetBasicRepository<Campaign>().Get(entityEvent.Body.EntityId);
-                            if (campaign != null)
+                        case EntityType.Exchange:
+                            var exchange = await _storageManager.GetRepository<Exchange, Guid>().Get(Guid.Parse(entityEvent.Body.EntityId));
+                            if (exchange != null)
                             {
                                 using (var ms = new MemoryStream())
                                 {
-                                    await _serializationContext.WriteTo(campaign, ms, true, SerializationFormat.JSON);
-                                    _log.LogInformation("Received Campaign:\n{0}", Encoding.UTF8.GetString(ms.ToArray()));
+                                    await _serializationContext.WriteTo(exchange, ms, true, SerializationFormat.JSON);
+                                    _log.LogInformation("Received Exchange:\n{0}", Encoding.UTF8.GetString(ms.ToArray()));
                                 }
                             }
                             break;
@@ -128,8 +125,8 @@ namespace Lucent.Common.Middleware
 
                 if (response != null && (response.Bids ?? new SeatBid[0]).Length > 0)
                 {
-                    await _serializationContext.WriteTo(httpContext, response);
                     httpContext.Response.StatusCode = StatusCodes.Status200OK;
+                    await _serializationContext.WriteTo(httpContext, response);
                 }
                 else
                     httpContext.Response.StatusCode = StatusCodes.Status204NoContent;

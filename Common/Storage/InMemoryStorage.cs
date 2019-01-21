@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Lucent.Common.Entities;
 
 namespace Lucent.Common.Storage
 {
@@ -10,8 +11,15 @@ namespace Lucent.Common.Storage
     /// </summary>
     public class InMemoryStorage : IStorageManager
     {
-        Dictionary<Type, object> _entities = new Dictionary<Type, object>();
-        object _syncLock = new object();
+        static Dictionary<Type, object> _entities = new Dictionary<Type, object>();
+        static object _syncLock = new object();
+        IServiceProvider _provider;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="provider"></param>
+        public InMemoryStorage(IServiceProvider provider) => _provider = provider;
 
         /// <inheritdoc />
         public IStorageRepository<T, K> GetRepository<T, K>()
@@ -29,7 +37,7 @@ namespace Lucent.Common.Storage
                     return obj as IStorageRepository<T, K>;
                 }
 
-                return new InMemoryRepository<T, K>
+                return new InMemoryRepository<T, K>(_provider)
                 {
                     Entities = _entities[typeof(T)] as List<T>,
                 };
@@ -47,6 +55,14 @@ namespace Lucent.Common.Storage
         /// <inheritdoc />
         public class InMemoryRepository<T, K> : IStorageRepository<T, K> where T : IStorageEntity<K>
         {
+            IServiceProvider _provider;
+
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="provider"></param>
+            public InMemoryRepository(IServiceProvider provider) => _provider = provider;
+
             /// <summary>
             /// List of entities available
             /// </summary>
@@ -57,7 +73,21 @@ namespace Lucent.Common.Storage
             public Task<ICollection<T>> GetAll() => Task.FromResult((ICollection<T>)Entities);
 
             /// <inheritdoc />
-            public Task<T> Get(K key) => Task.FromResult(Entities.FirstOrDefault(e => e.Id.Equals(key)));
+            public async Task<T> Get(K key)
+            {
+                var instance = Entities.FirstOrDefault(e => e.Id.Equals(key));
+                if (typeof(Exchange).IsAssignableFrom(typeof(T)))
+                {
+                    var exchange = (Exchange)(object)instance;
+                    if (exchange.Code != null)
+                    {
+                        await exchange.LoadExchange(_provider, exchange.Code.ToArray());
+                        exchange.Code = null;
+                    }
+                }
+
+                return instance;
+            }
 
 
             /// <inheritdoc />

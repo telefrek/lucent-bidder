@@ -64,7 +64,7 @@ namespace Lucent.Portal.Models
             CreativeCatalog = (await _creativeDb.GetAll()).ToList();
             if(creative != null)
             {
-                Campaign.Creatives.Remove(creative);
+                //Campaign.Creatives.Remove(creative);
                 _log.LogInformation("Updating campaign");
                 if(await _campaignDb.TryUpdate(Campaign))
                 {
@@ -85,7 +85,7 @@ namespace Lucent.Portal.Models
             CreativeCatalog = (await _creativeDb.GetAll()).ToList();
             if(creative != null)
             {
-                Campaign.Creatives.Add(creative);
+                //Campaign.Creatives.Add(creative);
                 _log.LogInformation("Updating campaign");
                 if(await _campaignDb.TryUpdate(Campaign))
                 {

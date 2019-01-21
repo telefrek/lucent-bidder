@@ -59,7 +59,11 @@ namespace Lucent.Common.Bidding
             foreach (var imp in request.Impressions)
             {
                 // Get the potential matches
-                var matches = _campaign.Creatives.SelectMany(c => c.Contents.Where(cc => !cc.Filter(imp)).Select(cc => new BidMatch { Impression = imp, Campaign = _campaign, Creative = c, Content = cc })).ToList();
+                var matches = _campaign.Creatives.SelectMany(c => c.Contents.Where(cc =>
+                {
+                    cc.HydrateFilter();
+                    return !cc.Filter(imp);
+                }).Select(cc => new BidMatch { Impression = imp, Campaign = _campaign, Creative = c, Content = cc })).ToList();
 
                 allMatched &= matches.Count > 0;
                 impList.AddRange(matches);
