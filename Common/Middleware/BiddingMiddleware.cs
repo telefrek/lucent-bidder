@@ -32,6 +32,7 @@ namespace Lucent.Common.Middleware
         IMessageFactory _messageFactory;
         IExchangeRegistry _exchangeRegistry;
         IStorageManager _storageManager;
+        UpdatingCollection<BidderFilter, string> _bidFiltersCollection;
         List<Func<BidRequest, bool>> _bidFilters;
         RequestDelegate _nextHandler;
         Histogram _serializerTiming = Metrics.CreateHistogram("serializer_latency", "Latency for each bidder call", new HistogramConfiguration
@@ -55,8 +56,20 @@ namespace Lucent.Common.Middleware
             _serializationContext = serializationContext;
             _exchangeRegistry = exchangeRegistry;
             _storageManager = storageManager;
-            _bidFilters = _storageManager.GetRepository<BidderFilter, string>().GetAll().Result.Where(f => f.BidFilter != null).Select(f => f.BidFilter.GenerateCode()).ToList();
+            _bidFiltersCollection = new UpdatingCollection<BidderFilter, string>(messageFactory, storageManager, EntityType.BidFilter);
+            _bidFiltersCollection.OnUpdate = UpdateBidFilters;
+            _bidFilters = _bidFiltersCollection.Entities.Where(f => f.BidFilter != null).Select(f => f.BidFilter.GenerateCode()).ToList();
             _messageFactory = messageFactory;
+        }
+
+        /// <summary>
+        /// Update bid filterss
+        /// </summary>
+        /// <returns></returns>
+        Task UpdateBidFilters()
+        {
+            _bidFilters = _bidFiltersCollection.Entities.Where(f => f.BidFilter != null).Select(f => f.BidFilter.GenerateCode()).ToList();
+            return Task.CompletedTask;
         }
 
         /// <summary>

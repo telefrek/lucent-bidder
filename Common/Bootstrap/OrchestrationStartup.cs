@@ -21,7 +21,7 @@ namespace Lucent.Common.Bootstrap
             app.UseMiddleware<MonitoringMiddleware>();
             app.ConfigureHealth();
 
-            
+
             app.Map("/api/campaigns", (a) =>
             {
                 a.UseMiddleware<CampaignOrchestrator>();
@@ -30,6 +30,12 @@ namespace Lucent.Common.Bootstrap
             app.Map("/api/exchanges", (a) =>
             {
                 a.UseMiddleware<ExchangeOrchestrator>();
+            });
+
+
+            app.Map("/api/filters", (a) =>
+            {
+                a.UseMiddleware<BidderFilterOrchestrator>();
             });
         }
     }

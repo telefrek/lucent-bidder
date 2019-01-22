@@ -55,69 +55,54 @@ namespace Lucent.Common.Bidding
         {
             await SetupBidderFilters();
             var exchangeId = SequentialGuid.NextGuid();
-
             var bid = BidGenerator.GenerateBid();
 
             var serializationContext = _biddingHost.Provider.GetRequiredService<ISerializationContext>();
 
             // Bid, no campaign or exchange should fail
-            using (var ms = new MemoryStream())
-            {
-                await serializationContext.WriteTo(bid, ms, true, SerializationFormat.JSON);
-                ms.Seek(0, SeekOrigin.Begin);
-
-                using (var bidContent = new StreamContent(ms, 4096))
-                {
-                    var resp = await _biddingClient.PostAsync("/v1/bidder?exchg={0}".FormatWith(exchangeId), bidContent);
-                    Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
-                }
-            }
+            var resp = await MakeBid(bid, serializationContext, exchangeId);
+            Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
 
             var campaign = await SetupCampaign();
 
             // Bid again, should be failed
-            using (var ms = new MemoryStream())
-            {
-                await serializationContext.WriteTo(bid, ms, true, SerializationFormat.JSON);
-                ms.Seek(0, SeekOrigin.Begin);
+            resp = await MakeBid(bid, serializationContext, exchangeId);
+            Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
 
-                using (var bidContent = new StreamContent(ms, 4096))
-                {
-                    var resp = await _biddingClient.PostAsync("/v1/bidder?exchg={0}".FormatWith(exchangeId), bidContent);
-                    Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
-                }
-            }
-
+            // Add the exchange
             await SetupExchange(exchangeId);
 
-            // Let the campaign reload
-            await Task.Delay(500);
+            resp = await MakeBid(bid, serializationContext, exchangeId);
+            Assert.AreEqual(HttpStatusCode.OK, resp.StatusCode);
 
-            // Bid again, should succeed
-            using (var ms = new MemoryStream())
-            {
-                await serializationContext.WriteTo(bid, ms, true, SerializationFormat.JSON);
-                ms.Seek(0, SeekOrigin.Begin);
-
-                using (var bidContent = new StreamContent(ms, 4096))
-                {
-                    var resp = await _biddingClient.PostAsync("/v1/bidder?exchg={0}".FormatWith(exchangeId), bidContent);
-                    Assert.AreEqual(HttpStatusCode.OK, resp.StatusCode);
-
-                    // Verify the response
-                    var bidResponse = await VerifyBidResponse(resp, serializationContext, campaign);
-                    Assert.IsNotNull(bidResponse);
-                }
-            }
-
+            // Verify the response
+            var bidResponse = await VerifyBidResponse(resp, serializationContext, campaign);
+            Assert.IsNotNull(bidResponse);
 
             // Ensure we filter out an invalid bid
             bid.Impressions.First().Banner.H = 101;
+            resp = await MakeBid(bid, serializationContext, exchangeId);
+            Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
 
             // Ensure we filter out a global bid
             bid.Impressions.First().Banner.H = 100;
             bid.Site = new Site { Domain = "telefrek.com" };
+            resp = await MakeBid(bid, serializationContext, exchangeId);
+            Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
+        }
 
+        async Task<HttpResponseMessage> MakeBid(BidRequest bid, ISerializationContext serializationContext, Guid exchangeId)
+        {
+            using (var ms = new MemoryStream())
+            {
+                await serializationContext.WriteTo(bid, ms, true, SerializationFormat.JSON);
+                ms.Seek(0, SeekOrigin.Begin);
+
+                using (var bidContent = new StreamContent(ms, 4096))
+                {
+                    return await _biddingClient.PostAsync("/v1/bidder?exchg={0}".FormatWith(exchangeId), bidContent);
+                }
+            }
         }
 
         async Task<BidResponse> VerifyBidResponse(HttpResponseMessage responseMessage, ISerializationContext serializationContext, Campaign campaign)
@@ -136,15 +121,30 @@ namespace Lucent.Common.Bidding
 
         async Task SetupBidderFilters()
         {
-            var fiters = _biddingHost.Provider.GetRequiredService<IStorageManager>().GetRepository<BidderFilter, string>();
-            Assert.IsTrue(await fiters.TryInsert(new BidderFilter
+            var entity = new BidderFilter
             {
                 Id = SequentialGuid.NextGuid().ToString(),
                 BidFilter = new BidFilter
                 {
                     SiteFilters = new[] { typeof(Site).CreateFilter(FilterType.IN, "Domain", "telefrek") }
                 }
-            }));
+            };
+
+            var context = _orchestrationHost.Provider.GetRequiredService<ISerializationContext>();
+
+            using (var ms = new MemoryStream())
+            {
+                await context.WriteTo(entity, ms, true, SerializationFormat.JSON);
+                ms.Seek(0, SeekOrigin.Begin);
+
+                using (var content = new StreamContent(ms, 4092))
+                {
+                    content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+
+                    var resp = await _orchestrationClient.PostAsync("/api/filters", content);
+                    Assert.AreEqual(HttpStatusCode.Created, resp.StatusCode);
+                }
+            }
         }
 
         async Task SetupExchange(Guid id)
@@ -168,8 +168,7 @@ namespace Lucent.Common.Bidding
                     await context.WriteTo(entity, ms, true, SerializationFormat.JSON);
                     ms.Seek(0, SeekOrigin.Begin);
 
-                    using (var content =
-                        new StreamContent(ms, 4092))
+                    using (var content = new StreamContent(ms, 4092))
                     {
                         content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
 
