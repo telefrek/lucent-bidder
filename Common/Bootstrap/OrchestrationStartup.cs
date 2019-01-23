@@ -21,17 +21,20 @@ namespace Lucent.Common.Bootstrap
             app.UseMiddleware<MonitoringMiddleware>();
             app.ConfigureHealth();
 
-
             app.Map("/api/campaigns", (a) =>
             {
                 a.UseMiddleware<CampaignOrchestrator>();
+            });
+
+            app.Map("/api/creatives", (a) =>
+            {
+                a.UseMiddleware<CreativeOrchestrator>();
             });
 
             app.Map("/api/exchanges", (a) =>
             {
                 a.UseMiddleware<ExchangeOrchestrator>();
             });
-
 
             app.Map("/api/filters", (a) =>
             {

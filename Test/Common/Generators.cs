@@ -23,10 +23,6 @@ namespace Lucent.Common.Test
                     {
                         typeof(Geo).CreateFilter(FilterType.IN, "Country", "USA"),
                     }
-                },
-                Creatives = new Creative[]
-                {
-                    CreativeGenerator.GenerateCreative(),
                 }
             };
         }

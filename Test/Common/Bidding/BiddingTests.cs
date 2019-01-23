@@ -194,7 +194,49 @@ namespace Lucent.Common.Bidding
 
         async Task<Campaign> SetupCampaign()
         {
-            var entity = CampaignGenerator.GenerateCampaign();
+            var campaign = CampaignGenerator.GenerateCampaign();
+            var context = _orchestrationHost.Provider.GetRequiredService<ISerializationContext>();
+
+            using (var ms = new MemoryStream())
+            {
+                await context.WriteTo(campaign, ms, true, SerializationFormat.JSON);
+                ms.Seek(0, SeekOrigin.Begin);
+
+                using (var content =
+                    new StreamContent(ms, 4092))
+                {
+                    content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+
+                    var resp = await _orchestrationClient.PostAsync("/api/campaigns", content);
+                    Assert.AreEqual(HttpStatusCode.Created, resp.StatusCode);
+                }
+            }
+
+            var creative = await SetupCreative();
+            campaign.CreativeIds = new String[]{creative.Id};
+
+            using (var ms = new MemoryStream())
+            {
+                await context.WriteTo(campaign, ms, true, SerializationFormat.JSON);
+                ms.Seek(0, SeekOrigin.Begin);
+
+                using (var content =
+                    new StreamContent(ms, 4092))
+                {
+                    content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+
+                    var resp = await _orchestrationClient.PutAsync("/api/campaigns/{0}".FormatWith(campaign.Id), content);
+                    Assert.AreEqual(HttpStatusCode.Accepted, resp.StatusCode);
+                }
+            }
+
+            return campaign;
+        }
+
+
+        async Task<Creative> SetupCreative()
+        {
+            var entity = CreativeGenerator.GenerateCreative();
             var context = _orchestrationHost.Provider.GetRequiredService<ISerializationContext>();
 
             using (var ms = new MemoryStream())
@@ -207,7 +249,7 @@ namespace Lucent.Common.Bidding
                 {
                     content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
 
-                    var resp = await _orchestrationClient.PostAsync("/api/campaigns", content);
+                    var resp = await _orchestrationClient.PostAsync("/api/creatives", content);
                     Assert.AreEqual(HttpStatusCode.Created, resp.StatusCode);
                 }
             }

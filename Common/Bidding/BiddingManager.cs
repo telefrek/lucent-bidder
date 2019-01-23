@@ -22,6 +22,9 @@ namespace Lucent.Common.Bidding
         IBidFactory _bidFactory;
         IMessageSubscriber<EntityEventMessage> _entityEvents;
 
+        IBasicStorageRepository<Campaign> _campaignRepo;
+        IBasicStorageRepository<Creative> _creativeRepo;
+
         /// <summary>
         /// Default constructor
         /// </summary>
@@ -39,13 +42,29 @@ namespace Lucent.Common.Bidding
             _bidFactory = bidFactory;
             _entityEvents = _messageFactory.CreateSubscriber<EntityEventMessage>("bidding", 0, _messageFactory.WildcardFilter);
             _entityEvents.OnReceive = HandleMessage;
+            _creativeRepo = storageManager.GetBasicRepository<Creative>();
 
             foreach (var campaign in _storageManager.GetBasicRepository<Campaign>().GetAll().Result)
             {
                 _log.LogInformation("Added bidder for campaign : {0}", campaign.Id);
-                Bidders.Add(_bidFactory.CreateBidder(campaign));
+                Bidders.Add(_bidFactory.CreateBidder(FillCampaign(campaign).Result));
 
             }
+        }
+
+        async Task<Campaign> FillCampaign(Campaign campaign)
+        {
+            foreach (var creativeId in campaign.CreativeIds)
+            {
+                var cr = await _creativeRepo.Get(creativeId);
+                foreach (var content in cr.Contents)
+                    if (content.Filter == null)
+                        content.HydrateFilter();
+
+                campaign.Creatives.Add(cr);
+            }
+
+            return campaign;
         }
 
         /// <summary>
@@ -55,8 +74,6 @@ namespace Lucent.Common.Bidding
         /// <returns></returns>
         async Task HandleMessage(EntityEventMessage message)
         {
-            _log.LogInformation("new message : {0}", message.MessageId);
-
             if (message.Body != null)
             {
                 var id = message.Body.EntityId;

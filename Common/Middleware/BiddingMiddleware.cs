@@ -79,12 +79,6 @@ namespace Lucent.Common.Middleware
         /// <returns></returns>
         public async Task TrackEntities(EntityEventMessage entityEvent)
         {
-            using (var ms = new MemoryStream())
-            {
-                await _serializationContext.WriteTo(entityEvent.Body, ms, true, SerializationFormat.JSON);
-                _log.LogInformation("Received Event:\n{0}", Encoding.UTF8.GetString(ms.ToArray()));
-            }
-
             switch (entityEvent.Body.EventType)
             {
                 case EventType.EntityAdd:
