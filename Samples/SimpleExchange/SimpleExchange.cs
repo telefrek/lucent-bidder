@@ -24,6 +24,7 @@ namespace Lucent.Samples.SimpleExchange
         IBiddingManager _bidManager;
         ILogger<SimpleExchange> _log;
 
+
         /// <inheritdoc/>
         public override Task Initialize(IServiceProvider provider)
         {
@@ -36,7 +37,7 @@ namespace Lucent.Samples.SimpleExchange
         /// <inheritdoc/>
         public override async Task<BidResponse> Bid(BidRequest request, HttpContext httpContext)
         {
-            if (await _bidManager.CanBid() && _bidManager.Bidders.Count > 0)
+            if (await _bidManager.CanBid(ExchangeId.ToString()) && _bidManager.Bidders.Count > 0)
             {
                 var resp = new BidResponse
                 {

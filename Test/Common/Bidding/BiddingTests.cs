@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucent.Common.Bootstrap;
+using Lucent.Common.Budget;
 using Lucent.Common.Entities;
 using Lucent.Common.Entities.Events;
 using Lucent.Common.Events;
@@ -76,6 +77,11 @@ namespace Lucent.Common.Bidding
             Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
 
             // Add budget
+            var bmf = _biddingHost.Provider.GetRequiredService<IMessageFactory>();
+            var bmsg = bmf.CreateMessage<BudgetEventMessage>();
+            bmsg.Body = new BudgetEvent { EntityId = exchangeId.ToString(), Amount = 1m };
+            bmsg.Route = "event_test";
+            Assert.IsTrue(await bmf.CreatePublisher("budget").TryPublish(bmsg), "failed to send budget message");
 
             resp = await MakeBid(bid, serializationContext, exchangeId);
             Assert.AreEqual(HttpStatusCode.OK, resp.StatusCode);
@@ -218,7 +224,7 @@ namespace Lucent.Common.Bidding
             }
 
             var creative = await SetupCreative();
-            campaign.CreativeIds = new String[]{creative.Id};
+            campaign.CreativeIds = new String[] { creative.Id };
 
             using (var ms = new MemoryStream())
             {

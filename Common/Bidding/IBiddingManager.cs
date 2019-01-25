@@ -16,16 +16,10 @@ namespace Lucent.Common.Bidding
         List<ICampaignBidder> Bidders { get; }
 
         /// <summary>
-        /// Bind this manager to a specific exchange
-        /// </summary>
-        /// <param name="exchangeId">The exchange to set to</param>
-        /// <returns>Task for async codde</returns>
-        Task BindTo(Guid exchangeId);
-
-        /// <summary>
         /// Check to see if the exchange is available for bidding
         /// </summary>
+        /// <param name="id"></param>
         /// <returns></returns>
-        Task<bool> CanBid();
+        Task<bool> CanBid(string id);
     }
 }

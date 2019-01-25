@@ -57,9 +57,6 @@ namespace Lucent.Common.Bidding
             }
         }
 
-        /// <inheritdoc/>
-        public async Task BindTo(Guid exchangeId) => await Task.CompletedTask;
-
         async Task<Campaign> FillCampaign(Campaign campaign)
         {
             foreach (var creativeId in campaign.CreativeIds)
@@ -111,7 +108,7 @@ namespace Lucent.Common.Bidding
         }
 
         /// <inheritdoc/>
-        public async Task<bool> CanBid() => await Task.FromResult(!_budgetManager.IsExhausted());
+        public async Task<bool> CanBid(string id) => await Task.FromResult(!_budgetManager.IsExhausted(id));
 
         /// <summary>
         /// Get the active bidders
