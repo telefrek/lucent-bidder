@@ -150,10 +150,10 @@ namespace Lucent.Common.Entities
         [Display(Name = "Active")]
         Active = 1,
         /// <value></value>
-        [Display(Name = "Not Active")]
+        [Display(Name = "InActive")]
         InActive = 2,
         /// <value></value>
-        [Display(Name = "Budget Spend")]
+        [Display(Name = "Budget Exhausted")]
         BudgedExhausted = 3,
     }
 

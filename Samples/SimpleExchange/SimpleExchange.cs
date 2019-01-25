@@ -29,47 +29,47 @@ namespace Lucent.Samples.SimpleExchange
         {
             _log = provider.GetRequiredService<ILogger<SimpleExchange>>();
             _bidManager = provider.GetRequiredService<IBiddingManager>();
-            
+
             return Task.CompletedTask;
         }
 
         /// <inheritdoc/>
         public override async Task<BidResponse> Bid(BidRequest request, HttpContext httpContext)
         {
-            if (_bidManager.Bidders.Count == 0)
-                return null;
-
-            var resp = new BidResponse
+            if (await _bidManager.CanBid() && _bidManager.Bidders.Count > 0)
             {
-                NoBidReason = NoBidReason.SuspectedNonHuman,
-                Id = request.Id,
-                CorrelationId = SequentialGuid.NextGuid().ToString(),
-            };
-
-            var bids = _bidManager.Bidders.Select(b => b.BidAsync(request, httpContext));
-
-            // Probably make this not wait on everything...
-            await Task.WhenAll(bids);
-            var seats = new List<SeatBid>();
-
-            foreach (var bid in bids.Where(b => b.Result.Length > 0).Select(b => b.Result))
-            {
-                var c = bid.First().Campaign;
-
-                var seat = new SeatBid
+                var resp = new BidResponse
                 {
-                    BuyerId = c.BuyerId,
-                    Bids = bid.Select(b => FormatBid(b, httpContext)).ToArray()
+                    NoBidReason = NoBidReason.SuspectedNonHuman,
+                    Id = request.Id,
+                    CorrelationId = SequentialGuid.NextGuid().ToString(),
                 };
 
-                if (seat.Bids.Length > 0)
-                    seats.Add(seat);
-            }
+                var bids = _bidManager.Bidders.Select(b => b.BidAsync(request, httpContext));
 
-            if (seats.Count > 0)
-            {
-                resp.Bids = seats.ToArray();
-                return resp;
+                // Probably make this not wait on everything...
+                await Task.WhenAll(bids);
+                var seats = new List<SeatBid>();
+
+                foreach (var bid in bids.Where(b => b.Result.Length > 0).Select(b => b.Result))
+                {
+                    var c = bid.First().Campaign;
+
+                    var seat = new SeatBid
+                    {
+                        BuyerId = c.BuyerId,
+                        Bids = bid.Select(b => FormatBid(b, httpContext)).ToArray()
+                    };
+
+                    if (seat.Bids.Length > 0)
+                        seats.Add(seat);
+                }
+
+                if (seats.Count > 0)
+                {
+                    resp.Bids = seats.ToArray();
+                    return resp;
+                }
             }
 
             return null;

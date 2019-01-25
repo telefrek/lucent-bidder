@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Lucent.Common.Budget;
 using Lucent.Common.Entities;
 using Lucent.Common.Entities.Events;
 using Lucent.Common.Events;
@@ -21,6 +23,7 @@ namespace Lucent.Common.Bidding
         IMessageFactory _messageFactory;
         IBidFactory _bidFactory;
         IMessageSubscriber<EntityEventMessage> _entityEvents;
+        IBudgetManager _budgetManager;
 
         IBasicStorageRepository<Campaign> _campaignRepo;
         IBasicStorageRepository<Creative> _creativeRepo;
@@ -33,7 +36,8 @@ namespace Lucent.Common.Bidding
         /// <param name="storageManager"></param>
         /// <param name="messageFactory"></param>
         /// <param name="bidFactory"></param>
-        public BiddingManager(ILogger<BiddingManager> logger, ISerializationContext serializationContext, IStorageManager storageManager, IMessageFactory messageFactory, IBidFactory bidFactory)
+        /// <param name="budgetManager"></param>
+        public BiddingManager(ILogger<BiddingManager> logger, ISerializationContext serializationContext, IStorageManager storageManager, IMessageFactory messageFactory, IBidFactory bidFactory, IBudgetManager budgetManager)
         {
             _log = logger;
             _serializationContext = serializationContext;
@@ -43,6 +47,7 @@ namespace Lucent.Common.Bidding
             _entityEvents = _messageFactory.CreateSubscriber<EntityEventMessage>("bidding", 0, _messageFactory.WildcardFilter);
             _entityEvents.OnReceive = HandleMessage;
             _creativeRepo = storageManager.GetBasicRepository<Creative>();
+            _budgetManager = budgetManager;
 
             foreach (var campaign in _storageManager.GetBasicRepository<Campaign>().GetAll().Result)
             {
@@ -51,6 +56,9 @@ namespace Lucent.Common.Bidding
 
             }
         }
+
+        /// <inheritdoc/>
+        public async Task BindTo(Guid exchangeId) => await Task.CompletedTask;
 
         async Task<Campaign> FillCampaign(Campaign campaign)
         {
@@ -101,6 +109,9 @@ namespace Lucent.Common.Bidding
                 }
             }
         }
+
+        /// <inheritdoc/>
+        public async Task<bool> CanBid() => await Task.FromResult(!_budgetManager.IsExhausted());
 
         /// <summary>
         /// Get the active bidders
