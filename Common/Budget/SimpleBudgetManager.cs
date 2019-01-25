@@ -11,14 +11,16 @@ namespace Lucent.Common.Budget
     {
         ConcurrentDictionary<string, decimal> _budgets = new ConcurrentDictionary<string, decimal>();
         IMessageSubscriber<BudgetEventMessage> _budgetSubscriber;
+        IBudgetClient _budgetClient;
 
         /// <summary>
         /// Useless
         /// </summary>
-        public SimpleBudgetManager(IMessageFactory messageFactory)
+        public SimpleBudgetManager(IMessageFactory messageFactory, IBudgetClient budgetClient)
         {
             _budgetSubscriber = messageFactory.CreateSubscriber<BudgetEventMessage>("budget", 0, messageFactory.WildcardFilter);
             _budgetSubscriber.OnReceive = HandleBudgetRequests;
+            _budgetClient = budgetClient;
         }
 
         /// <summary>

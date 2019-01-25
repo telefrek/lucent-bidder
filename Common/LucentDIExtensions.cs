@@ -70,7 +70,8 @@ namespace Lucent.Common
             if (includeBidder)
             {
                 // Setup bidder
-                services.AddSingleton<IBudgetManager, SimpleBudgetManager>()
+                services.AddSingleton<IBudgetClient, SimpleBudgetClient>()
+                    .AddSingleton<IBudgetManager, SimpleBudgetManager>()
                     .AddSingleton<IBiddingManager, BiddingManager>()
                     .AddSingleton<IBidFactory, BidFactory>()
                     .AddSingleton<IExchangeRegistry, ExchangeRegistry>();
