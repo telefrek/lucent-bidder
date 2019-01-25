@@ -42,7 +42,7 @@ namespace Lucent.Common.Budget
             {
                 GetAdditional().ContinueWith(t =>
                 {
-                    _budget += t.Result;
+                    _budget += t.Result + .01m;
                 });
             }
             

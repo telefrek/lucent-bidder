@@ -9,6 +9,7 @@ using Lucent.Common.Entities;
 using Lucent.Common.Media;
 using Lucent.Common.Entities.Repositories;
 using System;
+using Lucent.Common.Budget;
 
 namespace Lucent.Common
 {
@@ -69,7 +70,8 @@ namespace Lucent.Common
             if (includeBidder)
             {
                 // Setup bidder
-                services.AddSingleton<IBiddingManager, BiddingManager>()
+                services.AddSingleton<IBudgetManager, SimpleBudgetManager>()
+                    .AddSingleton<IBiddingManager, BiddingManager>()
                     .AddSingleton<IBidFactory, BidFactory>()
                     .AddSingleton<IExchangeRegistry, ExchangeRegistry>();
             }

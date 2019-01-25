@@ -73,6 +73,11 @@ namespace Lucent.Common.Bidding
             await SetupExchange(exchangeId);
 
             resp = await MakeBid(bid, serializationContext, exchangeId);
+            Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
+
+            // Add budget
+
+            resp = await MakeBid(bid, serializationContext, exchangeId);
             Assert.AreEqual(HttpStatusCode.OK, resp.StatusCode);
 
             // Verify the response
