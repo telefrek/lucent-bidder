@@ -1,11 +1,9 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Lucent.Common.Entities;
 using Lucent.Common.Messaging;
 using Lucent.Common.Storage;
-using Lucent.Portal.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
@@ -50,7 +48,6 @@ namespace Lucent.Portal.Models
 
             if (await _db.TryInsert(Campaign))
             {
-                _log.LogInformation("Created campaign, sending across clusters");
                 var cluster = _factory.GetClusters().FirstOrDefault();
                 if (!string.IsNullOrWhiteSpace(cluster))
                 {

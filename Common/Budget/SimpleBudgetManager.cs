@@ -35,16 +35,10 @@ namespace Lucent.Common.Budget
         }
 
         /// <inheritdoc/>
-        public async Task GetAdditional(string id)
-        {
-            await Task.CompletedTask;
-        }
+        public async Task GetAdditional(string id) => await GetAdditional(1m, id);
 
         /// <inheritdoc/>
-        public async Task GetAdditional(decimal amount, string id)
-        {
-            await Task.CompletedTask;
-        }
+        public async Task GetAdditional(decimal amount, string id) => await _budgetClient.RequestBudget(id, amount);
 
         /// <inheritdoc/>
         public async Task<decimal> GetRemaining(string id)
@@ -53,15 +47,7 @@ namespace Lucent.Common.Budget
         }
 
         /// <inheritdoc/>
-        public bool IsExhausted(string id)
-        {
-            if (_budgets.GetOrAdd(id, 0m) <= 0m)
-            {
-                GetAdditional(id);
-            }
-
-            return _budgets.GetOrAdd(id, 0m) <= 0m;
-        }
+        public bool IsExhausted(string id) => _budgets.GetOrAdd(id, 0m) <= 0m;
 
         /// <inheritdoc/>
         public async Task<bool> TrySpend(decimal amount, string id)

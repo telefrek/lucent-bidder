@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Lucent.Common.Bootstrap;
 using Lucent.Common.Budget;
+using Lucent.Common.Client;
 using Lucent.Common.Entities;
 using Lucent.Common.Entities.Events;
 using Lucent.Common.Events;
@@ -26,6 +27,7 @@ using Lucent.Common.Storage;
 using Lucent.Common.Test;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Lucent.Common.Bidding
@@ -35,17 +37,29 @@ namespace Lucent.Common.Bidding
     {
         LucentTestWebHost<OrchestrationStartup> _orchestrationHost;
         LucentTestWebHost<BidderStartup> _biddingHost;
-        HttpClient _orchestrationClient;
-        HttpClient _biddingClient;
+        static HttpClient _orchestrationClient;
+        static HttpClient _biddingClient;
 
         [TestInitialize]
         public void TestInitialize()
         {
             _orchestrationHost = new LucentTestWebHost<OrchestrationStartup>();
-            _biddingHost = new LucentTestWebHost<BidderStartup>();
+            _biddingHost = new LucentTestWebHost<BidderStartup>()
+            {
+                UpdateServices = (services) =>
+                {
+                    services.AddTransient<IClientManager, TestClientManger>();
+                }
+            };
 
             _orchestrationClient = _orchestrationHost.CreateClient();
             _biddingClient = _biddingHost.CreateClient();
+
+        }
+
+        class TestClientManger : IClientManager
+        {
+            public HttpClient OrchestrationClient => _orchestrationClient;
         }
 
 
@@ -76,12 +90,6 @@ namespace Lucent.Common.Bidding
             resp = await MakeBid(bid, serializationContext, exchangeId);
             Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
 
-            // Add budget
-            var bmf = _biddingHost.Provider.GetRequiredService<IMessageFactory>();
-            var bmsg = bmf.CreateMessage<BudgetEventMessage>();
-            bmsg.Body = new BudgetEvent { EntityId = exchangeId.ToString(), Amount = 1m };
-            bmsg.Route = "event_test";
-            Assert.IsTrue(await bmf.CreatePublisher("budget").TryPublish(bmsg), "failed to send budget message");
 
             resp = await MakeBid(bid, serializationContext, exchangeId);
             Assert.AreEqual(HttpStatusCode.OK, resp.StatusCode);

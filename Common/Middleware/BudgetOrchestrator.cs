@@ -2,6 +2,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Lucent.Common;
+using Lucent.Common.Budget;
 using Lucent.Common.Entities;
 using Lucent.Common.Entities.Events;
 using Lucent.Common.Events;
@@ -14,14 +15,14 @@ using Microsoft.Extensions.Logging;
 namespace Lucent.Common.Middleware
 {
     /// <summary>
-    /// Handle Creative API management
+    /// Handle Campaign API management
     /// </summary>
-    public class CreativeOrchestrator
+    public class BudgetOrchestrator
     {
         readonly IStorageManager _storageManager;
         readonly ISerializationContext _serializationContext;
-        readonly ILogger<CreativeOrchestrator> _logger;
-        readonly IBasicStorageRepository<Creative> _creativeRepository;
+        readonly ILogger<BudgetOrchestrator> _logger;
+        readonly IBasicStorageRepository<Campaign> _campaignRepository;
         readonly IMessageFactory _messageFactory;
 
         /// <summary>
@@ -32,38 +33,39 @@ namespace Lucent.Common.Middleware
         /// <param name="messageFactory"></param>
         /// <param name="serializationContext"></param>
         /// <param name="logger"></param>
-        public CreativeOrchestrator(RequestDelegate next, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<CreativeOrchestrator> logger)
+        public BudgetOrchestrator(RequestDelegate next, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<BudgetOrchestrator> logger)
         {
             _storageManager = storageManager;
-            _creativeRepository = storageManager.GetBasicRepository<Creative>();
+            _campaignRepository = storageManager.GetBasicRepository<Campaign>();
             _serializationContext = serializationContext;
             _messageFactory = messageFactory;
             _logger = logger;
 
-            _messageFactory.CreateSubscriber<LucentMessage<Creative>>("entities", 0, "creative").OnReceive += UpdateCreatives;
+            //_messageFactory.CreateSubscriber<LucentMessage<Campaign>>("entities", 0, "campaign").OnReceive += UpdateCampaigns;
         }
 
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="creativeEvent"></param>
+        /// <param name="campaignEvent"></param>
         /// <returns></returns>
-        async Task UpdateCreatives(LucentMessage<Creative> creativeEvent)
+        async Task UpdateCampaigns(LucentMessage<Campaign> campaignEvent)
         {
-            if (creativeEvent.Body != null)
+
+            if (campaignEvent.Body != null)
             {
                 var evt = new EntityEvent
                 {
-                    EntityType = EntityType.Creative,
-                    EntityId = creativeEvent.Body.Id,
+                    EntityType = EntityType.Campaign,
+                    EntityId = campaignEvent.Body.Id,
                 };
 
                 // This is awful, don't do this for real
-                if (await _creativeRepository.TryUpdate(creativeEvent.Body))
+                if (await _campaignRepository.TryUpdate(campaignEvent.Body))
                     evt.EventType = EventType.EntityUpdate;
-                else if (await _creativeRepository.TryInsert(creativeEvent.Body))
+                else if (await _campaignRepository.TryInsert(campaignEvent.Body))
                     evt.EventType = EventType.EntityAdd;
-                else if (await _creativeRepository.TryRemove(creativeEvent.Body))
+                else if (await _campaignRepository.TryRemove(campaignEvent.Body))
                     evt.EventType = EventType.EntityDelete;
 
                 // Notify
@@ -71,7 +73,8 @@ namespace Lucent.Common.Middleware
                 {
                     var msg = _messageFactory.CreateMessage<EntityEventMessage>();
                     msg.Body = evt;
-                    msg.Route = "creative";
+                    msg.Route = "campaign";
+
                     await _messageFactory.CreatePublisher("bidding").TryPublish(msg);
                 }
             }
@@ -85,48 +88,33 @@ namespace Lucent.Common.Middleware
         /// <returns></returns>
         public async Task InvokeAsync(HttpContext httpContext)
         {
-            var c = await _serializationContext.ReadAs<Creative>(httpContext);
-            if (c != null)
+            var request = await _serializationContext.ReadAs<BudgetRequest>(httpContext);
+            if (request != null)
             {
                 // Validate
                 var evt = new EntityEvent
                 {
-                    EntityType = EntityType.Creative,
-                    EntityId = c.Id,
+                    EntityType = EntityType.Unknown,
+                    EntityId = request.EntityId,
                 };
 
                 switch (httpContext.Request.Method.ToLowerInvariant())
                 {
                     case "post":
-                        if (await _creativeRepository.TryInsert(c))
-                        {
-                            httpContext.Response.StatusCode = 201;
-                            evt.EventType = EventType.EntityAdd;
-                            evt.EntityId = c.Id;
-                            await _serializationContext.WriteTo(httpContext, c);
-                        }
+                        // Add budget
+                        var bmsg = _messageFactory.CreateMessage<BudgetEventMessage>();
+                        bmsg.Body = new BudgetEvent { EntityId = request.EntityId, Amount = request.Amount };
+                        bmsg.Route = "event_test";
+                        if (await _messageFactory.CreatePublisher("budget").TryPublish(bmsg))
+                            httpContext.Response.StatusCode = 202;
                         else
-                            httpContext.Response.StatusCode = 409;
+                            httpContext.Response.StatusCode = 500;
                         break;
+                    case "get":
                     case "put":
                     case "patch":
-                        if (await _creativeRepository.TryUpdate(c))
-                        {
-                            httpContext.Response.StatusCode = 202;
-                            evt.EventType = EventType.EntityUpdate;
-                            await _serializationContext.WriteTo(httpContext, c);
-                        }
-                        else
-                            httpContext.Response.StatusCode = 409;
-                        break;
                     case "delete":
-                        if (await _creativeRepository.TryRemove(c))
-                        {
-                            evt.EventType = EventType.EntityDelete;
-                            httpContext.Response.StatusCode = 204;
-                        }
-                        else
-                            httpContext.Response.StatusCode = 404;
+                        httpContext.Response.StatusCode = 405;
                         break;
                 }
 
@@ -135,12 +123,12 @@ namespace Lucent.Common.Middleware
                 {
                     var msg = _messageFactory.CreateMessage<EntityEventMessage>();
                     msg.Body = evt;
-                    msg.Route = "creative";
+                    msg.Route = "campaign";
                     await _messageFactory.CreatePublisher("bidding").TryPublish(msg);
 
-                    var sync = _messageFactory.CreateMessage<LucentMessage<Creative>>();
-                    sync.Body = c;
-                    sync.Route = "creative";
+                    var sync = _messageFactory.CreateMessage<LucentMessage<BudgetRequest>>();
+                    sync.Body = request;
+                    sync.Route = "campaign";
                     await _messageFactory.CreatePublisher("entities").TryBroadcast(msg);
                 }
             }

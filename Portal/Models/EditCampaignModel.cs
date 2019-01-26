@@ -2,17 +2,15 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucent.Common.Storage;
-using Lucent.Portal.Data;
 using Lucent.Common.Entities;
-using Lucent.Portal.Hubs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using Lucent.Common.Messaging;
 using Microsoft.Extensions.Logging;
 using System.Linq;
-using Lucent.Portal.Entities;
 using System.Collections.Generic;
+using Lucent.Common.Hubs;
 
 namespace Lucent.Portal.Models
 {
@@ -116,7 +114,6 @@ namespace Lucent.Portal.Models
                     {
                         await _context.UpdateCampaignAsync(Campaign, CancellationToken.None);
 
-                        _log.LogInformation("Modified campaign, sending across clusters");
                         var cluster = _factory.GetClusters().FirstOrDefault();
                         if (!string.IsNullOrWhiteSpace(cluster))
                         {

@@ -6,7 +6,6 @@ namespace Lucent.Common.Budget
     /// <summary>
     /// 
     /// </summary>
-    /// <typeparam name="BudgetEvent"></typeparam>
     public class BudgetEventMessage : LucentMessage<BudgetEvent>
     {
         /// <summary>

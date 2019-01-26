@@ -10,6 +10,7 @@ using Lucent.Common.Media;
 using Lucent.Common.Entities.Repositories;
 using System;
 using Lucent.Common.Budget;
+using Lucent.Common.Client;
 
 namespace Lucent.Common
 {
@@ -36,6 +37,7 @@ namespace Lucent.Common
 
             // Add serialization
             services.AddSingleton<ISerializationContext, LucentSerializationContext>();
+            services.AddTransient<IClientManager, DefaultClientManager>();
 
             // Setup storage, messaging options for local vs distributed cluster
             if (localOnly)
@@ -70,9 +72,10 @@ namespace Lucent.Common
             if (includeBidder)
             {
                 // Setup bidder
-                services.AddSingleton<IBudgetClient, SimpleBudgetClient>()
-                    .AddSingleton<IBudgetManager, SimpleBudgetManager>()
-                    .AddSingleton<IBiddingManager, BiddingManager>()
+                services.Configure<BudgetConfig>(configuration.GetSection("budget"))
+                    .AddScoped<IBudgetClient, SimpleBudgetClient>()
+                    .AddScoped<IBudgetManager, SimpleBudgetManager>()
+                    .AddScoped<IBiddingManager, BiddingManager>()
                     .AddSingleton<IBidFactory, BidFactory>()
                     .AddSingleton<IExchangeRegistry, ExchangeRegistry>();
             }

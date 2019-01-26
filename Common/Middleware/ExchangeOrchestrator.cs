@@ -76,11 +76,6 @@ namespace Lucent.Common.Middleware
                     var msg = _messageFactory.CreateMessage<EntityEventMessage>();
                     msg.Body = evt;
                     msg.Route = "exchange";
-                    using (var ms = new MemoryStream())
-                    {
-                        await _serializationContext.WriteTo(evt, ms, true, SerializationFormat.JSON);
-                        _logger.LogInformation("Sending {0}", Encoding.UTF8.GetString(ms.ToArray()));
-                    }
 
                     await _messageFactory.CreatePublisher("bidding").TryPublish(msg);
                 }
@@ -181,22 +176,11 @@ namespace Lucent.Common.Middleware
                     var msg = _messageFactory.CreateMessage<EntityEventMessage>();
                     msg.Body = evt;
                     msg.Route = "exchange";
-                    using (var ms = new MemoryStream())
-                    {
-                        await _serializationContext.WriteTo(evt, ms, true, SerializationFormat.JSON);
-                        _logger.LogInformation("Sending {0}", Encoding.UTF8.GetString(ms.ToArray()));
-                    }
-
                     await _messageFactory.CreatePublisher("bidding").TryPublish(msg);
 
                     var sync = _messageFactory.CreateMessage<LucentMessage<Exchange>>();
                     sync.Body = exchange;
                     sync.Route = "exchange";
-                    using (var ms = new MemoryStream())
-                    {
-                        await _serializationContext.WriteTo(evt, ms, true, SerializationFormat.JSON);
-                        _logger.LogInformation("Sending {0}", Encoding.UTF8.GetString(ms.ToArray()));
-                    }
 
                     await _messageFactory.CreatePublisher("entities").TryBroadcast(msg);
                 }

@@ -108,7 +108,15 @@ namespace Lucent.Common.Bidding
         }
 
         /// <inheritdoc/>
-        public async Task<bool> CanBid(string id) => await Task.FromResult(!_budgetManager.IsExhausted(id));
+        public async Task<bool> CanBid(string id) 
+        {
+            if(_budgetManager.IsExhausted(id)){
+                await _budgetManager.GetAdditional(id);
+                return false;
+            }
+
+            return true;
+        }
 
         /// <summary>
         /// Get the active bidders

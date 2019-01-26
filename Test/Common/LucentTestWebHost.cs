@@ -14,19 +14,26 @@ namespace Lucent.Common.Test
 
         public IServiceProvider Provider { get; set; }
 
+        public Action<IServiceCollection> UpdateServices { get; set; } = (sp) => { };
+
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.ConfigureLogging(logBuilder =>
             {
                 logBuilder.AddConsole();
-            });
-
-            builder.UseStartup(typeof(TStartup));
-
-            builder.ConfigureServices(services =>
+            })
+            .UseStartup(typeof(TStartup))
+            .UseSockets()
+            .ConfigureServices(services =>
             {
                 // Add ALL the services muhahahaha
-                services.AddLucentServices(new ConfigurationBuilder().AddEnvironmentVariables().AddJsonFile("appsettings.json").Build(), true, true, true, true, true);
+                services.AddLucentServices(new ConfigurationBuilder()
+                .AddEnvironmentVariables()
+                .AddJsonFile("appsettings.json", false, true)
+                .AddJsonFile("testsettings.json", true, true)
+                .Build(), true, true, true, true, true);
+
+                UpdateServices(services);
 
                 // Build the service provider.
                 Provider = services.BuildServiceProvider();

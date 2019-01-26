@@ -72,11 +72,6 @@ namespace Lucent.Common.Middleware
                     var msg = _messageFactory.CreateMessage<EntityEventMessage>();
                     msg.Body = evt;
                     msg.Route = "campaign";
-                    using (var ms = new MemoryStream())
-                    {
-                        await _serializationContext.WriteTo(evt, ms, true, SerializationFormat.JSON);
-                        _logger.LogInformation("Sending {0}", Encoding.UTF8.GetString(ms.ToArray()));
-                    }
 
                     await _messageFactory.CreatePublisher("bidding").TryPublish(msg);
                 }

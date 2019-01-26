@@ -91,8 +91,6 @@ namespace Lucent.Common.Messaging
 
                 var msg = Encoding.UTF8.GetString(ms.ToArray());
 
-                _log.LogInformation("Sending : {0} ({1})", msg, _publishEndpoint.ToString());
-
                 using (var req = new HttpRequestMessage(HttpMethod.Post, _publishEndpoint.ToString()))
                 {
                     req.Content = new StringContent(msg, Encoding.UTF8, "application/json");

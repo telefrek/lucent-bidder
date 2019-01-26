@@ -1,14 +1,10 @@
-using System;
-using System.Threading;
 using System.Threading.Tasks;
 using Lucent.Common.Storage;
-using Lucent.Portal.Data;
 using Lucent.Common.Entities;
-using Lucent.Portal.Hubs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Lucent.Common.Hubs;
 
 namespace Lucent.Portal.Models
 {

@@ -2,10 +2,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore;
-using Lucent.Portal.Data;
 using Lucent.Common.Entities;
-using System;
 using Microsoft.Extensions.Logging;
 using Lucent.Common.Storage;
 using System.Linq;
@@ -43,7 +40,6 @@ namespace Lucent.Portal.Models
             {
                 if (await _db.TryRemove(contact))
                 {
-                    _log.LogInformation("Created campaign, sending across clusters");
                     var cluster = _factory.GetClusters().FirstOrDefault();
                     if (!string.IsNullOrWhiteSpace(cluster))
                     {

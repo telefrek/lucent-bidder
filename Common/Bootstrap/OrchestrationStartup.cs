@@ -40,6 +40,11 @@ namespace Lucent.Common.Bootstrap
             {
                 a.UseMiddleware<BidderFilterOrchestrator>();
             });
+
+            app.Map("/api/budget/request", (a) =>
+            {
+                a.UseMiddleware<BudgetOrchestrator>();
+            });
         }
     }
 }
