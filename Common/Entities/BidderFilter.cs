@@ -37,6 +37,6 @@ namespace Lucent.Common.Entities
 
 
         /// <inheritdoc/>
-        public EntityType EntityType { get; set; } = EntityType.BidFilter;
+        public EntityType EntityType { get; set; } = EntityType.BidderFilter;
     }
 }

@@ -1,4 +1,6 @@
+using System;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Lucent.Common;
@@ -14,15 +16,36 @@ using Microsoft.Extensions.Logging;
 namespace Lucent.Common.Middleware
 {
     /// <summary>
-    /// Handle BidderFilter API management
+    /// Test the rest api!
     /// </summary>
-    public class BidderFilterOrchestrator
+    /// <typeparam name="T"></typeparam>
+    /// <typeparam name="K"></typeparam>
+    public class EntityRestApi<T, K> where T : class, IStorageEntity<K>, new()
     {
-        readonly IStorageManager _storageManager;
-        readonly ISerializationContext _serializationContext;
-        readonly ILogger<BidderFilterOrchestrator> _logger;
-        readonly IBasicStorageRepository<BidderFilter> _bidderFilterRepository;
-        readonly IMessageFactory _messageFactory;
+        /// <summary>
+        /// 
+        /// </summary>
+        protected readonly IStorageManager _storageManager;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        protected readonly ISerializationContext _serializationContext;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        protected readonly ILogger<EntityRestApi<T, K>> _logger;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        protected readonly IStorageRepository<T, K> _entityRepository;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        protected readonly IMessageFactory _messageFactory;
 
         /// <summary>
         /// Default constructor
@@ -32,38 +55,38 @@ namespace Lucent.Common.Middleware
         /// <param name="messageFactory"></param>
         /// <param name="serializationContext"></param>
         /// <param name="logger"></param>
-        public BidderFilterOrchestrator(RequestDelegate next, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<BidderFilterOrchestrator> logger)
+        public EntityRestApi(RequestDelegate next, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<EntityRestApi<T, K>> logger)
         {
             _storageManager = storageManager;
-            _bidderFilterRepository = storageManager.GetBasicRepository<BidderFilter>();
+            _entityRepository = storageManager.GetRepository<T, K>();
             _serializationContext = serializationContext;
             _messageFactory = messageFactory;
             _logger = logger;
 
-            _messageFactory.CreateSubscriber<LucentMessage<BidderFilter>>("entities", 0, "bidderFilter").OnReceive += UpdateBidderFilters;
+            _messageFactory.CreateSubscriber<LucentMessage<T>>("entities", 0, _messageFactory.WildcardFilter).OnReceive += UpdateEntity;
         }
 
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="bidderFilterEvent"></param>
+        /// <param name="entityEvent"></param>
         /// <returns></returns>
-        async Task UpdateBidderFilters(LucentMessage<BidderFilter> bidderFilterEvent)
+        async Task UpdateEntity(LucentMessage<T> entityEvent)
         {
-            if (bidderFilterEvent.Body != null)
+            if (entityEvent.Body != null)
             {
                 var evt = new EntityEvent
                 {
-                    EntityType = EntityType.BidderFilter,
-                    EntityId = bidderFilterEvent.Body.Id,
+                    EntityType = (EntityType)Enum.Parse(typeof(EntityType), typeof(T).Name),
+                    EntityId = entityEvent.Body.Id.ToString(),
                 };
 
                 // This is awful, don't do this for real
-                if (await _bidderFilterRepository.TryUpdate(bidderFilterEvent.Body))
+                if (await _entityRepository.TryUpdate(entityEvent.Body))
                     evt.EventType = EventType.EntityUpdate;
-                else if (await _bidderFilterRepository.TryInsert(bidderFilterEvent.Body))
+                else if (await _entityRepository.TryInsert(entityEvent.Body))
                     evt.EventType = EventType.EntityAdd;
-                else if (await _bidderFilterRepository.TryRemove(bidderFilterEvent.Body))
+                else if (await _entityRepository.TryRemove(entityEvent.Body))
                     evt.EventType = EventType.EntityDelete;
 
                 // Notify
@@ -71,15 +94,31 @@ namespace Lucent.Common.Middleware
                 {
                     var msg = _messageFactory.CreateMessage<EntityEventMessage>();
                     msg.Body = evt;
-                    msg.Route = "bidderFilter";
-                    using (var ms = new MemoryStream())
-                    {
-                        await _serializationContext.WriteTo(evt, ms, true, SerializationFormat.JSON);
-                    }
+                    msg.Route = typeof(T).Name.ToLowerInvariant();
 
                     await _messageFactory.CreatePublisher("bidding").TryPublish(msg);
                 }
             }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="httpContext"></param>
+        /// <returns></returns>
+        protected virtual async Task<T> ReadEntity(HttpContext httpContext)
+        {
+            T entity = await _serializationContext.ReadAs<T>(httpContext);
+
+            if (entity == null && httpContext.Request.Path.Value.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries).Length > 0)
+            {
+                var id = httpContext.Request.Path.Value.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries).Last();
+                var key = (K)Convert.ChangeType(id, typeof(K));
+                if (!key.IsNullOrDefault())
+                    return await _entityRepository.Get(key);
+            }
+
+            return entity;
         }
 
 
@@ -90,42 +129,42 @@ namespace Lucent.Common.Middleware
         /// <returns></returns>
         public async Task InvokeAsync(HttpContext httpContext)
         {
-            var c = await _serializationContext.ReadAs<BidderFilter>(httpContext);
-            if (c != null)
+            var entity = await ReadEntity(httpContext);
+            if (entity != null)
             {
                 // Validate
                 var evt = new EntityEvent
                 {
-                    EntityType = EntityType.BidderFilter,
-                    EntityId = c.Id,
+                    EntityType = (EntityType)Enum.Parse(typeof(EntityType), typeof(T).Name),
+                    EntityId = entity.Id.ToString(),
                 };
 
                 switch (httpContext.Request.Method.ToLowerInvariant())
                 {
                     case "post":
-                        if (await _bidderFilterRepository.TryInsert(c))
+                        if (await _entityRepository.TryInsert(entity))
                         {
                             httpContext.Response.StatusCode = 201;
                             evt.EventType = EventType.EntityAdd;
-                            evt.EntityId = c.Id;
-                            await _serializationContext.WriteTo(httpContext, c);
+                            evt.EntityId = entity.Id.ToString();
+                            await _serializationContext.WriteTo(httpContext, entity);
                         }
                         else
                             httpContext.Response.StatusCode = 409;
                         break;
                     case "put":
                     case "patch":
-                        if (await _bidderFilterRepository.TryUpdate(c))
+                        if (await _entityRepository.TryUpdate(entity))
                         {
                             httpContext.Response.StatusCode = 202;
                             evt.EventType = EventType.EntityUpdate;
-                            await _serializationContext.WriteTo(httpContext, c);
+                            await _serializationContext.WriteTo(httpContext, entity);
                         }
                         else
                             httpContext.Response.StatusCode = 409;
                         break;
                     case "delete":
-                        if (await _bidderFilterRepository.TryRemove(c))
+                        if (await _entityRepository.TryRemove(entity))
                         {
                             evt.EventType = EventType.EntityDelete;
                             httpContext.Response.StatusCode = 204;
@@ -140,12 +179,12 @@ namespace Lucent.Common.Middleware
                 {
                     var msg = _messageFactory.CreateMessage<EntityEventMessage>();
                     msg.Body = evt;
-                    msg.Route = "bidderFilter";
+                    msg.Route = typeof(T).Name.ToLowerInvariant();
                     await _messageFactory.CreatePublisher("bidding").TryPublish(msg);
 
-                    var sync = _messageFactory.CreateMessage<LucentMessage<BidderFilter>>();
-                    sync.Body = c;
-                    sync.Route = "bidderFilter";
+                    var sync = _messageFactory.CreateMessage<LucentMessage<T>>();
+                    sync.Body = entity;
+                    sync.Route = typeof(T).Name.ToLowerInvariant();
                     await _messageFactory.CreatePublisher("entities").TryBroadcast(msg);
                 }
             }

@@ -14,9 +14,6 @@ namespace Lucent.Common.Storage
         public StringStorageKey(string value) => _value = value;
 
         /// <inheritdoc />
-        public bool IsComposite => false;
-
-        /// <inheritdoc />
         public int CompareTo(object obj)
         {
             if (obj is string)
@@ -24,16 +21,13 @@ namespace Lucent.Common.Storage
             if (obj is StringStorageKey)
                 return _value.CompareTo((obj as StringStorageKey)._value);
             if (obj is IStorageKey)
-                return _value.CompareTo((obj as IStorageKey).StringValue());
+                return _value.CompareTo((obj as IStorageKey).ToString());
 
             return _value.CompareTo(obj.ToString());
         }
 
         /// <inheritdoc />
         public object[] RawValue() => new object[] { _value };
-
-        /// <inheritdoc />
-        public string StringValue() => _value;
 
         /// <summary>
         /// Implicit operator for use in code

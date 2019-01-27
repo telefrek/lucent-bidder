@@ -56,7 +56,7 @@ namespace Lucent.Common.Middleware
             _serializationContext = serializationContext;
             _exchangeRegistry = exchangeRegistry;
             _storageManager = storageManager;
-            _bidFiltersCollection = new UpdatingCollection<BidderFilter, string>(messageFactory, storageManager, EntityType.BidFilter);
+            _bidFiltersCollection = new UpdatingCollection<BidderFilter, string>(messageFactory, storageManager, EntityType.BidderFilter);
             _bidFiltersCollection.OnUpdate = UpdateBidFilters;
             _bidFilters = _bidFiltersCollection.Entities.Where(f => f.BidFilter != null).Select(f => f.BidFilter.GenerateCode()).ToList();
             _messageFactory = messageFactory;

@@ -1,4 +1,5 @@
-﻿using Lucent.Common.Middleware;
+﻿using Lucent.Common.Entities;
+using Lucent.Common.Middleware;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Prometheus;
@@ -23,12 +24,12 @@ namespace Lucent.Common.Bootstrap
 
             app.Map("/api/campaigns", (a) =>
             {
-                a.UseMiddleware<CampaignOrchestrator>();
+                a.UseMiddleware<EntityRestApi<Campaign, string>>();
             });
 
             app.Map("/api/creatives", (a) =>
             {
-                a.UseMiddleware<CreativeOrchestrator>();
+                a.UseMiddleware<EntityRestApi<Creative, string>>();
             });
 
             app.Map("/api/exchanges", (a) =>
@@ -38,7 +39,7 @@ namespace Lucent.Common.Bootstrap
 
             app.Map("/api/filters", (a) =>
             {
-                a.UseMiddleware<BidderFilterOrchestrator>();
+                a.UseMiddleware<EntityRestApi<BidderFilter, string>>();
             });
 
             app.Map("/api/budget/request", (a) =>

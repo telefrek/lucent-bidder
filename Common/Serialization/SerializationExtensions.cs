@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Reflection;
 using System.Threading.Tasks;
 using Lucent.Common.Serialization;
@@ -65,6 +67,42 @@ namespace Lucent.Common
                     format |= SerializationFormat.COMPRESSED;
 
             await serializationContext.WriteTo(instance, httpContext.Response.Body, false, format);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public async static Task<HttpResponseMessage> PostJsonAsync<T>(this HttpClient httpClient, ISerializationContext serializationContext, T instance, string path) where T : class, new()
+        {
+            using (var ms = new MemoryStream())
+            {
+                await serializationContext.WriteTo(instance, ms, true, SerializationFormat.JSON);
+                ms.Seek(0, SeekOrigin.Begin);
+
+                using (var content = new StreamContent(ms, 4092))
+                {
+                    content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+                    return await httpClient.PostAsync(path, content);
+                }
+            }
+        }
+
+         /// <summary>
+        /// 
+        /// </summary>
+        public async static Task<HttpResponseMessage> PutJsonAsync<T>(this HttpClient httpClient, ISerializationContext serializationContext, T instance, string path) where T : class, new()
+        {
+            using (var ms = new MemoryStream())
+            {
+                await serializationContext.WriteTo(instance, ms, true, SerializationFormat.JSON);
+                ms.Seek(0, SeekOrigin.Begin);
+
+                using (var content = new StreamContent(ms, 4092))
+                {
+                    content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+                    return await httpClient.PutAsync(path, content);
+                }
+            }
         }
 
         /// <summary>

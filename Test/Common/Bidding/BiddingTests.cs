@@ -40,8 +40,29 @@ namespace Lucent.Common.Bidding
         static HttpClient _orchestrationClient;
         static HttpClient _biddingClient;
 
+        Campaign campaign;
+        Creative creative;
+        Guid exchangeId;
+        BidderFilter bidderFilter;
+
+        [TestCleanup]
+        public async Task TestCleanup()
+        {
+            if (campaign != null)
+                await _orchestrationClient.DeleteAsync("/api/campaigns/{0}".FormatWith(campaign.Id));
+
+            if (creative != null)
+                await _orchestrationClient.DeleteAsync("/api/creatives/{0}".FormatWith(creative.Id));
+
+            if (exchangeId != null)
+                await _orchestrationClient.DeleteAsync("/api/exchanges/{0}".FormatWith(exchangeId));
+
+            if (bidderFilter != null)
+                await _orchestrationClient.DeleteAsync("/api/filters/{0}".FormatWith(bidderFilter.Id));
+        }
+
         [TestInitialize]
-        public void TestInitialize()
+        public async Task TestInitialize()
         {
             _orchestrationHost = new LucentTestWebHost<OrchestrationStartup>();
             _biddingHost = new LucentTestWebHost<BidderStartup>()
@@ -55,6 +76,7 @@ namespace Lucent.Common.Bidding
             _orchestrationClient = _orchestrationHost.CreateClient();
             _biddingClient = _biddingHost.CreateClient();
 
+            await Task.CompletedTask;
         }
 
         class TestClientManger : IClientManager
@@ -62,14 +84,12 @@ namespace Lucent.Common.Bidding
             public HttpClient OrchestrationClient => _orchestrationClient;
         }
 
-
-
         [TestMethod]
         //[Ignore]
         public async Task TestSuccessfulBid()
         {
             await SetupBidderFilters();
-            var exchangeId = SequentialGuid.NextGuid();
+            exchangeId = SequentialGuid.NextGuid();
             var bid = BidGenerator.GenerateBid();
 
             var serializationContext = _biddingHost.Provider.GetRequiredService<ISerializationContext>();
@@ -78,7 +98,7 @@ namespace Lucent.Common.Bidding
             var resp = await MakeBid(bid, serializationContext, exchangeId);
             Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
 
-            var campaign = await SetupCampaign();
+            campaign = await SetupCampaign();
 
             // Bid again, should be failed
             resp = await MakeBid(bid, serializationContext, exchangeId);
@@ -89,7 +109,6 @@ namespace Lucent.Common.Bidding
 
             resp = await MakeBid(bid, serializationContext, exchangeId);
             Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
-
 
             resp = await MakeBid(bid, serializationContext, exchangeId);
             Assert.AreEqual(HttpStatusCode.OK, resp.StatusCode);
@@ -140,7 +159,7 @@ namespace Lucent.Common.Bidding
 
         async Task SetupBidderFilters()
         {
-            var entity = new BidderFilter
+            bidderFilter = new BidderFilter
             {
                 Id = SequentialGuid.NextGuid().ToString(),
                 BidFilter = new BidFilter
@@ -150,20 +169,8 @@ namespace Lucent.Common.Bidding
             };
 
             var context = _orchestrationHost.Provider.GetRequiredService<ISerializationContext>();
-
-            using (var ms = new MemoryStream())
-            {
-                await context.WriteTo(entity, ms, true, SerializationFormat.JSON);
-                ms.Seek(0, SeekOrigin.Begin);
-
-                using (var content = new StreamContent(ms, 4092))
-                {
-                    content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-
-                    var resp = await _orchestrationClient.PostAsync("/api/filters", content);
-                    Assert.AreEqual(HttpStatusCode.Created, resp.StatusCode);
-                }
-            }
+            var resp = await _orchestrationClient.PostJsonAsync(context, bidderFilter, "/api/filters");
+            Assert.AreEqual(HttpStatusCode.Created, resp.StatusCode);
         }
 
         async Task SetupExchange(Guid id)
@@ -181,20 +188,8 @@ namespace Lucent.Common.Bidding
             using (var client = _orchestrationHost.CreateClient())
             {
                 var context = _orchestrationHost.Provider.GetRequiredService<ISerializationContext>();
-
-                using (var ms = new MemoryStream())
-                {
-                    await context.WriteTo(entity, ms, true, SerializationFormat.JSON);
-                    ms.Seek(0, SeekOrigin.Begin);
-
-                    using (var content = new StreamContent(ms, 4092))
-                    {
-                        content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-
-                        var resp = await client.PostAsync("/api/exchanges", content);
-                        Assert.AreEqual(HttpStatusCode.Created, resp.StatusCode);
-                    }
-                }
+                var resp = await client.PostJsonAsync(context, entity, "api/exchanges");
+                Assert.AreEqual(HttpStatusCode.Created, resp.StatusCode);
 
                 using (var content =
                     new MultipartFormDataContent("Upload----" + DateTime.Now.ToString(CultureInfo.InvariantCulture)))
@@ -213,41 +208,16 @@ namespace Lucent.Common.Bidding
 
         async Task<Campaign> SetupCampaign()
         {
-            var campaign = CampaignGenerator.GenerateCampaign();
+            campaign = CampaignGenerator.GenerateCampaign();
             var context = _orchestrationHost.Provider.GetRequiredService<ISerializationContext>();
+            var resp = await _orchestrationClient.PostJsonAsync(context, campaign, "/api/campaigns");
+            Assert.AreEqual(HttpStatusCode.Created, resp.StatusCode);
 
-            using (var ms = new MemoryStream())
-            {
-                await context.WriteTo(campaign, ms, true, SerializationFormat.JSON);
-                ms.Seek(0, SeekOrigin.Begin);
-
-                using (var content =
-                    new StreamContent(ms, 4092))
-                {
-                    content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-
-                    var resp = await _orchestrationClient.PostAsync("/api/campaigns", content);
-                    Assert.AreEqual(HttpStatusCode.Created, resp.StatusCode);
-                }
-            }
-
-            var creative = await SetupCreative();
+            creative = await SetupCreative();
             campaign.CreativeIds = new String[] { creative.Id };
 
-            using (var ms = new MemoryStream())
-            {
-                await context.WriteTo(campaign, ms, true, SerializationFormat.JSON);
-                ms.Seek(0, SeekOrigin.Begin);
-
-                using (var content =
-                    new StreamContent(ms, 4092))
-                {
-                    content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-
-                    var resp = await _orchestrationClient.PutAsync("/api/campaigns/{0}".FormatWith(campaign.Id), content);
-                    Assert.AreEqual(HttpStatusCode.Accepted, resp.StatusCode);
-                }
-            }
+            resp = await _orchestrationClient.PutJsonAsync(context, campaign, "/api/campaigns/{0}".FormatWith(campaign.Id));
+            Assert.AreEqual(HttpStatusCode.Accepted, resp.StatusCode);
 
             return campaign;
         }
@@ -255,25 +225,12 @@ namespace Lucent.Common.Bidding
 
         async Task<Creative> SetupCreative()
         {
-            var entity = CreativeGenerator.GenerateCreative();
+            creative = CreativeGenerator.GenerateCreative();
             var context = _orchestrationHost.Provider.GetRequiredService<ISerializationContext>();
+            var resp = await _orchestrationClient.PostJsonAsync(context, creative, "/api/creatives");
+            Assert.AreEqual(HttpStatusCode.Created, resp.StatusCode);
 
-            using (var ms = new MemoryStream())
-            {
-                await context.WriteTo(entity, ms, true, SerializationFormat.JSON);
-                ms.Seek(0, SeekOrigin.Begin);
-
-                using (var content =
-                    new StreamContent(ms, 4092))
-                {
-                    content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-
-                    var resp = await _orchestrationClient.PostAsync("/api/creatives", content);
-                    Assert.AreEqual(HttpStatusCode.Created, resp.StatusCode);
-                }
-            }
-
-            return entity;
+            return creative;
         }
     }
 }
