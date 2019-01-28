@@ -79,7 +79,7 @@ namespace Lucent.Common.Storage
             public Task<ICollection<T>> GetAll() => Task.FromResult((ICollection<T>)Entities);
 
             /// <inheritdoc />
-            public async Task<T> Get(IStorageKey key)
+            public async Task<T> Get(StorageKey key)
             {
                 _log.LogInformation("Getting {0} ({1})", key, typeof(T).Name);
                 var instance = Entities.FirstOrDefault(e => e.Key.Equals(key));
@@ -98,7 +98,7 @@ namespace Lucent.Common.Storage
 
 
             /// <inheritdoc />
-            public Task<ICollection<T>> GetAny(IStorageKey key) => Task.FromResult((ICollection<T>)Entities.Where(e => e.Key.Equals(key)).ToList());
+            public Task<ICollection<T>> GetAny(StorageKey key) => Task.FromResult((ICollection<T>)Entities.Where(e => e.Key.Equals(key)).ToList());
 
             /// <inheritdoc />
             public Task<bool> TryInsert(T obj)

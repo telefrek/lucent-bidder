@@ -14,7 +14,7 @@ namespace Lucent.Common.Entities
         /// </summary>
         /// <value></value>
         [SerializationProperty(1, "id")]
-        public string Id 
+        public string Id
         {
             get => Key.ToString();
             set
@@ -27,8 +27,8 @@ namespace Lucent.Common.Entities
         /// 
         /// </summary>
         /// <value></value>
-        public IStorageKey Key { get; set; }
-        
+        public StorageKey Key { get; set; } = new StringStorageKey();
+
         /// <summary>
         /// Filters for incoming bids before exchange evaluation
         /// </summary>

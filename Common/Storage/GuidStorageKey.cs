@@ -5,9 +5,14 @@ namespace Lucent.Common.Storage
     /// <summary>
     /// Storage key from a string
     /// </summary>
-    public class GuidStorageKey : IStorageKey
+    public class GuidStorageKey : StorageKey
     {
         Guid _value;
+
+        /// <summary>
+        /// Default constructor
+        /// </summary>
+        public GuidStorageKey() => _value = Guid.Empty;
 
         /// <summary>
         /// Default constructor
@@ -31,22 +36,22 @@ namespace Lucent.Common.Storage
         public override int GetHashCode() => _value.GetHashCode();
 
         /// <inheritdoc />
-        public int CompareTo(object obj)
+        public override int CompareTo(object obj)
         {
             if (obj is Guid)
                 return _value.CompareTo(obj);
             if (obj is GuidStorageKey)
                 return _value.CompareTo((obj as GuidStorageKey)._value);
-            if (obj is IStorageKey)
-                return _value.CompareTo((obj as IStorageKey).ToString());
+            if (obj is StorageKey)
+                return _value.CompareTo((obj as StorageKey).ToString());
 
             return _value.CompareTo(obj.ToString());
         }
         
         /// <inheritdoc/>
-        public void Parse(string value) => _value = Guid.Parse(value);
+        public override void Parse(string value) => _value = Guid.Parse(value);
 
         /// <inheritdoc/>
-        public object[] RawValue() => new object[] { _value };
+        public override object[] RawValue() => new object[] { _value };
     }
 }

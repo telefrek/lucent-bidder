@@ -20,7 +20,7 @@ namespace Lucent.Common.Entities
         IStorageRepository<Creative> _creativeRepo;
         ILogger _log;
 
-        ConcurrentDictionary<IStorageKey, Campaign> _campaigns = new ConcurrentDictionary<IStorageKey, Campaign>();
+        ConcurrentDictionary<StorageKey, Campaign> _campaigns = new ConcurrentDictionary<StorageKey, Campaign>();
 
         /// <summary>
         /// 

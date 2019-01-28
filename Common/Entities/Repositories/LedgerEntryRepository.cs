@@ -66,7 +66,7 @@ namespace Lucent.Common.Entities.Repositories
         }
 
         /// <inheritdoc/>
-        public async Task<LedgerEntry> Get(IStorageKey id)
+        public async Task<LedgerEntry> Get(StorageKey id)
         {
             try
             {
@@ -82,7 +82,7 @@ namespace Lucent.Common.Entities.Repositories
         }
 
         /// <inheritdoc/>
-        public async Task<ICollection<LedgerEntry>> GetAny(IStorageKey id)
+        public async Task<ICollection<LedgerEntry>> GetAny(StorageKey id)
         {
             try
             {

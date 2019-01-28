@@ -28,7 +28,7 @@ namespace Lucent.Common.Entities
         /// 
         /// </summary>
         /// <returns></returns>
-        public IStorageKey Key { get; set; } = new LedgerCompositeEntryKey();
+        public StorageKey Key { get; set; } = new LedgerCompositeEntryKey();
 
         /// <summary>
         /// 
@@ -77,7 +77,7 @@ namespace Lucent.Common.Entities
     /// <summary>
     /// Key type for retrieving ledger entries
     /// </summary>
-    public class LedgerCompositeEntryKey : IStorageKey
+    public class LedgerCompositeEntryKey : StorageKey
     {
         /// <summary>
         /// The id for the target type
@@ -97,7 +97,7 @@ namespace Lucent.Common.Entities
         public override int GetHashCode() => (TargetId + (LedgerTimeId == default(Guid) ? Guid.Empty : LedgerTimeId).ToString()).GetHashCode();
 
         /// <inheritdoc/>
-        public int CompareTo(object obj)
+        public override int CompareTo(object obj)
         {
             var lck = obj as LedgerCompositeEntryKey;
 
@@ -128,7 +128,7 @@ namespace Lucent.Common.Entities
         }
 
         /// <inheritdoc/>
-        public void Parse(string value)
+        public override void Parse(string value)
         {
             var data = value.Split(new char[] { ':' }, StringSplitOptions.RemoveEmptyEntries);
             if (data.Length > 2)
@@ -139,6 +139,6 @@ namespace Lucent.Common.Entities
         }
 
         /// <inheritdoc/>
-        public object[] RawValue() => new object[] { TargetId, LedgerTimeId };
+        public override object[] RawValue() => new object[] { TargetId, LedgerTimeId };
     }
 }

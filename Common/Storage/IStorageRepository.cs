@@ -22,14 +22,14 @@ namespace Lucent.Common.Storage
         /// </summary>
         /// <param name="id">The object id to search for</param>
         /// <returns></returns>
-        Task<T> Get(IStorageKey id);
+        Task<T> Get(StorageKey id);
 
 
         /// <summary>
         /// Gets all the objects in the collection that match the key
         /// </summary>
         /// <returns></returns>
-        Task<ICollection<T>> GetAny(IStorageKey id);
+        Task<ICollection<T>> GetAny(StorageKey id);
 
         /// <summary>
         /// Tries to insert the object into the collection

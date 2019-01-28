@@ -5,18 +5,29 @@ namespace Lucent.Common.Storage
     /// <summary>
     /// Represents a storage key (singluar, composite, clustered, etc.)
     /// </summary>
-    public interface IStorageKey : IComparable
+    public class StorageKey : IComparable
     {
+        /// <summary>
+        /// Default constructor
+        /// </summary>
+        public StorageKey()
+        {
+
+        }
+
         /// <summary>
         /// Get the raw values that make up the key
         /// </summary>
         /// <returns></returns>
-        object[] RawValue();
+        public virtual object[] RawValue() => null;
 
         /// <summary>
         /// Must be able to parse from a string
         /// </summary>
         /// <param name="value"></param>
-        void Parse(string value);
+        public virtual void Parse(string value) => throw new InvalidCastException();
+
+        /// <inheritdoc/>
+        public virtual int CompareTo(object obj) => throw new InvalidCastException();
     }
 }

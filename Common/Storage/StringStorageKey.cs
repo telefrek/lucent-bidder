@@ -5,9 +5,14 @@ namespace Lucent.Common.Storage
     /// <summary>
     /// Storage key from a string
     /// </summary>
-    public class StringStorageKey : IStorageKey
+    public class StringStorageKey : StorageKey
     {
         string _value;
+
+        /// <summary>
+        /// Default constructor
+        /// </summary>
+        public StringStorageKey() => _value = string.Empty;
 
         /// <summary>
         /// Default constructor
@@ -22,32 +27,32 @@ namespace Lucent.Common.Storage
         public override bool Equals(object obj)
         {
             var ssk = obj as StringStorageKey;
-            if(ssk != null) return _value.Equals(ssk._value);
+            if (ssk != null) return _value.Equals(ssk._value);
 
             return _value.Equals(obj.ToString());
         }
-        
+
         /// <inheritdoc/>
         public override int GetHashCode() => _value.GetHashCode();
 
         /// <inheritdoc />
-        public int CompareTo(object obj)
+        public override int CompareTo(object obj)
         {
             if (obj is string)
                 return _value.CompareTo(obj);
             if (obj is StringStorageKey)
                 return _value.CompareTo((obj as StringStorageKey)._value);
-            if (obj is IStorageKey)
-                return _value.CompareTo((obj as IStorageKey).ToString());
+            if (obj is StorageKey)
+                return _value.CompareTo((obj as StorageKey).ToString());
 
             return _value.CompareTo(obj.ToString());
         }
 
         /// <inheritdoc/>
-        public void Parse(string value) => _value = value;
-        
+        public override void Parse(string value) => _value = value;
+
         /// <inheritdoc />
-        public object[] RawValue() => new object[] { _value };
+        public override object[] RawValue() => new object[] { _value };
 
     }
 }

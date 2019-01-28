@@ -26,7 +26,7 @@ namespace Lucent.Common.Entities
         /// 
         /// </summary>
         /// <value></value>
-        public IStorageKey Key { get; set; } = new GuidStorageKey(Guid.Empty);
+        public StorageKey Key { get; set; } = new GuidStorageKey();
 
         /// <inheritdoc/>
         public string ETag { get; set; }

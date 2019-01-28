@@ -12,7 +12,7 @@ namespace Lucent.Common.Storage
         /// The unique identifier for the object
         /// </summary>
         /// <value></value>
-        IStorageKey Key { get; set; }
+        StorageKey Key { get; set; }
 
         /// <summary>
         /// The object ETag for detecting invalid changes

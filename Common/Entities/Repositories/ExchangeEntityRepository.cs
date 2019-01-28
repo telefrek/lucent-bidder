@@ -54,7 +54,7 @@ namespace Lucent.Common.Entities.Repositories
         }
 
         /// <inheritdoc/>
-        public async Task<Exchange> Get(IStorageKey id)
+        public async Task<Exchange> Get(StorageKey id)
         {
             try
             {
@@ -87,7 +87,7 @@ namespace Lucent.Common.Entities.Repositories
         }
 
         /// <inheritdoc/>
-        public async Task<ICollection<Exchange>> GetAny(IStorageKey id)
+        public async Task<ICollection<Exchange>> GetAny(StorageKey id)
         {
             try
             {

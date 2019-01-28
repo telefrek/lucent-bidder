@@ -81,7 +81,7 @@ namespace Lucent.Common.Storage
         }
 
         /// <inheritdoc/>
-        public async Task<T> Get(IStorageKey key)
+        public async Task<T> Get(StorageKey key)
         {
             try
             {
@@ -103,7 +103,7 @@ namespace Lucent.Common.Storage
         }
 
         /// <inheritdoc/>
-        public async Task<ICollection<T>> GetAny(IStorageKey key)
+        public async Task<ICollection<T>> GetAny(StorageKey key)
         {
             var target = await Get(key);
             return target != null ? new List<T>() { target } : new List<T>();

@@ -30,7 +30,7 @@ namespace Lucent.Common.Entities
         /// 
         /// </summary>
         /// <value></value>
-        public IStorageKey Key { get; set; } = new StringStorageKey(null);
+        public StorageKey Key { get; set; } = new StringStorageKey();
 
         /// <summary>
         /// 
