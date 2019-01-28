@@ -24,7 +24,7 @@
                         <a asp-page="./Summary" class="btn btn-link" asp-route-id="@creative.Id">@creative.Id</a>
                     </th>
                     <td id="@creative.Id-name">@creative.Name</td>
-                    <td id="@creative.Id-num-creative">@creative.Contents.Count</td>
+                    <td id="@creative.Id-num-creative">@creative.Contents.Count()</td>
                     <td>
                         <a asp-page="./Edit" class="btn btn-link" asp-route-id="@creative.Id">edit</a>
                         <button type="submit" class="btn btn-link" asp-page-handler="delete" 
