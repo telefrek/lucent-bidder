@@ -45,7 +45,7 @@ namespace Lucent.Common.Middleware
         /// </summary>
         /// <param name="context">The current http context</param>
         /// <returns>A completed pipeline step</returns>
-        public async Task HandleAsync(HttpContext context)
+        public async Task InvokeAsync(HttpContext context)
         {
             // Check type of postback
             var query = context.Request.Query;
@@ -59,6 +59,8 @@ namespace Lucent.Common.Middleware
 
                 if (query.ContainsKey(QueryParameters.LUCENT_BID_CONTEXT_PARAMETER))
                     bidContext = BidContext.Parse(query[QueryParameters.LUCENT_BID_CONTEXT_PARAMETER]);
+
+                _log.LogInformation("Bid : {0} ({1})", bidContext.BidId, bidContext.Operation);
 
                 switch (bidContext.Operation)
                 {

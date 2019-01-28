@@ -33,6 +33,11 @@ namespace Lucent.Common.Bootstrap
             {
                 a.UseMiddleware<BiddingMiddleware>();
             });
+
+            app.Map("/v1/postback", (a) =>
+            {
+                a.UseMiddleware<PostbackMiddleware>();
+            });
         }
     }
 }

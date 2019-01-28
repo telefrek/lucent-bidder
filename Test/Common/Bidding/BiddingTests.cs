@@ -28,6 +28,7 @@ using Lucent.Common.Test;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Lucent.Common.Bidding
@@ -44,6 +45,8 @@ namespace Lucent.Common.Bidding
         Creative creative;
         Guid exchangeId;
         BidderFilter bidderFilter;
+
+        public TestContext TestContext { get; set; }
 
         [TestCleanup]
         public async Task TestCleanup()
@@ -127,6 +130,10 @@ namespace Lucent.Common.Bidding
             bid.Site = new Site { Domain = "telefrek.com" };
             resp = await MakeBid(bid, serializationContext, exchangeId);
             Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
+
+            // send a loss notification
+            resp = await AdvanceBid(serializationContext, bidResponse.Bids.First().Bids.First(), false);
+            Assert.AreEqual(HttpStatusCode.OK, resp.StatusCode);
         }
 
         async Task<HttpResponseMessage> MakeBid(BidRequest bid, ISerializationContext serializationContext, Guid exchangeId)
@@ -155,6 +162,14 @@ namespace Lucent.Common.Bidding
             Assert.AreEqual(campaign.Id, campaignBid.CampaignId, "Only one campaign should exist");
 
             return response;
+        }
+
+        async Task<HttpResponseMessage> AdvanceBid(ISerializationContext serializationContext, Bid bid, bool win = true)
+        {
+            TestContext.WriteLine("Advancing {0} ({1})", bid.Id, win);
+            var uri = new Uri(win ? bid.WinUrl : bid.LossUrl);
+
+            return await _biddingClient.PostAsync(uri.PathAndQuery, null);
         }
 
         async Task SetupBidderFilters()
