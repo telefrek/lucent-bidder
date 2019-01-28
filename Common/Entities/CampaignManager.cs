@@ -37,7 +37,7 @@ namespace Lucent.Common.Entities
             _creativeRepo = storageManager.GetRepository<Creative>();
 
             // Setup message loop
-            _eventSubscriber = messageFactory.CreateSubscriber<EntityEventMessage>("bidding", 0, messageFactory.WildcardFilter);
+            _eventSubscriber = messageFactory.CreateSubscriber<EntityEventMessage>(Topics.BIDDING, 0, messageFactory.WildcardFilter);
             _eventSubscriber.OnReceive = TrackEntities;
         }
 

@@ -41,7 +41,7 @@ namespace Lucent.Common.Middleware
             _messageFactory = messageFactory;
             _logger = logger;
 
-            //_messageFactory.CreateSubscriber<LucentMessage<Campaign>>("entities", 0, "campaign").OnReceive += UpdateCampaigns;
+            //_messageFactory.CreateSubscriber<LucentMessage<Campaign>>(Topics.ENTITIES, 0, "campaign").OnReceive += UpdateCampaigns;
         }
 
         /// <summary>
@@ -75,7 +75,7 @@ namespace Lucent.Common.Middleware
                     msg.Body = evt;
                     msg.Route = "campaign";
 
-                    await _messageFactory.CreatePublisher("bidding").TryPublish(msg);
+                    await _messageFactory.CreatePublisher(Topics.BIDDING).TryPublish(msg);
                 }
             }
         }
@@ -124,12 +124,12 @@ namespace Lucent.Common.Middleware
                     var msg = _messageFactory.CreateMessage<EntityEventMessage>();
                     msg.Body = evt;
                     msg.Route = "campaign";
-                    await _messageFactory.CreatePublisher("bidding").TryPublish(msg);
+                    await _messageFactory.CreatePublisher(Topics.BIDDING).TryPublish(msg);
 
                     var sync = _messageFactory.CreateMessage<LucentMessage<BudgetRequest>>();
                     sync.Body = request;
                     sync.Route = "campaign";
-                    await _messageFactory.CreatePublisher("entities").TryBroadcast(msg);
+                    await _messageFactory.CreatePublisher(Topics.ENTITIES).TryBroadcast(msg);
                 }
             }
         }

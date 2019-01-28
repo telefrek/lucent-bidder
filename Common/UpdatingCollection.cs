@@ -27,7 +27,7 @@ namespace Lucent.Common
         /// <param name="entityType"></param>
         public UpdatingCollection(IMessageFactory messageFactory, IStorageManager storageManager, EntityType entityType)
         {
-            _entitySubscriber = messageFactory.CreateSubscriber<EntityEventMessage>("bidding", 0, messageFactory.WildcardFilter);
+            _entitySubscriber = messageFactory.CreateSubscriber<EntityEventMessage>(Topics.BIDDING, 0, messageFactory.WildcardFilter);
             _entitySubscriber.OnReceive = HandleMessageAsync;
             _storageRepository = storageManager.GetRepository<T>();
             _entityType = entityType;

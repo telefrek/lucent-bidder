@@ -44,7 +44,7 @@ namespace Lucent.Common.Bidding
             _storageManager = storageManager;
             _messageFactory = messageFactory;
             _bidFactory = bidFactory;
-            _entityEvents = _messageFactory.CreateSubscriber<EntityEventMessage>("bidding", 0, _messageFactory.WildcardFilter);
+            _entityEvents = _messageFactory.CreateSubscriber<EntityEventMessage>(Topics.BIDDING, 0, _messageFactory.WildcardFilter);
             _entityEvents.OnReceive = HandleMessage;
             _creativeRepo = storageManager.GetRepository<Creative>();
             _budgetManager = budgetManager;

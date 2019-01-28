@@ -62,7 +62,7 @@ namespace Lucent.Common.Middleware
             _messageFactory = messageFactory;
             _logger = logger;
 
-            _messageFactory.CreateSubscriber<LucentMessage<T>>("entities", 0, _messageFactory.WildcardFilter).OnReceive += UpdateEntity;
+            _messageFactory.CreateSubscriber<LucentMessage<T>>(Topics.ENTITIES, 0, _messageFactory.WildcardFilter).OnReceive += UpdateEntity;
         }
 
         /// <summary>
@@ -95,7 +95,7 @@ namespace Lucent.Common.Middleware
                     msg.Body = evt;
                     msg.Route = typeof(T).Name.ToLowerInvariant();
 
-                    await _messageFactory.CreatePublisher("bidding").TryPublish(msg);
+                    await _messageFactory.CreatePublisher(Topics.BIDDING).TryPublish(msg);
                 }
             }
         }
@@ -179,12 +179,12 @@ namespace Lucent.Common.Middleware
                     var msg = _messageFactory.CreateMessage<EntityEventMessage>();
                     msg.Body = evt;
                     msg.Route = typeof(T).Name.ToLowerInvariant();
-                    await _messageFactory.CreatePublisher("bidding").TryPublish(msg);
+                    await _messageFactory.CreatePublisher(Topics.BIDDING).TryPublish(msg);
 
                     var sync = _messageFactory.CreateMessage<LucentMessage<T>>();
                     sync.Body = entity;
                     sync.Route = typeof(T).Name.ToLowerInvariant();
-                    await _messageFactory.CreatePublisher("entities").TryBroadcast(msg);
+                    await _messageFactory.CreatePublisher(Topics.ENTITIES).TryBroadcast(msg);
                 }
             }
         }

@@ -36,7 +36,7 @@ namespace Lucent.Common.Exchanges
             _log = logger;
             _messageFactory = messageFactory;
             _storageRepository = storageManager.GetRepository<Exchange>();
-            _subscriber = messageFactory.CreateSubscriber<EntityEventMessage>("bidding", 0, messageFactory.WildcardFilter);
+            _subscriber = messageFactory.CreateSubscriber<EntityEventMessage>(Topics.BIDDING, 0, messageFactory.WildcardFilter);
 
             _subscriber.OnReceive = async (message) =>
             {
