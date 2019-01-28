@@ -19,8 +19,7 @@ namespace Lucent.Common.Middleware
     /// Test the rest api!
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <typeparam name="K"></typeparam>
-    public class EntityRestApi<T, K> where T : class, IStorageEntity<K>, new()
+    public class EntityRestApi<T> where T : class, IStorageEntity, new()
     {
         /// <summary>
         /// 
@@ -35,12 +34,12 @@ namespace Lucent.Common.Middleware
         /// <summary>
         /// 
         /// </summary>
-        protected readonly ILogger<EntityRestApi<T, K>> _logger;
+        protected readonly ILogger<EntityRestApi<T>> _logger;
 
         /// <summary>
         /// 
         /// </summary>
-        protected readonly IStorageRepository<T, K> _entityRepository;
+        protected readonly IStorageRepository<T> _entityRepository;
 
         /// <summary>
         /// 
@@ -55,10 +54,10 @@ namespace Lucent.Common.Middleware
         /// <param name="messageFactory"></param>
         /// <param name="serializationContext"></param>
         /// <param name="logger"></param>
-        public EntityRestApi(RequestDelegate next, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<EntityRestApi<T, K>> logger)
+        public EntityRestApi(RequestDelegate next, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<EntityRestApi<T>> logger)
         {
             _storageManager = storageManager;
-            _entityRepository = storageManager.GetRepository<T, K>();
+            _entityRepository = storageManager.GetRepository<T>();
             _serializationContext = serializationContext;
             _messageFactory = messageFactory;
             _logger = logger;
@@ -78,7 +77,7 @@ namespace Lucent.Common.Middleware
                 var evt = new EntityEvent
                 {
                     EntityType = (EntityType)Enum.Parse(typeof(EntityType), typeof(T).Name),
-                    EntityId = entityEvent.Body.Id.ToString(),
+                    EntityId = entityEvent.Body.Key.ToString(),
                 };
 
                 // This is awful, don't do this for real
@@ -113,9 +112,9 @@ namespace Lucent.Common.Middleware
             if (entity == null && httpContext.Request.Path.Value.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries).Length > 0)
             {
                 var id = httpContext.Request.Path.Value.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries).Last();
-                var key = (K)Convert.ChangeType(id, typeof(K));
-                if (!key.IsNullOrDefault())
-                    return await _entityRepository.Get(key);
+                var t = new T();
+                t.Key.Parse(id);
+                return await _entityRepository.Get(t.Key);
             }
 
             return entity;
@@ -136,7 +135,7 @@ namespace Lucent.Common.Middleware
                 var evt = new EntityEvent
                 {
                     EntityType = (EntityType)Enum.Parse(typeof(EntityType), typeof(T).Name),
-                    EntityId = entity.Id.ToString(),
+                    EntityId = entity.Key.ToString(),
                 };
 
                 switch (httpContext.Request.Method.ToLowerInvariant())
@@ -146,7 +145,7 @@ namespace Lucent.Common.Middleware
                         {
                             httpContext.Response.StatusCode = 201;
                             evt.EventType = EventType.EntityAdd;
-                            evt.EntityId = entity.Id.ToString();
+                            evt.EntityId = entity.Key.ToString();
                             await _serializationContext.WriteTo(httpContext, entity);
                         }
                         else

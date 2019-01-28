@@ -14,8 +14,8 @@ namespace Lucent.Common.Bidding
     /// </summary>
     public class InMemoryBudgetLedgerManager : IBudgetLedgerManager
     {
-        IBasicStorageRepository<Campaign> _campaignRepo;
-        IStorageRepository<LedgerEntry, LedgerCompositeEntryKey> _ledger;
+        IStorageRepository<Campaign> _campaignRepo;
+        IStorageRepository<LedgerEntry> _ledger;
         ILogger<InMemoryBudgetLedgerManager> _log;
         BudgetLedgerConfig _config;
         IServiceProvider _provider;
@@ -30,8 +30,8 @@ namespace Lucent.Common.Bidding
         public InMemoryBudgetLedgerManager(IServiceProvider provider, ILogger<InMemoryBudgetLedgerManager> logger, IStorageManager storageManager, IOptions<BudgetLedgerConfig> config)
         {
             _log = logger;
-            _campaignRepo = storageManager.GetBasicRepository<Campaign>();
-            _ledger = storageManager.GetRepository<LedgerEntry, LedgerCompositeEntryKey>();
+            _campaignRepo = storageManager.GetRepository<Campaign>();
+            _ledger = storageManager.GetRepository<LedgerEntry>();
             _config = config.Value;
             _provider = provider;
         }
@@ -45,7 +45,7 @@ namespace Lucent.Common.Bidding
             _log.LogInformation("Requesting budget for {0}", campaignId);
 
             // Check if the current campaign is over budget
-            var c = await _campaignRepo.Get(campaignId);
+            var c = await _campaignRepo.Get(new StringStorageKey(campaignId));
             if (c == null)
                 return null;
 
@@ -61,7 +61,7 @@ namespace Lucent.Common.Bidding
 
             var entry = new LedgerEntry
             {
-                Id = new LedgerCompositeEntryKey { TargetId = campaignId, LedgerTimeId = TimeUuid.NewId() },
+                Key = new LedgerCompositeEntryKey { TargetId = campaignId, LedgerTimeId = TimeUuid.NewId() },
                 OriginalAmount = amt,
                 RemainingAmount = amt,
             };

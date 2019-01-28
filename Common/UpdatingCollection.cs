@@ -13,10 +13,9 @@ namespace Lucent.Common
     /// 
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <typeparam name="K"></typeparam>
-    public class UpdatingCollection<T, K> where T : IStorageEntity<K>, new()
+    public class UpdatingCollection<T> where T : IStorageEntity, new()
     {
-        IStorageRepository<T, K> _storageRepository;
+        IStorageRepository<T> _storageRepository;
         IMessageSubscriber<EntityEventMessage> _entitySubscriber;
         EntityType _entityType;
 
@@ -30,7 +29,7 @@ namespace Lucent.Common
         {
             _entitySubscriber = messageFactory.CreateSubscriber<EntityEventMessage>("bidding", 0, messageFactory.WildcardFilter);
             _entitySubscriber.OnReceive = HandleMessageAsync;
-            _storageRepository = storageManager.GetRepository<T, K>();
+            _storageRepository = storageManager.GetRepository<T>();
             _entityType = entityType;
 
             Entities = _storageRepository.GetAll().Result.ToList();

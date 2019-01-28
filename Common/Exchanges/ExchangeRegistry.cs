@@ -20,7 +20,7 @@ namespace Lucent.Common.Exchanges
         ILogger<ExchangeRegistry> _log;
         Dictionary<string, AdExchange> _exchangeMap = new Dictionary<string, AdExchange>();
         IMessageFactory _messageFactory;
-        IStorageRepository<Exchange, Guid> _storageRepository;
+        IStorageRepository<Exchange> _storageRepository;
         IMessageSubscriber<EntityEventMessage> _subscriber;
 
         object _syncLock = new object();
@@ -35,7 +35,7 @@ namespace Lucent.Common.Exchanges
         {
             _log = logger;
             _messageFactory = messageFactory;
-            _storageRepository = storageManager.GetRepository<Exchange, Guid>();
+            _storageRepository = storageManager.GetRepository<Exchange>();
             _subscriber = messageFactory.CreateSubscriber<EntityEventMessage>("bidding", 0, messageFactory.WildcardFilter);
 
             _subscriber.OnReceive = async (message) =>
@@ -50,7 +50,7 @@ namespace Lucent.Common.Exchanges
                     case EventType.EntityUpdate:
                         Guid id;
                         if (!Guid.TryParse(evt.EntityId, out id)) return;
-                        var entity = await _storageRepository.Get(id);
+                        var entity = await _storageRepository.Get(new GuidStorageKey(id));
                         if (entity.Instance != null)
                         {
                             _log.LogInformation("Loaded exchange : {0}", entity.Id);

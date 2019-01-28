@@ -22,7 +22,7 @@ namespace Lucent.Common.Middleware
         readonly IStorageManager _storageManager;
         readonly ISerializationContext _serializationContext;
         readonly ILogger<BudgetOrchestrator> _logger;
-        readonly IBasicStorageRepository<Campaign> _campaignRepository;
+        readonly IStorageRepository<Campaign> _campaignRepository;
         readonly IMessageFactory _messageFactory;
 
         /// <summary>
@@ -36,7 +36,7 @@ namespace Lucent.Common.Middleware
         public BudgetOrchestrator(RequestDelegate next, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<BudgetOrchestrator> logger)
         {
             _storageManager = storageManager;
-            _campaignRepository = storageManager.GetBasicRepository<Campaign>();
+            _campaignRepository = storageManager.GetRepository<Campaign>();
             _serializationContext = serializationContext;
             _messageFactory = messageFactory;
             _logger = logger;
@@ -57,7 +57,7 @@ namespace Lucent.Common.Middleware
                 var evt = new EntityEvent
                 {
                     EntityType = EntityType.Campaign,
-                    EntityId = campaignEvent.Body.Id,
+                    EntityId = campaignEvent.Body.Key.ToString(),
                 };
 
                 // This is awful, don't do this for real

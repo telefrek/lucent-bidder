@@ -21,7 +21,7 @@ namespace Lucent.Common.Storage.Test
             var manager = ServiceProvider.GetRequiredService<IStorageManager>();
             Assert.IsNotNull(manager, "Failed to create manager");
 
-            var testRepo = manager.GetRepository<Creative, string>();
+            var testRepo = manager.GetRepository<Creative>();
             Assert.IsNotNull(testRepo, "Failed to create repo");
 
             foreach (var entry in testRepo.GetAll().Result)
@@ -39,10 +39,10 @@ namespace Lucent.Common.Storage.Test
             var manager = ServiceProvider.GetRequiredService<IStorageManager>();
             Assert.IsNotNull(manager, "Failed to create manager");
 
-            var testRepo = manager.GetBasicRepository<Creative>();
+            var testRepo = manager.GetRepository<Creative>();
             Assert.IsNotNull(testRepo, "Failed to create repo");
 
-            var res = await testRepo.Get(Guid.NewGuid().ToString());
+            var res = await testRepo.Get(new StringStorageKey(Guid.NewGuid().ToString()));
             Assert.IsNull(res, "No object should be returned");
             var tObj = new Creative { Id = Guid.NewGuid().ToString(), Name = "item" };
 
@@ -57,9 +57,9 @@ namespace Lucent.Common.Storage.Test
             var success = await testRepo.TryInsert(tObj);
             Assert.IsTrue(success);
 
-            res = await testRepo.Get(tObj.Id);
+            res = await testRepo.Get(tObj.Key);
             Assert.IsNotNull(res);
-            Assert.AreEqual(tObj.Id, res.Id, "mismatch id");
+            Assert.AreEqual(tObj.Key, res.Id, "mismatch id");
             Assert.AreEqual(tObj.Contents.Length, 1, "mismatch count");
             Assert.AreEqual(tObj.Contents[0].Duration, 100, "bad duration");
 
@@ -68,15 +68,15 @@ namespace Lucent.Common.Storage.Test
             success = await testRepo.TryUpdate(tObj);
             Assert.IsTrue(success, "Failed to update");
 
-            res = await testRepo.Get(tObj.Id);
+            res = await testRepo.Get(tObj.Key);
             Assert.IsNotNull(res);
-            Assert.AreEqual(tObj.Id, res.Id, "mismatch id");
+            Assert.AreEqual(tObj.Key, res.Id, "mismatch id");
             Assert.AreEqual("Updated", res.Name, true, "Failed to update name");
 
             success = await testRepo.TryRemove(tObj);
             Assert.IsTrue(success, "Failed to remove");
 
-            res = await testRepo.Get(tObj.Id);
+            res = await testRepo.Get(tObj.Key);
             Assert.IsNull(res, "No object should be returned");
         }
     }

@@ -10,7 +10,7 @@ namespace Lucent.Common.Entities
     /// <summary>
     /// 
     /// </summary>
-    public class Campaign : IBasicStorageEntity
+    public class Campaign : IStorageEntity
     {
         /// <summary>
         /// 
@@ -18,7 +18,20 @@ namespace Lucent.Common.Entities
         /// <value></value>
         [Display(Name = "Id")]
         [SerializationProperty(1, "id")]
-        public string Id { get; set; }
+        public string Id
+        {
+            get => Key.ToString();
+            set
+            {
+                Key = new StringStorageKey(value);
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
+        public IStorageKey Key { get; set; } = new StringStorageKey(null);
 
         /// <summary>
         /// 

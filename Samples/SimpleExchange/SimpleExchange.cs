@@ -29,7 +29,7 @@ namespace Lucent.Samples.SimpleExchange
         public override Task Initialize(IServiceProvider provider)
         {
             _log = provider.GetRequiredService<ILogger<SimpleExchange>>();
-            
+
             _bidManager = provider.CreateScope().ServiceProvider.GetRequiredService<IBiddingManager>();
 
             return Task.CompletedTask;

@@ -29,23 +29,15 @@ namespace Lucent.Common.Storage
         }
 
         /// <inheritdoc />
-        public IStorageRepository<T, K> GetRepository<T, K>()
-            where T : IStorageEntity<K>, new()
+        public IStorageRepository<T> GetRepository<T>()
+            where T : IStorageEntity, new()
         {
             lock (_syncLock)
             {
                 if (!_entities.ContainsKey(typeof(T)))
                     _entities.Add(typeof(T), new List<T>());
 
-                if (typeof(string).IsAssignableFrom(typeof(K)))
-                {
-                    dynamic obj = Activator.CreateInstance(typeof(BasicInMemoryRepository<>).MakeGenericType(typeof(T)));
-                    obj.Entities = _entities[typeof(T)] as List<T>;
-                    obj.Log = _log;
-                    return obj as IStorageRepository<T, K>;
-                }
-
-                return new InMemoryRepository<T, K>(_provider, _log)
+                return new InMemoryRepository<T>(_provider, _log)
                 {
                     Entities = _entities[typeof(T)] as List<T>,
                 };
@@ -53,15 +45,15 @@ namespace Lucent.Common.Storage
         }
 
         /// <inheritdoc />
-        public void RegisterRepository<R, T, K>()
-            where R : IStorageRepository<T, K>
-            where T : IStorageEntity<K>, new()
+        public void RegisterRepository<R, T>()
+            where R : IStorageRepository<T>
+            where T : IStorageEntity, new()
         {
             // Ignore this for in memory
         }
 
         /// <inheritdoc />
-        public class InMemoryRepository<T, K> : IStorageRepository<T, K> where T : IStorageEntity<K>
+        public class InMemoryRepository<T> : IStorageRepository<T> where T : IStorageEntity
         {
             IServiceProvider _provider;
             ILogger _log;
@@ -87,10 +79,10 @@ namespace Lucent.Common.Storage
             public Task<ICollection<T>> GetAll() => Task.FromResult((ICollection<T>)Entities);
 
             /// <inheritdoc />
-            public async Task<T> Get(K key)
+            public async Task<T> Get(IStorageKey key)
             {
                 _log.LogInformation("Getting {0} ({1})", key, typeof(T).Name);
-                var instance = Entities.FirstOrDefault(e => e.Id.Equals(key));
+                var instance = Entities.FirstOrDefault(e => e.Key.Equals(key));
                 if (typeof(Exchange).IsAssignableFrom(typeof(T)))
                 {
                     var exchange = (Exchange)(object)instance;
@@ -106,13 +98,13 @@ namespace Lucent.Common.Storage
 
 
             /// <inheritdoc />
-            public Task<ICollection<T>> GetAny(K key) => Task.FromResult((ICollection<T>)Entities.Where(e => e.Id.Equals(key)).ToList());
+            public Task<ICollection<T>> GetAny(IStorageKey key) => Task.FromResult((ICollection<T>)Entities.Where(e => e.Key.Equals(key)).ToList());
 
             /// <inheritdoc />
             public Task<bool> TryInsert(T obj)
             {
-                _log.LogInformation("Inserting {0} ({1})", obj.Id, typeof(T).Name);
-                if (!Entities.Exists(e => e.Id.Equals(obj.Id)))
+                _log.LogInformation("Inserting {0} ({1})", obj.Key, typeof(T).Name);
+                if (!Entities.Exists(e => e.Key.Equals(obj.Key)))
                 {
                     Entities.Add(obj);
                     return Task.FromResult(true);
@@ -124,76 +116,15 @@ namespace Lucent.Common.Storage
             /// <inheritdoc />
             public Task<bool> TryRemove(T obj)
             {
-                _log.LogInformation("Removing {0} ({1})", obj.Id, typeof(T).Name);
-                var test = Entities.FirstOrDefault(e => e.Id.Equals(obj.Id) && e.ETag == obj.ETag);
+                _log.LogInformation("Removing {0} ({1})", obj.Key, typeof(T).Name);
+                var test = Entities.FirstOrDefault(e => e.Key.Equals(obj.Key) && e.ETag == obj.ETag);
                 return Task.FromResult(test != null ? Entities.Remove(test) : false);
             }
 
             /// <inheritdoc />
             public async Task<bool> TryUpdate(T obj)
             {
-
-                _log.LogInformation("Updating {0} ({1})", obj.Id, typeof(T).Name);
-                return await TryRemove(obj) ? await TryInsert(obj) : false;
-            }
-        }
-
-        /// <inheritdoc />
-        public class BasicInMemoryRepository<T> : IBasicStorageRepository<T> where T : IStorageEntity<string>, new()
-        {
-            /// <summary>
-            /// List of entities available
-            /// </summary>
-            /// <value></value>
-            public List<T> Entities { get; set; }
-
-            /// <summary>
-            /// 
-            /// </summary>
-            /// <value></value>
-            public ILogger Log { get; set; }
-
-            /// <inheritdoc />
-            public Task<ICollection<T>> GetAll() => Task.FromResult((ICollection<T>)Entities);
-
-            /// <inheritdoc />
-            public Task<T> Get(string key)
-            {
-                Log.LogInformation("Getting {0} ({1})", key, typeof(T).Name);
-                return Task.FromResult(Entities.FirstOrDefault(e => e.Id.Equals(key)));
-            }
-
-
-            /// <inheritdoc />
-            public Task<ICollection<T>> GetAny(string key) => Task.FromResult((ICollection<T>)Entities.Where(e => e.Id.Equals(key)).ToList());
-
-            /// <inheritdoc />
-            public Task<bool> TryInsert(T obj)
-            {
-
-                Log.LogInformation("Inserting {0} ({1})", obj.Id, typeof(T).Name);
-                if (!Entities.Exists(e => e.Id.Equals(obj.Id)))
-                {
-                    Entities.Add(obj);
-                    return Task.FromResult(true);
-                }
-
-                return Task.FromResult(false);
-            }
-
-            /// <inheritdoc />
-            public Task<bool> TryRemove(T obj)
-            {
-                Log.LogInformation("Removing {0} ({1})", obj.Id, typeof(T).Name);
-                var test = Entities.FirstOrDefault(e => e.Id.Equals(obj.Id) && e.ETag == obj.ETag);
-                return Task.FromResult(test != null ? Entities.Remove(test) : false);
-            }
-
-            /// <inheritdoc />
-            public async Task<bool> TryUpdate(T obj)
-            {
-
-                Log.LogInformation("Updating {0} ({1})", obj.Id, typeof(T).Name);
+                _log.LogInformation("Updating {0} ({1})", obj.Key, typeof(T).Name);
                 return await TryRemove(obj) ? await TryInsert(obj) : false;
             }
         }

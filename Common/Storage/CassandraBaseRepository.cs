@@ -175,18 +175,16 @@ namespace Lucent.Common.Storage
         /// <param name="row"></param>
         /// <param name="instance"></param>
         /// <typeparam name="T"></typeparam>
-        /// <typeparam name="K"></typeparam>
         /// <returns></returns>
-        protected virtual async Task ReadExtraAsync<T, K>(Row row, T instance) where T : IStorageEntity<K>, new() => await Task.CompletedTask;
+        protected virtual async Task ReadExtraAsync<T>(Row row, T instance) where T : IStorageEntity, new() => await Task.CompletedTask;
 
         /// <summary>
         /// Reads the rowset completely, using the builder function to create entities
         /// </summary>
         /// <param name="rowSet"></param>
         /// <typeparam name="T"></typeparam>
-        /// <typeparam name="K"></typeparam>
         /// <returns></returns>
-        protected async Task<ICollection<T>> ReadAsAsync<T, K>(RowSet rowSet) where T : IStorageEntity<K>, new()
+        protected async Task<ICollection<T>> ReadAsAsync<T>(RowSet rowSet) where T : IStorageEntity, new()
         {
             var instances = new List<T>();
 
@@ -205,7 +203,7 @@ namespace Lucent.Common.Storage
                             using (var ms = new MemoryStream(contents))
                             {
                                 var obj = await _serializationContext.ReadFrom<T>(ms, false, format);
-                                await ReadExtraAsync<T, K>(rowEnum.Current, obj);
+                                await ReadExtraAsync<T>(rowEnum.Current, obj);
                                 instances.Add(obj);
                             }
                         }
@@ -224,7 +222,7 @@ namespace Lucent.Common.Storage
                         using (var ms = new MemoryStream(contents))
                         {
                             var obj = await _serializationContext.ReadFrom<T>(ms, false, format);
-                            await ReadExtraAsync<T, K>(rowEnum.Current, obj);
+                            await ReadExtraAsync<T>(rowEnum.Current, obj);
                             instances.Add(obj);
                         }
                     }

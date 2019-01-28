@@ -16,17 +16,17 @@ namespace Lucent.Portal.Models
 {
     public class EditCampaignModel : PageModel
     {
-        private readonly IBasicStorageRepository<Campaign> _campaignDb;
+        private readonly IStorageRepository<Campaign> _campaignDb;
 
-        private readonly IBasicStorageRepository<Creative> _creativeDb;
+        private readonly IStorageRepository<Creative> _creativeDb;
         private readonly ILogger _log;
         private readonly ICampaignUpdateContext _context;
         private readonly IMessageFactory _factory;
 
         public EditCampaignModel(IStorageManager db, ILogger<CreateCampaignModel> log, ICampaignUpdateContext context, IMessageFactory factory)
         {
-            _campaignDb = db.GetBasicRepository<Campaign>();
-            _creativeDb = db.GetBasicRepository<Creative>();
+            _campaignDb = db.GetRepository<Campaign>();
+            _creativeDb = db.GetRepository<Creative>();
             _log = log;
             _context = context;
             _factory = factory;
@@ -43,7 +43,7 @@ namespace Lucent.Portal.Models
         public async Task<IActionResult> OnGetAsync(string id)
         {
             _log.LogInformation("Geting campaign {id}", id);
-            var c = await _campaignDb.Get(id);
+            var c = await _campaignDb.Get(new StringStorageKey(id));
             CreativeCatalog = (await _creativeDb.GetAll()).ToList();
 
             if (c != null)
@@ -58,7 +58,7 @@ namespace Lucent.Portal.Models
         public async Task<IActionResult> OnPostRemoveCreativeAsync(string id)
         {
             _log.LogInformation("Removing creative {id}", id);
-            var creative = await _creativeDb.Get(id);
+            var creative = await _creativeDb.Get(new StringStorageKey(id));
             CreativeCatalog = (await _creativeDb.GetAll()).ToList();
             if(creative != null)
             {
@@ -67,7 +67,7 @@ namespace Lucent.Portal.Models
                 if(await _campaignDb.TryUpdate(Campaign))
                 {
                     _log.LogInformation("Success");
-                    Campaign = await _campaignDb.Get(Campaign.Id);
+                    Campaign = await _campaignDb.Get(Campaign.Key);
                 }
                 else
                     _log.LogWarning("Failed to update campaign");
@@ -79,7 +79,7 @@ namespace Lucent.Portal.Models
         public async Task<IActionResult> OnPostAddCreativeAsync(string id)
         {
             _log.LogInformation("Adding creative {id}", id);
-            var creative = await _creativeDb.Get(id);
+            var creative = await _creativeDb.Get(new StringStorageKey(id));
             CreativeCatalog = (await _creativeDb.GetAll()).ToList();
             if(creative != null)
             {
@@ -88,7 +88,7 @@ namespace Lucent.Portal.Models
                 if(await _campaignDb.TryUpdate(Campaign))
                 {
                     _log.LogInformation("Success");
-                    Campaign = await _campaignDb.Get(Campaign.Id);
+                    Campaign = await _campaignDb.Get(Campaign.Key);
                 }
                 else
                     _log.LogWarning("Failed to update campaign");
@@ -105,7 +105,7 @@ namespace Lucent.Portal.Models
                 return Page();
             }
 
-            var c = await _campaignDb.Get(Campaign.Id);
+            var c = await _campaignDb.Get(Campaign.Key);
             if (c != null)
             {
                 try
@@ -132,7 +132,7 @@ namespace Lucent.Portal.Models
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    throw new Exception($"Campaign {Campaign.Id} not found!");
+                    throw new Exception($"Campaign {Campaign.Key} not found!");
                 }
                 return RedirectToPage("./Index");
             }

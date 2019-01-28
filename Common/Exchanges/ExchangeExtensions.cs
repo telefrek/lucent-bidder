@@ -30,7 +30,7 @@ namespace Lucent.Common
                         var exchg = provider.CreateInstance(exchgType) as AdExchange;
                         if (exchg != null)
                         {
-                            exchg.ExchangeId = (Guid)(object)exchange.Id; // <-- this is proof something is ugly with this code...
+                            exchg.ExchangeId = exchange.Id; 
                             await exchg.Initialize(provider);
                             (exchange as Exchange).Instance = exchg;
                         }

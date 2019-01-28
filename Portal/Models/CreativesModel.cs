@@ -12,7 +12,7 @@ namespace Lucent.Portal.Models
 {
     public class CreativesModel : PageModel
     {
-        private readonly IStorageRepository<Creative, string> _db;
+        private readonly IStorageRepository<Creative> _db;
         private readonly ILogger<CreativesModel> _log;
         readonly IMessageFactory _factory;
         readonly string _contentRoot;
@@ -20,7 +20,7 @@ namespace Lucent.Portal.Models
         public CreativesModel(IStorageManager db, IConfiguration configuration, ILogger<CreativesModel> logger, IMessageFactory factory)
         {
             _contentRoot = configuration.GetValue("ContentPath", "/tmp/content");
-            _db = db.GetRepository<Creative, string>();
+            _db = db.GetRepository<Creative>();
             _log = logger;
             _factory = factory;
         }

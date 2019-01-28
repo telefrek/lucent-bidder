@@ -32,7 +32,7 @@ namespace Lucent.Common.Middleware
         IMessageFactory _messageFactory;
         IExchangeRegistry _exchangeRegistry;
         IStorageManager _storageManager;
-        UpdatingCollection<BidderFilter, string> _bidFiltersCollection;
+        UpdatingCollection<BidderFilter> _bidFiltersCollection;
         List<Func<BidRequest, bool>> _bidFilters;
         RequestDelegate _nextHandler;
         Histogram _serializerTiming = Metrics.CreateHistogram("serializer_latency", "Latency for each bidder call", new HistogramConfiguration
@@ -56,7 +56,7 @@ namespace Lucent.Common.Middleware
             _serializationContext = serializationContext;
             _exchangeRegistry = exchangeRegistry;
             _storageManager = storageManager;
-            _bidFiltersCollection = new UpdatingCollection<BidderFilter, string>(messageFactory, storageManager, EntityType.BidderFilter);
+            _bidFiltersCollection = new UpdatingCollection<BidderFilter>(messageFactory, storageManager, EntityType.BidderFilter);
             _bidFiltersCollection.OnUpdate = UpdateBidFilters;
             _bidFilters = _bidFiltersCollection.Entities.Where(f => f.BidFilter != null).Select(f => f.BidFilter.GenerateCode()).ToList();
             _messageFactory = messageFactory;
@@ -86,7 +86,7 @@ namespace Lucent.Common.Middleware
                     switch (entityEvent.Body.EntityType)
                     {
                         case EntityType.Exchange:
-                            var exchange = await _storageManager.GetRepository<Exchange, Guid>().Get(Guid.Parse(entityEvent.Body.EntityId));
+                            var exchange = await _storageManager.GetRepository<Exchange>().Get(new GuidStorageKey(Guid.Parse(entityEvent.Body.EntityId)));
                             if (exchange != null)
                             {
                                 using (var ms = new MemoryStream())

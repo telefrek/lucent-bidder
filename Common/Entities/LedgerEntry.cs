@@ -8,14 +8,27 @@ namespace Lucent.Common.Entities
     /// <summary>
     /// Individual ledger entry
     /// </summary>
-    public class LedgerEntry : IStorageEntity<LedgerCompositeEntryKey>
+    public class LedgerEntry : IStorageEntity
     {
         /// <summary>
         /// Composite key for identifying a ledger
         /// </summary>
         /// <returns></returns>
         [SerializationProperty(1, "key")]
-        public LedgerCompositeEntryKey Id { get; set; } = new LedgerCompositeEntryKey();
+        public LedgerCompositeEntryKey Id
+        {
+            get => Key as LedgerCompositeEntryKey;
+            set
+            {
+                Key = value;
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public IStorageKey Key { get; set; } = new LedgerCompositeEntryKey();
 
         /// <summary>
         /// 
@@ -64,7 +77,7 @@ namespace Lucent.Common.Entities
     /// <summary>
     /// Key type for retrieving ledger entries
     /// </summary>
-    public class LedgerCompositeEntryKey
+    public class LedgerCompositeEntryKey : IStorageKey
     {
         /// <summary>
         /// The id for the target type
@@ -80,6 +93,26 @@ namespace Lucent.Common.Entities
         [SerializationProperty(2, "ledgerid")]
         public Guid LedgerTimeId { get; set; }
 
+        /// <inheritdoc/>
+        public override int GetHashCode() => (TargetId + (LedgerTimeId == default(Guid) ? Guid.Empty : LedgerTimeId).ToString()).GetHashCode();
+
+        /// <inheritdoc/>
+        public int CompareTo(object obj)
+        {
+            var lck = obj as LedgerCompositeEntryKey;
+
+            if (lck != null)
+            {
+                var cmp = TargetId.CompareTo(lck.TargetId);
+                return cmp == 0 ? LedgerTimeId == lck.LedgerTimeId ? 0 : cmp : cmp;
+            }
+
+            return -1;
+        }
+
+        /// <inheritdoc/>
+        public override string ToString() => "{0}:{1}".FormatWith(TargetId, LedgerTimeId);
+
         /// <summary>
         /// Override equality comparison
         /// </summary>
@@ -94,13 +127,18 @@ namespace Lucent.Common.Entities
                 entry.TargetId == TargetId && entry.LedgerTimeId == entry.LedgerTimeId;
         }
 
-        /// <summary>
-        /// Override so warnings shut up
-        /// </summary>
-        public override int GetHashCode()
+        /// <inheritdoc/>
+        public void Parse(string value)
         {
-            return LedgerTimeId == null ? TargetId.GetHashCode() :
-                LedgerTimeId.GetHashCode();
+            var data = value.Split(new char[] { ':' }, StringSplitOptions.RemoveEmptyEntries);
+            if (data.Length > 2)
+                throw new NotSupportedException();
+            TargetId = data[0];
+            if (data.Length > 1)
+                LedgerTimeId = Guid.Parse(data[1]);
         }
+
+        /// <inheritdoc/>
+        public object[] RawValue() => new object[] { TargetId, LedgerTimeId };
     }
 }

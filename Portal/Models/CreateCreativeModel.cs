@@ -18,7 +18,7 @@ namespace Lucent.Portal.Models
 {
     public class CreateCreativeModel : PageModel
     {
-        private readonly IStorageRepository<Creative, string> _db;
+        private readonly IStorageRepository<Creative> _db;
         private readonly ILogger<CreateCreativeModel> _log;
         readonly IMessageFactory _factory;
         readonly IMediaScanner _scanner;
@@ -31,7 +31,7 @@ namespace Lucent.Portal.Models
             _contentRoot = configuration.GetValue("ContentPath", "/tmp/content");
             _contentHost = configuration.GetValue("ContentHost", "http://localhost");
             _contentCache = configuration.GetValue("ContentCache", "http://localhost");
-            _db = db.GetRepository<Creative, string>();
+            _db = db.GetRepository<Creative>();
             _log = logger;
             _factory = factory;
             _scanner = scanner;
@@ -79,8 +79,8 @@ namespace Lucent.Portal.Models
 
                         if (content != null)
                         {
-                            content.RawUri = _contentHost + "/creatives/" + creative.Id + "/" + fileName;
-                            content.CreativeUri = _contentCache + "/creatives/" + creative.Id + "/" + fileName;
+                            content.RawUri = _contentHost + "/creatives/" + creative.Key + "/" + fileName;
+                            content.CreativeUri = _contentCache + "/creatives/" + creative.Key + "/" + fileName;
 
                             //creative.Contents.Add(content);
                         }

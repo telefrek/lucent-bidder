@@ -59,8 +59,8 @@ namespace Lucent.Common
                 var storageManager = services.BuildServiceProvider().GetRequiredService<IStorageManager>();
 
                 // Register custom repositories
-                storageManager.RegisterRepository<LedgerEntryRepository, LedgerEntry, LedgerCompositeEntryKey>();
-                storageManager.RegisterRepository<ExchangeEntityRespositry, Exchange, Guid>();
+                storageManager.RegisterRepository<LedgerEntryRepository, LedgerEntry>();
+                storageManager.RegisterRepository<ExchangeEntityRespositry, Exchange>();
             }
 
             if (includePortal)

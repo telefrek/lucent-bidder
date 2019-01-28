@@ -9,11 +9,24 @@ namespace Lucent.Common.Entities
     /// <summary>
     /// 
     /// </summary>
-    public class Exchange : IStorageEntity<Guid>
+    public class Exchange : IStorageEntity
     {
         /// <inheritdoc/>
         [SerializationProperty(1, "id")]
-        public Guid Id { get; set; }
+        public Guid Id
+        {
+            get => (Guid)Key.RawValue()[0];
+            set
+            {
+                Key = new GuidStorageKey(value);
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
+        public IStorageKey Key { get; set; } = new GuidStorageKey(Guid.Empty);
 
         /// <inheritdoc/>
         public string ETag { get; set; }

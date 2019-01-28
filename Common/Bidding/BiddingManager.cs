@@ -25,8 +25,8 @@ namespace Lucent.Common.Bidding
         IMessageSubscriber<EntityEventMessage> _entityEvents;
         IBudgetManager _budgetManager;
 
-        IBasicStorageRepository<Campaign> _campaignRepo;
-        IBasicStorageRepository<Creative> _creativeRepo;
+        IStorageRepository<Campaign> _campaignRepo;
+        IStorageRepository<Creative> _creativeRepo;
 
         /// <summary>
         /// Default constructor
@@ -46,10 +46,10 @@ namespace Lucent.Common.Bidding
             _bidFactory = bidFactory;
             _entityEvents = _messageFactory.CreateSubscriber<EntityEventMessage>("bidding", 0, _messageFactory.WildcardFilter);
             _entityEvents.OnReceive = HandleMessage;
-            _creativeRepo = storageManager.GetBasicRepository<Creative>();
+            _creativeRepo = storageManager.GetRepository<Creative>();
             _budgetManager = budgetManager;
 
-            foreach (var campaign in _storageManager.GetBasicRepository<Campaign>().GetAll().Result)
+            foreach (var campaign in _storageManager.GetRepository<Campaign>().GetAll().Result)
             {
                 _log.LogInformation("Added bidder for campaign : {0}", campaign.Id);
                 Bidders.Add(_bidFactory.CreateBidder(FillCampaign(campaign).Result));
@@ -61,7 +61,7 @@ namespace Lucent.Common.Bidding
         {
             foreach (var creativeId in campaign.CreativeIds)
             {
-                var cr = await _creativeRepo.Get(creativeId);
+                var cr = await _creativeRepo.Get(new StringStorageKey(creativeId));
                 foreach (var content in cr.Contents)
                     if (content.Filter == null)
                         content.HydrateFilter();
@@ -89,8 +89,8 @@ namespace Lucent.Common.Bidding
                         {
                             case EventType.EntityAdd:
                             case EventType.EntityUpdate:
-                                var entity = await _storageManager.GetBasicRepository<Campaign>().Get(id);
-                                Bidders.RemoveAll(b => b.Campaign.Id.Equals(id));
+                                var entity = await _storageManager.GetRepository<Campaign>().Get(new StringStorageKey(id));
+                                Bidders.RemoveAll(b => b.Campaign.Key.Equals(id));
                                 if (entity != null)
                                 {
                                     _log.LogInformation("Added bidder for campaign : {0}", id);
@@ -99,7 +99,7 @@ namespace Lucent.Common.Bidding
                                 break;
                             case EventType.EntityDelete:
                                 _log.LogInformation("Removing bidder for campaign : {0}", id);
-                                Bidders.RemoveAll(b => b.Campaign.Id.Equals(id));
+                                Bidders.RemoveAll(b => b.Campaign.Key.Equals(id));
                                 break;
                         }
                         break;
@@ -108,9 +108,10 @@ namespace Lucent.Common.Bidding
         }
 
         /// <inheritdoc/>
-        public async Task<bool> CanBid(string id) 
+        public async Task<bool> CanBid(string id)
         {
-            if(_budgetManager.IsExhausted(id)){
+            if (_budgetManager.IsExhausted(id))
+            {
                 await _budgetManager.GetAdditional(id);
                 return false;
             }

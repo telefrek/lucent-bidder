@@ -24,12 +24,12 @@ namespace Lucent.Common.Bootstrap
 
             app.Map("/api/campaigns", (a) =>
             {
-                a.UseMiddleware<EntityRestApi<Campaign, string>>();
+                a.UseMiddleware<EntityRestApi<Campaign>>();
             });
 
             app.Map("/api/creatives", (a) =>
             {
-                a.UseMiddleware<EntityRestApi<Creative, string>>();
+                a.UseMiddleware<EntityRestApi<Creative>>();
             });
 
             app.Map("/api/exchanges", (a) =>
@@ -39,7 +39,7 @@ namespace Lucent.Common.Bootstrap
 
             app.Map("/api/filters", (a) =>
             {
-                a.UseMiddleware<EntityRestApi<BidderFilter, string>>();
+                a.UseMiddleware<EntityRestApi<BidderFilter>>();
             });
 
             app.Map("/api/budget/request", (a) =>

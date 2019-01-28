@@ -13,7 +13,7 @@ namespace Lucent.Common.Entities.Repositories
     /// <summary>
     /// Manages ledger entries
     /// </summary>
-    public class LedgerEntryRepository : CassandraBaseRepository, IStorageRepository<LedgerEntry, LedgerCompositeEntryKey>
+    public class LedgerEntryRepository : CassandraBaseRepository, IStorageRepository<LedgerEntry>
     {
         string _tableName;
 
@@ -55,7 +55,7 @@ namespace Lucent.Common.Entities.Repositories
             try
             {
                 var rowSet = await ExecuteAsync(_getAllLedgers, "getAll_" + _tableName);
-                return await ReadAsAsync<LedgerEntry, LedgerCompositeEntryKey>(rowSet);
+                return await ReadAsAsync<LedgerEntry>(rowSet);
             }
             catch (DriverException queryError)
             {
@@ -66,12 +66,12 @@ namespace Lucent.Common.Entities.Repositories
         }
 
         /// <inheritdoc/>
-        public async Task<LedgerEntry> Get(LedgerCompositeEntryKey id)
+        public async Task<LedgerEntry> Get(IStorageKey id)
         {
             try
             {
-                var rowSet = await ExecuteAsync(_getFullLedger.Bind(id.TargetId, id.LedgerTimeId), "get_" + _tableName);
-                return (await ReadAsAsync<LedgerEntry, LedgerCompositeEntryKey>(rowSet)).FirstOrDefault();
+                var rowSet = await ExecuteAsync(_getFullLedger.Bind(id.RawValue()), "get_" + _tableName);
+                return (await ReadAsAsync<LedgerEntry>(rowSet)).FirstOrDefault();
             }
             catch (DriverException queryError)
             {
@@ -82,14 +82,18 @@ namespace Lucent.Common.Entities.Repositories
         }
 
         /// <inheritdoc/>
-        public async Task<ICollection<LedgerEntry>> GetAny(LedgerCompositeEntryKey id)
+        public async Task<ICollection<LedgerEntry>> GetAny(IStorageKey id)
         {
             try
             {
-                var rowSet = id.LedgerTimeId == null ? await ExecuteAsync(_getFullLedger.Bind(id.TargetId), "getAny_" + _tableName) :
-                    await ExecuteAsync(_getLedgerEntry.Bind(id.TargetId, id.LedgerTimeId), "get_" + _tableName);
+                var ledgerId = id as LedgerCompositeEntryKey;
+                if(ledgerId != null)
+                {
+                    var rowSet =ledgerId.LedgerTimeId == null ? await ExecuteAsync(_getFullLedger.Bind(ledgerId.TargetId), "getAny_" + _tableName) :
+                        await ExecuteAsync(_getLedgerEntry.Bind(ledgerId.TargetId, ledgerId.LedgerTimeId), "get_" + _tableName);
 
-                return await ReadAsAsync<LedgerEntry, LedgerCompositeEntryKey>(rowSet);
+                    return await ReadAsAsync<LedgerEntry>(rowSet);
+                }
             }
             catch (DriverException queryError)
             {
@@ -104,9 +108,10 @@ namespace Lucent.Common.Entities.Repositories
         {
             try
             {
-                _log.LogInformation("Inserting new ledger for {0}", obj.Id.TargetId);
-                if (obj.Id.LedgerTimeId == null)
-                    obj.Id.LedgerTimeId = TimeUuid.NewId();
+                _log.LogInformation("Inserting new ledger for {0}", obj.Key);
+                var id = obj.Key as LedgerCompositeEntryKey;
+                if (id.LedgerTimeId == null)
+                    id.LedgerTimeId = TimeUuid.NewId();
 
                 var contents = new byte[0];
                 using (var ms = new MemoryStream())
@@ -118,7 +123,7 @@ namespace Lucent.Common.Entities.Repositories
 
                 obj.ETag = contents.CalculateETag();
 
-                var rowSet = await ExecuteAsync(_insertLedgerEntry.Bind(obj.Id.TargetId, obj.Id.LedgerTimeId, obj.ETag, _serializationFormat.ToString(), DateTime.UtcNow, contents), "insert_" + _tableName);
+                var rowSet = await ExecuteAsync(_insertLedgerEntry.Bind(id.TargetId, id.LedgerTimeId, obj.ETag, _serializationFormat.ToString(), DateTime.UtcNow, contents), "insert_" + _tableName);
 
                 return rowSet != null;
             }
@@ -135,8 +140,9 @@ namespace Lucent.Common.Entities.Repositories
         {
             try
             {
-                _log.LogInformation("Removing ledger from {0}", obj.Id.TargetId);
-                var rowSet = await ExecuteAsync(_deleteLedgerEntry.Bind(obj.Id.TargetId, obj.Id.LedgerTimeId, obj.ETag), "delete_" + _tableName);
+                var id = obj.Key as LedgerCompositeEntryKey;
+                _log.LogInformation("Removing ledger from {0}", id.TargetId);
+                var rowSet = await ExecuteAsync(_deleteLedgerEntry.Bind(id.TargetId, id.LedgerTimeId, obj.ETag), "delete_" + _tableName);
 
                 return rowSet != null;
             }
@@ -154,7 +160,8 @@ namespace Lucent.Common.Entities.Repositories
             var oldEtag = obj.ETag;
             try
             {
-                _log.LogInformation("Updating ledger entry for {0}", obj.Id.TargetId);
+                var id = obj.Key as LedgerCompositeEntryKey;
+                _log.LogInformation("Updating ledger entry for {0}", id.TargetId);
                 var contents = new byte[0];
                 using (var ms = new MemoryStream())
                 {
@@ -165,7 +172,7 @@ namespace Lucent.Common.Entities.Repositories
 
                 obj.ETag = contents.CalculateETag();
 
-                var rowSet = await ExecuteAsync(_updateLedgerEntry.Bind(obj.ETag, DateTime.UtcNow, contents, _serializationFormat.ToString(), obj.Id.TargetId, obj.Id.LedgerTimeId, oldEtag), "update_" + _tableName);
+                var rowSet = await ExecuteAsync(_updateLedgerEntry.Bind(obj.ETag, DateTime.UtcNow, contents, _serializationFormat.ToString(), id.TargetId, id.LedgerTimeId, oldEtag), "update_" + _tableName);
 
                 return rowSet != null;
             }

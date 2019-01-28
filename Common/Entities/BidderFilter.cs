@@ -7,14 +7,27 @@ namespace Lucent.Common.Entities
     /// <summary>
     /// Represents Bidder global rules
     /// </summary>
-    public class BidderFilter : IBasicStorageEntity
+    public class BidderFilter : IStorageEntity
     {
         /// <summary>
         /// 
         /// </summary>
         /// <value></value>
         [SerializationProperty(1, "id")]
-        public string Id { get; set; }
+        public string Id 
+        {
+            get => Key.ToString();
+            set
+            {
+                Key = new StringStorageKey(value);
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
+        public IStorageKey Key { get; set; }
         
         /// <summary>
         /// Filters for incoming bids before exchange evaluation

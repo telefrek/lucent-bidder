@@ -12,5 +12,11 @@ namespace Lucent.Common.Storage
         /// </summary>
         /// <returns></returns>
         object[] RawValue();
+
+        /// <summary>
+        /// Must be able to parse from a string
+        /// </summary>
+        /// <param name="value"></param>
+        void Parse(string value);
     }
 }

@@ -16,11 +16,11 @@ namespace Lucent.Common.Entities
     public class CampaignManager
     {
         IMessageSubscriber<EntityEventMessage> _eventSubscriber;
-        IBasicStorageRepository<Campaign> _campaignRepo;
-        IBasicStorageRepository<Creative> _creativeRepo;
+        IStorageRepository<Campaign> _campaignRepo;
+        IStorageRepository<Creative> _creativeRepo;
         ILogger _log;
 
-        ConcurrentDictionary<string, Campaign> _campaigns = new ConcurrentDictionary<string, Campaign>();
+        ConcurrentDictionary<IStorageKey, Campaign> _campaigns = new ConcurrentDictionary<IStorageKey, Campaign>();
 
         /// <summary>
         /// 
@@ -33,8 +33,8 @@ namespace Lucent.Common.Entities
             _log = log;
 
             // Setup repos
-            _campaignRepo = storageManager.GetBasicRepository<Campaign>();
-            _creativeRepo = storageManager.GetBasicRepository<Creative>();
+            _campaignRepo = storageManager.GetRepository<Campaign>();
+            _creativeRepo = storageManager.GetRepository<Creative>();
 
             // Setup message loop
             _eventSubscriber = messageFactory.CreateSubscriber<EntityEventMessage>("bidding", 0, messageFactory.WildcardFilter);
@@ -47,12 +47,12 @@ namespace Lucent.Common.Entities
         /// <param name="campaign"></param>
         public async Task AddCampaign(Campaign campaign)
         {
-            campaign = _campaigns.GetOrAdd(campaign.Id, campaign);
+            campaign = _campaigns.GetOrAdd(campaign.Key, campaign);
             campaign.Creatives.Clear();
 
             foreach (var creativeId in campaign.CreativeIds)
             {
-                var cr = await _creativeRepo.Get(creativeId);
+                var cr = await _creativeRepo.Get(new StringStorageKey(creativeId));
                 foreach (var content in cr.Contents)
                     if (content.Filter == null)
                         content.HydrateFilter();
@@ -76,22 +76,22 @@ namespace Lucent.Common.Entities
                     switch (entityEvent.Body.EntityType)
                     {
                         case EntityType.Campaign:
-                            var campaign = await _campaignRepo.Get(entityEvent.Body.EntityId);
+                            var campaign = await _campaignRepo.Get(new StringStorageKey(entityEvent.Body.EntityId));
                             await AddCampaign(campaign);
 
                             Campaigns = _campaigns.Values.ToList();
 
                             break;
                         case EntityType.Creative:
-                            var creative = await _creativeRepo.Get(entityEvent.Body.EntityId);
+                            var creative = await _creativeRepo.Get(new StringStorageKey(entityEvent.Body.EntityId));
                             foreach (var content in creative.Contents)
                                 if (content.Filter == null)
                                     content.HydrateFilter();
 
                             foreach (var camp in _campaigns.Values.ToArray())
-                                if (camp.Creatives.Any(cr => cr.Id == creative.Id))
+                                if (camp.Creatives.Any(cr => cr.Key == creative.Key))
                                 {
-                                    camp.Creatives = camp.Creatives.Where(cr => cr.Id != creative.Id).ToList();
+                                    camp.Creatives = camp.Creatives.Where(cr => cr.Key != creative.Key).ToList();
                                     camp.Creatives.Add(creative);
                                 }
 

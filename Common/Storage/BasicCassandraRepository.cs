@@ -18,8 +18,8 @@ namespace Lucent.Common.Storage
     /// Internal Cassandra storage repository
     /// </summary>
     /// <typeparam name="T">The type of object to store in cassandra</typeparam>
-    public class BasicCassandraRepository<T> : CassandraBaseRepository, IBasicStorageRepository<T>
-        where T : IStorageEntity<string>, new()
+    public class BasicCassandraRepository<T> : CassandraBaseRepository, IStorageRepository<T>
+        where T : IStorageEntity, new()
     {
         string _tableName;
 
@@ -65,7 +65,7 @@ namespace Lucent.Common.Storage
             try
             {
                 var rowSet = await ExecuteAsync(_getAllStatement, "getAll_" + _tableName);
-                return await ReadAsAsync<T, string>(rowSet);
+                return await ReadAsAsync<T>(rowSet);
             }
             catch (InvalidQueryException queryError)
             {
@@ -81,13 +81,13 @@ namespace Lucent.Common.Storage
         }
 
         /// <inheritdoc/>
-        public async Task<T> Get(string key)
+        public async Task<T> Get(IStorageKey key)
         {
             try
             {
-                var rowSet = await ExecuteAsync(_getStatement.Bind(key), "get_" + _tableName);
+                var rowSet = await ExecuteAsync(_getStatement.Bind(key.RawValue()), "get_" + _tableName);
 
-                return (await ReadAsAsync<T, string>(rowSet)).FirstOrDefault();
+                return (await ReadAsAsync<T>(rowSet)).FirstOrDefault();
             }
             catch (InvalidQueryException queryError)
             {
@@ -103,7 +103,7 @@ namespace Lucent.Common.Storage
         }
 
         /// <inheritdoc/>
-        public async Task<ICollection<T>> GetAny(string key)
+        public async Task<ICollection<T>> GetAny(IStorageKey key)
         {
             var target = await Get(key);
             return target != null ? new List<T>() { target } : new List<T>();
@@ -125,7 +125,7 @@ namespace Lucent.Common.Storage
 
                 obj.ETag = contents.CalculateETag();
 
-                var rowSet = await ExecuteAsync(_insertStatement.Bind(obj.Id, obj.ETag, _serializationFormat.ToString(), DateTime.UtcNow, contents), "insert_" + _tableName);
+                var rowSet = await ExecuteAsync(_insertStatement.Bind(obj.Key.RawValue().Concat(new object[] { obj.ETag, _serializationFormat.ToString(), DateTime.UtcNow, contents })), "insert_" + _tableName);
 
                 return rowSet != null;
             }
@@ -148,7 +148,7 @@ namespace Lucent.Common.Storage
             _log.LogInformation("Deleting obj");
             try
             {
-                var rowSet = await ExecuteAsync(_deleteStatement.Bind(obj.Id, obj.ETag), "delete_" + _tableName);
+                var rowSet = await ExecuteAsync(_deleteStatement.Bind(obj.Key.RawValue().Concat(new object[] { obj.ETag })), "delete_" + _tableName);
 
                 return rowSet != null;
             }
@@ -182,7 +182,7 @@ namespace Lucent.Common.Storage
 
                 obj.ETag = contents.CalculateETag();
 
-                var rowSet = await ExecuteAsync(_updateStatement.Bind(obj.ETag, DateTime.UtcNow, contents, _serializationFormat.ToString(), obj.Id, oldEtag), "update_" + _tableName);
+                var rowSet = await ExecuteAsync(_updateStatement.Bind(new object[] { obj.ETag, DateTime.UtcNow, contents, _serializationFormat.ToString() }.Concat(obj.Key.RawValue().Concat(new object[] { oldEtag }))), "update_" + _tableName);
 
                 return rowSet != null;
             }

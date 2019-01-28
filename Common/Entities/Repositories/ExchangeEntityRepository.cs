@@ -15,7 +15,7 @@ namespace Lucent.Common.Entities.Repositories
     /// <summary>
     /// 
     /// </summary>
-    public class ExchangeEntityRespositry : CassandraBaseRepository, IStorageRepository<Exchange, Guid>
+    public class ExchangeEntityRespositry : CassandraBaseRepository, IStorageRepository<Exchange>
     {
         string _tableName;
 
@@ -54,13 +54,13 @@ namespace Lucent.Common.Entities.Repositories
         }
 
         /// <inheritdoc/>
-        public async Task<Exchange> Get(Guid id)
+        public async Task<Exchange> Get(IStorageKey id)
         {
             try
             {
-                var rowSet = await ExecuteAsync(_getExchangeEntity.Bind(id), "get_" + _tableName);
+                var rowSet = await ExecuteAsync(_getExchangeEntity.Bind(id.RawValue()), "get_" + _tableName);
 
-                return (await ReadAsAsync<Exchange, Guid>(rowSet)).FirstOrDefault();
+                return (await ReadAsAsync<Exchange>(rowSet)).FirstOrDefault();
             }
             catch (DriverException queryError)
             {
@@ -76,7 +76,7 @@ namespace Lucent.Common.Entities.Repositories
             try
             {
                 var rowSet = await ExecuteAsync(_getAllExchanges, "getAll_" + _tableName);
-                return await ReadAsAsync<Exchange, Guid>(rowSet);
+                return await ReadAsAsync<Exchange>(rowSet);
             }
             catch (DriverException queryError)
             {
@@ -87,13 +87,13 @@ namespace Lucent.Common.Entities.Repositories
         }
 
         /// <inheritdoc/>
-        public async Task<ICollection<Exchange>> GetAny(Guid id)
+        public async Task<ICollection<Exchange>> GetAny(IStorageKey id)
         {
             try
             {
-                var rowSet = await ExecuteAsync(_getExchangeEntity.Bind(id), "getAny_" + _tableName);
+                var rowSet = await ExecuteAsync(_getExchangeEntity.Bind(id.RawValue()), "getAny_" + _tableName);
 
-                return await ReadAsAsync<Exchange, Guid>(rowSet);
+                return await ReadAsAsync<Exchange>(rowSet);
             }
             catch (DriverException queryError)
             {
@@ -108,7 +108,7 @@ namespace Lucent.Common.Entities.Repositories
         {
             try
             {
-                _log.LogInformation("Inserting new exchange {0}", obj.Id);
+                _log.LogInformation("Inserting new exchange {0}", obj.Key);
 
                 if (obj.Code != null && obj.LastCodeUpdate.IsNullOrDefault())
                     obj.LastCodeUpdate = DateTime.UtcNow;
@@ -123,11 +123,11 @@ namespace Lucent.Common.Entities.Repositories
 
                 obj.ETag = contents.CalculateETag();
 
-                var rowSet = await ExecuteAsync(_insertExchangeEntity.Bind(obj.Id, obj.ETag, _serializationFormat.ToString(), DateTime.UtcNow, contents), "insert_" + _tableName);
+                var rowSet = await ExecuteAsync(_insertExchangeEntity.Bind(obj.Key.RawValue().Concat(new object[] { obj.ETag, _serializationFormat.ToString(), DateTime.UtcNow, contents })), "insert_" + _tableName);
 
                 if (rowSet != null && obj.Code != null)
                 {
-                    return await ExecuteAsync(_updateExchangeCode.Bind(obj.Code.ToArray(), obj.Id, obj.ETag), "update_code_" + _tableName) != null;
+                    return await ExecuteAsync(_updateExchangeCode.Bind(new object[] { obj.Code.ToArray() }.Concat(obj.Key.RawValue().Concat(new object[] { obj.ETag }))), "update_code_" + _tableName) != null;
                 }
 
                 return rowSet != null;
@@ -145,8 +145,8 @@ namespace Lucent.Common.Entities.Repositories
         {
             try
             {
-                _log.LogInformation("Removing exchange {0}", obj.Id);
-                var rowSet = await ExecuteAsync(_deleteExchangeEntity.Bind(obj.Id, obj.ETag), "delete_" + _tableName);
+                _log.LogInformation("Removing exchange {0}", obj.Key);
+                var rowSet = await ExecuteAsync(_deleteExchangeEntity.Bind(obj.Key.RawValue().Concat(new object[] { obj.ETag })), "delete_" + _tableName);
 
                 return rowSet != null;
             }
@@ -167,7 +167,7 @@ namespace Lucent.Common.Entities.Repositories
                 if (obj.Code != null && obj.LastCodeUpdate.IsNullOrDefault())
                     obj.LastCodeUpdate = DateTime.UtcNow;
 
-                _log.LogInformation("Updating exchange {0}", obj.Id);
+                _log.LogInformation("Updating exchange {0}", obj.Key);
                 var contents = new byte[0];
                 using (var ms = new MemoryStream())
                 {
@@ -178,10 +178,10 @@ namespace Lucent.Common.Entities.Repositories
 
                 obj.ETag = contents.CalculateETag();
 
-                var rowSet = await ExecuteAsync(_updateExchangeEntity.Bind(obj.ETag, DateTime.UtcNow, contents, _serializationFormat.ToString(), obj.Id, oldEtag), "update_" + _tableName);
+                var rowSet = await ExecuteAsync(_updateExchangeEntity.Bind(new object[] { obj.ETag, DateTime.UtcNow, contents, _serializationFormat.ToString() }.Concat(obj.Key.RawValue().Concat(new object[] { oldEtag }))), "update_" + _tableName);
 
                 if (rowSet != null && obj.Code != null)
-                    return await ExecuteAsync(_updateExchangeCode.Bind(obj.Code.ToArray(), obj.Id, obj.ETag), "update_code_" + _tableName) != null;
+                    return await ExecuteAsync(_updateExchangeCode.Bind(new object[] { obj.Code.ToArray() }.Concat(obj.Key.RawValue().Concat(new object[] { obj.ETag }))), "update_code_" + _tableName) != null;
 
                 return rowSet != null;
             }
@@ -199,7 +199,7 @@ namespace Lucent.Common.Entities.Repositories
             await ExecuteAsync("CREATE TABLE IF NOT EXISTS {0} (id uuid, etag text, format text, updated timestamp, contents blob, code blob, PRIMARY KEY(id);".FormatWith(_tableName), "create_table_" + _tableName);
 
         /// <inheritdoc/>
-        protected override async Task ReadExtraAsync<T, K>(Row row, T instance)
+        protected override async Task ReadExtraAsync<T>(Row row, T instance)
         {
             if (row.GetColumn("code") != null)
             {
@@ -210,11 +210,11 @@ namespace Lucent.Common.Entities.Repositories
                         var exchange = ((Exchange)(object)instance);
                         await exchange.LoadExchange(_provider, contents);
                         if (exchange.Instance != null)
-                            _log.LogInformation("Loaded {0} ({1})", exchange.Instance.Name, exchange.Id);
+                            _log.LogInformation("Loaded {0} ({1})", exchange.Instance.Name, exchange.Key);
                     }
                     catch (Exception e)
                     {
-                        _log.LogError(e, "Failed to load exchange : {0}", instance.Id);
+                        _log.LogError(e, "Failed to load exchange : {0}", instance.Key);
                     }
             }
 

@@ -10,13 +10,13 @@ namespace Lucent.Portal.Models
 {
     public class SummaryCampaignModel : PageModel
     {
-        private readonly IBasicStorageRepository<Campaign> _db;
+        private readonly IStorageRepository<Campaign> _db;
         private readonly ILogger _log;
         private readonly ICampaignUpdateContext _context;
 
         public SummaryCampaignModel(IStorageManager db, ILogger<CreateCampaignModel> log, ICampaignUpdateContext context)
         {
-            _db = db.GetBasicRepository<Campaign>();
+            _db = db.GetRepository<Campaign>();
             _log = log;
             _context = context;
         }
@@ -27,7 +27,7 @@ namespace Lucent.Portal.Models
         public async Task<IActionResult> OnGetAsync(string id)
         {
             _log.LogInformation("Geting campaign {id}", id);
-            var c = await _db.Get(id);
+            var c = await _db.Get(new StringStorageKey(id));
 
             if (c != null)
             {

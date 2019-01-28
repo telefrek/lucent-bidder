@@ -5,26 +5,26 @@ namespace Lucent.Common.Storage
     /// <summary>
     /// Storage key from a string
     /// </summary>
-    public class StringStorageKey : IStorageKey
+    public class GuidStorageKey : IStorageKey
     {
-        string _value;
+        Guid _value;
 
         /// <summary>
         /// Default constructor
         /// </summary>
         /// <param name="value"></param>
-        public StringStorageKey(string value) => _value = value;
+        public GuidStorageKey(Guid value) => _value = value;
 
         /// <inheritdoc/>
-        public override string ToString() => _value;
+        public override string ToString() => _value.ToString();
 
         /// <inheritdoc/>
         public override bool Equals(object obj)
         {
-            var ssk = obj as StringStorageKey;
-            if(ssk != null) return _value.Equals(ssk._value);
+            var gsk = obj as GuidStorageKey;
+            if(gsk != null) return _value.Equals(gsk._value);
 
-            return _value.Equals(obj.ToString());
+            return false;
         }
         
         /// <inheritdoc/>
@@ -33,21 +33,20 @@ namespace Lucent.Common.Storage
         /// <inheritdoc />
         public int CompareTo(object obj)
         {
-            if (obj is string)
+            if (obj is Guid)
                 return _value.CompareTo(obj);
-            if (obj is StringStorageKey)
-                return _value.CompareTo((obj as StringStorageKey)._value);
+            if (obj is GuidStorageKey)
+                return _value.CompareTo((obj as GuidStorageKey)._value);
             if (obj is IStorageKey)
                 return _value.CompareTo((obj as IStorageKey).ToString());
 
             return _value.CompareTo(obj.ToString());
         }
+        
+        /// <inheritdoc/>
+        public void Parse(string value) => _value = Guid.Parse(value);
 
         /// <inheritdoc/>
-        public void Parse(string value) => _value = value;
-        
-        /// <inheritdoc />
         public object[] RawValue() => new object[] { _value };
-
     }
 }

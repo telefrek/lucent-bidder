@@ -20,10 +20,10 @@ namespace Lucent.Common.Middleware
     /// <summary>
     /// Handle Exxchange API management
     /// </summary>
-    public class ExchangeOrchestrator : EntityRestApi<Exchange, Guid>
+    public class ExchangeOrchestrator : EntityRestApi<Exchange>
     {
         /// <inheritdoc/>
-        public ExchangeOrchestrator(RequestDelegate next, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<EntityRestApi<Exchange, Guid>> logger) : base(next, storageManager, messageFactory, serializationContext, logger)
+        public ExchangeOrchestrator(RequestDelegate next, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<EntityRestApi<Exchange>> logger) : base(next, storageManager, messageFactory, serializationContext, logger)
         {
         }
 
@@ -35,7 +35,7 @@ namespace Lucent.Common.Middleware
             if (!httpContext.Request.ContentType.IsNullOrDefault() && httpContext.Request.ContentType.Contains("multipart"))
             {
                 // /api/exchanges/id
-                exchange = await _entityRepository.Get(Guid.Parse(httpContext.Request.Path.Value.Split("/").Last()));
+                exchange = await _entityRepository.Get(new GuidStorageKey(Guid.Parse(httpContext.Request.Path.Value.Split("/").Last())));
                 if (exchange != null)
                 {
                     var header = MediaTypeHeaderValue.Parse(httpContext.Request.ContentType);

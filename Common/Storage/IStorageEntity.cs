@@ -6,14 +6,13 @@ namespace Lucent.Common.Storage
     /// <summary>
     /// Represents a storage entity
     /// </summary>
-    /// <typeparam name="K">The type of key</typeparam>
-    public interface IStorageEntity<K>
+    public interface IStorageEntity
     {
         /// <summary>
         /// The unique identifier for the object
         /// </summary>
         /// <value></value>
-        K Id { get; set; }
+        IStorageKey Key { get; set; }
 
         /// <summary>
         /// The object ETag for detecting invalid changes

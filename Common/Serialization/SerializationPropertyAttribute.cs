@@ -28,5 +28,11 @@ namespace Lucent.Common.Serialization
         /// </summary>
         /// <value></value>
         public string Name { get; set; }
+
+        /// <summary>
+        /// Optional override for checking type override
+        /// </summary>
+        /// <value></value>
+        public Type AsType { get; set; }
     }
 }

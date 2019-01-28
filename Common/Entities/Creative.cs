@@ -10,14 +10,27 @@ namespace Lucent.Common.Entities
     /// <summary>
     /// 
     /// </summary>
-    public class Creative : IBasicStorageEntity
+    public class Creative : IStorageEntity
     {
         /// <summary>
         /// 
         /// </summary>
         /// <value></value>
         [SerializationProperty(1, "id")]
-        public string Id { get; set; }
+        public string Id
+        {
+            get => Key.ToString();
+            set
+            {
+                Key = new StringStorageKey(value);
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
+        public IStorageKey Key { get; set; } = new StringStorageKey(null);
 
         /// <summary>
         /// 
