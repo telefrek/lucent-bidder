@@ -98,5 +98,14 @@ namespace Lucent.Common.Serialization
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
         Task<T> ReadFrom<T>(Stream target, bool leaveOpen, SerializationFormat format) where T : new();
+
+        /// <summary>
+        /// Get the serialized bytes for an object
+        /// </summary>
+        /// <param name="instance"></param>
+        /// <param name="format"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        Task<byte[]> AsBytes<T>(T instance, SerializationFormat format) where T : new();
     }
 }

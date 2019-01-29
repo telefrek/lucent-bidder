@@ -11,6 +11,8 @@ using Lucent.Common.Entities.Repositories;
 using System;
 using Lucent.Common.Budget;
 using Lucent.Common.Client;
+using Microsoft.Extensions.Caching.Memory;
+using Lucent.Common.Caching;
 
 namespace Lucent.Common
 {
@@ -42,6 +44,11 @@ namespace Lucent.Common
             // Setup storage, messaging options for local vs distributed cluster
             if (localOnly)
             {
+                services.Configure<MemoryCacheOptions>((opts) =>
+                {
+                    opts.ExpirationScanFrequency = TimeSpan.FromSeconds(30);
+                    opts.SizeLimit = 1024 * 1024 * 256L;
+                }).AddSingleton<IMemoryCache, MemoryCache>().AddSingleton<IBidderCache, MemoryBidderCache>();
                 services.AddSingleton<IStorageManager, InMemoryStorage>();
                 services.AddSingleton<IMessageFactory, InMemoryMessageFactory>();
                 services.Configure<BudgetLedgerConfig>(configuration.GetSection("ledger"))
@@ -49,6 +56,13 @@ namespace Lucent.Common
             }
             else
             {
+                // TODO: Update this
+                services.Configure<MemoryCacheOptions>((opts) =>
+                {
+                    opts.ExpirationScanFrequency = TimeSpan.FromSeconds(30);
+                    opts.SizeLimit = 1024 * 1024 * 256L;
+                }).AddSingleton<IMemoryCache, MemoryCache>().AddSingleton<IBidderCache, MemoryBidderCache>();
+
                 // Setup storage
                 services.Configure<CassandraConfiguration>(configuration.GetSection("cassandra"))
                     .AddSingleton<IStorageManager, CassandraStorageManager>();

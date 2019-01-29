@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucent.Common.Bidding;
+using Lucent.Common.Caching;
 using Lucent.Common.Entities;
 using Lucent.Common.Exchanges;
 using Lucent.Common.Messaging;
@@ -24,6 +25,7 @@ namespace Lucent.Common.Middleware
         ILogger<PostbackMiddleware> _log;
         ISerializationContext _serializationContext;
         IStorageManager _storageManager;
+        IBidderCache _bidCache;
 
         /// <summary>
         /// Default constructor
@@ -33,11 +35,13 @@ namespace Lucent.Common.Middleware
         /// <param name="factory"></param>
         /// <param name="serializationContext"></param>
         /// <param name="storageManager"></param>
-        public PostbackMiddleware(RequestDelegate next, ILogger<PostbackMiddleware> log, IMessageFactory factory, ISerializationContext serializationContext, IStorageManager storageManager)
+        /// <param name="bidderCache"></param>
+        public PostbackMiddleware(RequestDelegate next, ILogger<PostbackMiddleware> log, IMessageFactory factory, ISerializationContext serializationContext, IStorageManager storageManager, IBidderCache bidderCache)
         {
             _log = log;
             _serializationContext = serializationContext;
             _storageManager = storageManager;
+            _bidCache = bidderCache;
         }
 
         /// <summary>
@@ -62,28 +66,35 @@ namespace Lucent.Common.Middleware
 
                 _log.LogInformation("Bid : {0} ({1})", bidContext.BidId, bidContext.Operation);
 
-                switch (bidContext.Operation)
+                var bid = await _bidCache.TryRetrieve<Bid>(bidContext.BidId.ToString());
+                if (bid != null)
                 {
-                    case BidOperation.Clicked:
-                        // Start the rest of the tracking async
-                        break;
-                    case BidOperation.Loss:
-                        context.Response.StatusCode = StatusCodes.Status200OK;
-                        break;
-                    case BidOperation.Win:
-                        context.Response.StatusCode = StatusCodes.Status200OK;
-                        break;
-                    case BidOperation.Impression:
-                        await Task.Delay(10);
-                        context.Response.StatusCode = StatusCodes.Status200OK;
-                        break;
-                    case BidOperation.Action:
-                        context.Response.StatusCode = StatusCodes.Status200OK;
-                        break;
-                    default:
-                        context.Response.StatusCode = StatusCodes.Status404NotFound;
-                        break;
+
+                    switch (bidContext.Operation)
+                    {
+                        case BidOperation.Clicked:
+                            // Start the rest of the tracking async
+                            break;
+                        case BidOperation.Loss:
+                            context.Response.StatusCode = StatusCodes.Status200OK;
+                            break;
+                        case BidOperation.Win:
+                            context.Response.StatusCode = StatusCodes.Status200OK;
+                            break;
+                        case BidOperation.Impression:
+                            await Task.Delay(10);
+                            context.Response.StatusCode = StatusCodes.Status200OK;
+                            break;
+                        case BidOperation.Action:
+                            context.Response.StatusCode = StatusCodes.Status200OK;
+                            break;
+                        default:
+                            context.Response.StatusCode = StatusCodes.Status404NotFound;
+                            break;
+                    }
                 }
+                else
+                    context.Response.StatusCode = StatusCodes.Status404NotFound;
             }
             catch (Exception e)
             {

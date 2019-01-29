@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Lucent.Common.Caching;
 using Lucent.Common.Entities;
 using Lucent.Common.Entities.Events;
 using Lucent.Common.Events;
@@ -32,6 +33,7 @@ namespace Lucent.Common.Middleware
         IMessageFactory _messageFactory;
         IExchangeRegistry _exchangeRegistry;
         IStorageManager _storageManager;
+        IBidderCache _bidCache;
         UpdatingCollection<BidderFilter> _bidFiltersCollection;
         List<Func<BidRequest, bool>> _bidFilters;
         RequestDelegate _nextHandler;
@@ -50,7 +52,8 @@ namespace Lucent.Common.Middleware
         /// <param name="serializationContext"></param>
         /// <param name="exchangeRegistry"></param>
         /// <param name="storageManager"></param>
-        public BiddingMiddleware(RequestDelegate next, ILogger<BiddingMiddleware> logger, IMessageFactory messageFactory, ISerializationContext serializationContext, IExchangeRegistry exchangeRegistry, IStorageManager storageManager)
+        /// <param name="bidderCache"></param>
+        public BiddingMiddleware(RequestDelegate next, ILogger<BiddingMiddleware> logger, IMessageFactory messageFactory, ISerializationContext serializationContext, IExchangeRegistry exchangeRegistry, IStorageManager storageManager, IBidderCache bidderCache)
         {
             _log = logger;
             _serializationContext = serializationContext;
@@ -60,6 +63,7 @@ namespace Lucent.Common.Middleware
             _bidFiltersCollection.OnUpdate = UpdateBidFilters;
             _bidFilters = _bidFiltersCollection.Entities.Where(f => f.BidFilter != null).Select(f => f.BidFilter.GenerateCode()).ToList();
             _messageFactory = messageFactory;
+            _bidCache = bidderCache;
         }
 
         /// <summary>
@@ -132,6 +136,17 @@ namespace Lucent.Common.Middleware
 
                 if (response != null && (response.Bids ?? new SeatBid[0]).Length > 0)
                 {
+                    foreach (var seat in response.Bids)
+                        foreach (var bid in seat.Bids)
+                            try
+                            {
+                                await _bidCache.TryStore(bid, bid.Id);
+                            }
+                            catch
+                            {
+
+                            }
+
                     httpContext.Response.StatusCode = StatusCodes.Status200OK;
                     await _serializationContext.WriteTo(httpContext, response);
                 }

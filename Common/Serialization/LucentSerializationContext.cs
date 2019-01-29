@@ -119,5 +119,15 @@ namespace Lucent.Common.Serialization
             }
         }
 
+        /// <inheritdoc/>
+        public async Task<byte[]> AsBytes<T>(T instance, SerializationFormat format) where T : new()
+        {
+            using (var ms = new MemoryStream())
+            {
+                await WriteTo(instance, ms, true, format);
+                return ms.ToArray();
+            }
+        }
+
     }
 }
