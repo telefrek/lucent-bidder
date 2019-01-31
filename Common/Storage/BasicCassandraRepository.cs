@@ -115,14 +115,7 @@ namespace Lucent.Common.Storage
             _log.LogInformation("Inserting new item");
             try
             {
-                var contents = new byte[0];
-                using (var ms = new MemoryStream())
-                {
-                    await _serializationContext.WriteTo(obj, ms, true, _serializationFormat);
-                    ms.Seek(0, SeekOrigin.Begin);
-                    contents = ms.ToArray();
-                }
-
+                var contents = await _serializationContext.AsBytes(obj, _serializationFormat);
                 obj.ETag = contents.CalculateETag();
 
                 var rowSet = await ExecuteAsync(_insertStatement.Bind(obj.Key.RawValue().Concat(new object[] { obj.ETag, _serializationFormat.ToString(), DateTime.UtcNow, contents })), "insert_" + _tableName);
@@ -172,14 +165,7 @@ namespace Lucent.Common.Storage
             var oldEtag = obj.ETag;
             try
             {
-                var contents = new byte[0];
-                using (var ms = new MemoryStream())
-                {
-                    await _serializationContext.WriteTo(obj, ms, true, _serializationFormat);
-                    ms.Seek(0, SeekOrigin.Begin);
-                    contents = ms.ToArray();
-                }
-
+                var contents = await _serializationContext.AsBytes(obj, _serializationFormat);
                 obj.ETag = contents.CalculateETag();
 
                 var rowSet = await ExecuteAsync(_updateStatement.Bind(new object[] { obj.ETag, DateTime.UtcNow, contents, _serializationFormat.ToString() }.Concat(obj.Key.RawValue().Concat(new object[] { oldEtag }))), "update_" + _tableName);
