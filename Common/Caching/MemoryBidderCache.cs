@@ -15,6 +15,7 @@ namespace Lucent.Common.Caching
         ILogger _log;
         ISerializationContext _serializationContext;
         IMemoryCache _memCache;
+        object _budgetSync = new object();
 
         /// <summary>
         /// Injection constructor
@@ -30,10 +31,17 @@ namespace Lucent.Common.Caching
         }
 
         /// <inheritdoc/>
-        public async Task<bool> TryRemove(string key)
+        public Task<double> GetBudget(string key)
+        {
+            var res = _memCache.Get(key);
+            return Task.FromResult(res == null ? 0 : (double)res);
+        }
+
+        /// <inheritdoc/>
+        public Task<bool> TryRemove(string key)
         {
             _memCache.Remove(key);
-            return await Task.FromResult(true);
+            return Task.FromResult(true);
         }
 
         /// <inheritdoc/>
@@ -65,6 +73,21 @@ namespace Lucent.Common.Caching
                 Size = raw.Length
             });
             return true;
+        }
+
+        /// <inheritdoc/>
+        public Task<bool> TryUpdateBudget(string key, double value)
+        {
+            lock (_budgetSync)
+            {
+                var current = _memCache.Get(key);
+                _memCache.Set(key, (current == null ? value : (double)current + value), new MemoryCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(1),
+                    Size = sizeof(double),
+                });
+                return Task.FromResult(true);
+            }
         }
     }
 }

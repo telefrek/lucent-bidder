@@ -122,12 +122,20 @@ namespace Lucent.Common.Entities
         public string[] CreativeIds { get; set; }
 
         /// <summary>
-        /// O
+        /// 
         /// </summary>
         /// <value></value>
         [Display(Name = "Caps")]
         [SerializationProperty(12, "spendcap")]
         public SpendCap SpendCaps { get; set; } = new SpendCap { };
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
+        [Display(Name = "Conversion Price")]
+        [SerializationProperty(13, "conversion")]
+        public double ConversionPrice { get; set; }
 
         /// <summary>
         /// 

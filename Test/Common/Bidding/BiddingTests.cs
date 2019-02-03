@@ -132,7 +132,7 @@ namespace Lucent.Common.Bidding
             Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
 
             // send a loss notification
-            resp = await AdvanceBid(serializationContext, bidResponse.Bids.First().Bids.First(), false);
+            resp = await AdvanceBid(serializationContext, bidResponse.Bids.First().Bids.First(), true);
             Assert.AreEqual(HttpStatusCode.OK, resp.StatusCode);
         }
 
@@ -160,14 +160,15 @@ namespace Lucent.Common.Bidding
             var campaignBid = seatBid.Bids.First();
             Assert.IsNotNull(campaignBid);
             Assert.AreEqual(campaign.Id, campaignBid.CampaignId, "Only one campaign should exist");
+            Assert.IsTrue(campaignBid.CPM > 0, "No bid information");
 
             return response;
         }
 
-        async Task<HttpResponseMessage> AdvanceBid(ISerializationContext serializationContext, Bid bid, bool win = true)
+        async Task<HttpResponseMessage> AdvanceBid(ISerializationContext serializationContext, Bid bid, bool win = true, double? amount = null)
         {
             TestContext.WriteLine("Advancing {0} ({1})", bid.Id, win);
-            var uri = new Uri(win ? bid.WinUrl : bid.LossUrl);
+            var uri = new Uri(win ? bid.WinUrl.UrlDecode().Replace("${AUCTION_PRICE}", (amount ?? (double)bid.CPM).ToString()) : bid.LossUrl);
 
             return await _biddingClient.PostAsync(uri.PathAndQuery, null);
         }

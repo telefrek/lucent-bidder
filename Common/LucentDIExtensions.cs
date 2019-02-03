@@ -13,6 +13,7 @@ using Lucent.Common.Budget;
 using Lucent.Common.Client;
 using Microsoft.Extensions.Caching.Memory;
 using Lucent.Common.Caching;
+using Lucent.Common.Scoring;
 
 namespace Lucent.Common
 {
@@ -53,6 +54,7 @@ namespace Lucent.Common
                 services.AddSingleton<IMessageFactory, InMemoryMessageFactory>();
                 services.Configure<BudgetLedgerConfig>(configuration.GetSection("ledger"))
                     .AddSingleton<IBudgetLedgerManager, InMemoryBudgetLedgerManager>();
+                services.AddSingleton<IBudgetLedger, MemoryBudgetLedger>();
             }
             else
             {
@@ -71,6 +73,7 @@ namespace Lucent.Common
                     .AddSingleton<IMessageFactory, RabbitFactory>();
 
                 var storageManager = services.BuildServiceProvider().GetRequiredService<IStorageManager>();
+                services.AddSingleton<IBudgetLedger, BudgetLedger>();
 
                 // Register custom repositories
                 storageManager.RegisterRepository<LedgerEntryRepository, LedgerEntry>();
@@ -86,7 +89,9 @@ namespace Lucent.Common
             if (includeBidder)
             {
                 // Setup bidder
-                services.Configure<BudgetConfig>(configuration.GetSection("budget"))
+                services
+                    .AddSingleton<IScoringService, RandomScoring>()
+                    .Configure<BudgetConfig>(configuration.GetSection("budget"))
                     .AddScoped<IBudgetClient, SimpleBudgetClient>()
                     .AddScoped<IBudgetManager, SimpleBudgetManager>()
                     .AddScoped<IBiddingManager, BiddingManager>()

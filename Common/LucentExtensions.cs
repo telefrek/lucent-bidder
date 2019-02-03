@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Security;
 using System.Security.Cryptography;
@@ -183,6 +184,20 @@ public static partial class LucentExtensions
     /// <param name="data">The data to substitute into the format</param>
     /// <returns>A formatted string</returns>
     public static string FormatWith(this string format, params object[] data) => string.Format(format, data);
+
+    /// <summary>
+    /// URL Encode the string
+    /// </summary>
+    /// <param name="original"></param>
+    /// <returns></returns>
+    public static string UrlEncode(this string original) => WebUtility.UrlEncode(original);
+
+    /// <summary>
+    /// URL Decode the string
+    /// </summary>
+    /// <param name="encoded"></param>
+    /// <returns></returns>
+    public static string UrlDecode(this string encoded) => WebUtility.UrlDecode(encoded);
 
     /// <summary>
     /// Sets the value in the dictionary, regardless of whether or not it exists

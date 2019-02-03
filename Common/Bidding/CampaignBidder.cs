@@ -6,6 +6,7 @@ using Lucent.Common.Entities;
 using Lucent.Common.Exchanges;
 using Lucent.Common.Middleware;
 using Lucent.Common.OpenRTB;
+using Lucent.Common.Scoring;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
@@ -19,6 +20,7 @@ namespace Lucent.Common.Bidding
         Campaign _campaign;
         ILogger<CampaignBidder> _log;
         ICampaignLedger _ledger;
+        IScoringService _scoringService;
 
         /// <summary>
         /// Default constructor
@@ -26,11 +28,13 @@ namespace Lucent.Common.Bidding
         /// <param name="c"></param>
         /// <param name="logger"></param>
         /// <param name="ledgerManager"></param>
-        public CampaignBidder(Campaign c, ILogger<CampaignBidder> logger, IBudgetLedgerManager ledgerManager)
+        /// <param name="scoringService"></param>
+        public CampaignBidder(Campaign c, ILogger<CampaignBidder> logger, IBudgetLedgerManager ledgerManager, IScoringService scoringService)
         {
             _campaign = c;
             _log = logger;
             _ledger = ledgerManager.GetLedger(c);
+            _scoringService = scoringService;
         }
 
         /// <summary>
@@ -59,11 +63,8 @@ namespace Lucent.Common.Bidding
             foreach (var imp in request.Impressions)
             {
                 // Get the potential matches
-                var matches = _campaign.Creatives.SelectMany(c => c.Contents.Where(cc =>
-                {
-                    cc.HydrateFilter();
-                    return !cc.Filter(imp);
-                }).Select(cc => new BidMatch { Impression = imp, Campaign = _campaign, Creative = c, Content = cc })).ToList();
+                var matches = _campaign.Creatives.SelectMany(c => c.Contents.Where(cc => !cc.Filter(imp))
+                    .Select(cc => new BidMatch { Impression = imp, Campaign = _campaign, Creative = c, Content = cc })).ToList();
 
                 allMatched &= matches.Count > 0;
                 impList.AddRange(matches);
@@ -73,9 +74,10 @@ namespace Lucent.Common.Bidding
             if (request.AllImpressions && !allMatched)
                 return NO_MATCHES;
 
-            // Scoring to make async stop complaining
-            await Task.Delay(10);
+            // Get a score for the campaign to the request
+            var score = await _scoringService.Score(Campaign, request);
 
+            // Need some uri building
             var baseUri = new UriBuilder
             {
                 Scheme = httpContext.Request.Scheme,
@@ -93,28 +95,35 @@ namespace Lucent.Common.Bidding
                     CPM = bm.Impression.BidFloor,
                 };
 
-                // This is ugly...
-                bm.RawBid = new Bid
+                // TODO: This is a terrible cpm calculation lol
+                var cpm = score * Campaign.ConversionPrice;
+                if (cpm >= bm.Impression.BidFloor)
                 {
-                    ImpressionId = bm.Impression.ImpressionId,
-                    Id = bidContext.BidId.ToString(),
-                    CPM = bm.Impression.BidFloor,
-                    WinUrl = new Uri(baseUri.Uri, "/v1/postback?" + QueryParameters.LUCENT_BID_CONTEXT_PARAMETER + "=" + bidContext.GetOperationString(BidOperation.Win)).AbsoluteUri,
-                    LossUrl = new Uri(baseUri.Uri, "/v1/postback?" + QueryParameters.LUCENT_BID_CONTEXT_PARAMETER + "=" + bidContext.GetOperationString(BidOperation.Loss)).AbsoluteUri,
-                    BillingUrl = new Uri(baseUri.Uri, "/v1/postback?" + QueryParameters.LUCENT_BID_CONTEXT_PARAMETER + "=" + bidContext.GetOperationString(BidOperation.Impression)).AbsoluteUri,
-                    H = bm.Content.H,
-                    W = bm.Content.W,
-                    AdDomain = bm.Campaign.AdDomains.ToArray(),
-                    BidExpiresSeconds = 300,
-                    Bundle = bm.Campaign.BundleId,
-                    ContentCategories = bm.Content.Categories,
-                    ImageUrl = bm.Content.RawUri,
-                    AdId = bm.Creative.Id,
-                    CreativeId = bm.Creative.Id,
-                    CampaignId = bm.Campaign.Id,
-                };
-                return bm;
-            }).ToArray();
+                    // This is ugly...
+                    bm.RawBid = new Bid
+                    {
+                        ImpressionId = bm.Impression.ImpressionId,
+                        Id = bidContext.BidId.ToString(),
+                        CPM = cpm,
+                        WinUrl = new Uri(baseUri.Uri, "/v1/postback?" + QueryParameters.LUCENT_BID_CONTEXT_PARAMETER + "=" + bidContext.GetOperationString(BidOperation.Win) + "&cpm=${AUCTION_PRICE}").AbsoluteUri,
+                        LossUrl = new Uri(baseUri.Uri, "/v1/postback?" + QueryParameters.LUCENT_BID_CONTEXT_PARAMETER + "=" + bidContext.GetOperationString(BidOperation.Loss)).AbsoluteUri,
+                        BillingUrl = new Uri(baseUri.Uri, "/v1/postback?" + QueryParameters.LUCENT_BID_CONTEXT_PARAMETER + "=" + bidContext.GetOperationString(BidOperation.Impression)).AbsoluteUri,
+                        H = bm.Content.H,
+                        W = bm.Content.W,
+                        AdDomain = bm.Campaign.AdDomains.ToArray(),
+                        BidExpiresSeconds = 300,
+                        Bundle = bm.Campaign.BundleId,
+                        ContentCategories = bm.Content.Categories,
+                        ImageUrl = bm.Content.RawUri,
+                        AdId = bm.Creative.Id,
+                        CreativeId = bm.Creative.Id,
+                        CampaignId = bm.Campaign.Id,
+                    };
+
+                    return bm;
+                }
+                return null;
+            }).Where(b => b != null).ToArray();
         }
     }
 }

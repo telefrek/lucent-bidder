@@ -19,6 +19,6 @@ namespace Lucent.Common.Budget
         /// </summary>
         /// <value></value>
         [SerializationProperty(2, "amt")]
-        public decimal Amount { get; set; } = 1m;
+        public double Amount { get; set; } = 1;
     }
 }

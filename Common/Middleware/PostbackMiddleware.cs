@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucent.Common.Bidding;
+using Lucent.Common.Budget;
 using Lucent.Common.Caching;
 using Lucent.Common.Entities;
 using Lucent.Common.Exchanges;
@@ -26,6 +27,7 @@ namespace Lucent.Common.Middleware
         ISerializationContext _serializationContext;
         IStorageManager _storageManager;
         IBidderCache _bidCache;
+        IBudgetLedger _ledger;
 
         /// <summary>
         /// Default constructor
@@ -36,12 +38,14 @@ namespace Lucent.Common.Middleware
         /// <param name="serializationContext"></param>
         /// <param name="storageManager"></param>
         /// <param name="bidderCache"></param>
-        public PostbackMiddleware(RequestDelegate next, ILogger<PostbackMiddleware> log, IMessageFactory factory, ISerializationContext serializationContext, IStorageManager storageManager, IBidderCache bidderCache)
+        /// <param name="budgetLedger"></param>
+        public PostbackMiddleware(RequestDelegate next, ILogger<PostbackMiddleware> log, IMessageFactory factory, ISerializationContext serializationContext, IStorageManager storageManager, IBidderCache bidderCache, IBudgetLedger budgetLedger)
         {
             _log = log;
             _serializationContext = serializationContext;
             _storageManager = storageManager;
             _bidCache = bidderCache;
+            _ledger = budgetLedger;
         }
 
         /// <summary>
@@ -69,7 +73,6 @@ namespace Lucent.Common.Middleware
                 var bid = await _bidCache.TryRetrieve<Bid>(bidContext.BidId.ToString());
                 if (bid != null)
                 {
-
                     switch (bidContext.Operation)
                     {
                         case BidOperation.Clicked:
@@ -79,6 +82,23 @@ namespace Lucent.Common.Middleware
                             context.Response.StatusCode = StatusCodes.Status200OK;
                             break;
                         case BidOperation.Win:
+                            var cpm = 0d;
+                            if (TryGetCPM(context, out cpm))
+                            {
+                                // Update the exchange and campaign amounts
+                                // TODO: handle errors
+                                var acpm = cpm / 1000d;
+                                _log.LogInformation("Updating budgets for win {0} ({1})", cpm, acpm);
+                                await _ledger.TryRecordEntry(bidContext.ExchangeId.ToString(), bid, EntityType.Bid, acpm);
+                                await _ledger.TryRecordEntry(bidContext.CampaignId.ToString(), bid, EntityType.Bid, acpm);
+                                await _bidCache.TryUpdateBudget(bidContext.ExchangeId.ToString(), -acpm);
+                                await _bidCache.TryUpdateBudget(bidContext.CampaignId.ToString(), -acpm);
+                            }
+                            else
+                            {
+                                _log.LogWarning("No pricing on {0}", context.Request.QueryString);
+                            }
+
                             context.Response.StatusCode = StatusCodes.Status200OK;
                             break;
                         case BidOperation.Impression:
@@ -101,6 +121,23 @@ namespace Lucent.Common.Middleware
                 _log.LogError(e, "Failed to handle postback");
                 context.Response.StatusCode = StatusCodes.Status400BadRequest;
             }
+        }
+
+        /// <summary>
+        /// Attempt to extract the cpm value from the context
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="cpm"></param>
+        /// <returns></returns>
+        bool TryGetCPM(HttpContext context, out double cpm)
+        {
+            cpm = 0;
+
+            StringValues sv;
+            if (context.Request.Query.TryGetValue("cpm", out sv))
+                return double.TryParse(sv, out cpm);
+
+            return false;
         }
     }
 }

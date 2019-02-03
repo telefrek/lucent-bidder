@@ -34,7 +34,7 @@ namespace Lucent.Common.Budget
         }
 
         /// <inheritdoc/>
-        public override async Task CreateTableAsync() => await ExecuteAsync("CREATE TABLE IF NOT EXISTS {0} (id text, ledgerDate timeuuid, etype bigint, amount decimal, format text, updated timestamp, contents blob, PRIMARY KEY(id, ledgerDate) ) WITH CLUSTERING ORDER BY (ledgerDate DESC) AND {'compaction_window_size': '7', 'compaction_window_unit': 'DAYS', 'class': 'org.apache.cassandra.db.compaction.TimeWindowCompactionStrategy'};".FormatWith(_tableName), "create_ledger");
+        public override async Task CreateTableAsync() => await ExecuteAsync("CREATE TABLE IF NOT EXISTS {0} (id text, ledgerDate timeuuid, etype bigint, amount double, format text, updated timestamp, contents blob, PRIMARY KEY(id, ledgerDate) ) WITH CLUSTERING ORDER BY (ledgerDate DESC) AND {'compaction_window_size': '7', 'compaction_window_unit': 'DAYS', 'class': 'org.apache.cassandra.db.compaction.TimeWindowCompactionStrategy'};".FormatWith(_tableName), "create_ledger");
 
 
         /// <inheritdoc/>
@@ -58,7 +58,7 @@ namespace Lucent.Common.Budget
         }
 
         /// <inheritdoc/>
-        public async Task<bool> TryRecordEntry<T>(string ledgerId, T source, EntityType eType, decimal amount) where T : class, new()
+        public async Task<bool> TryRecordEntry<T>(string ledgerId, T source, EntityType eType, double amount) where T : class, new()
         {
             _log.LogInformation("Recording {0} for {1}", amount, ledgerId);
             try

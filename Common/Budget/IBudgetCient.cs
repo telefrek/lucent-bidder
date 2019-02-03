@@ -13,6 +13,6 @@ namespace Lucent.Common.Budget
         /// <param name="entityId"></param>
         /// <param name="amount"></param>
         /// <returns></returns>
-        Task<bool> RequestBudget(string entityId, decimal amount);
+        Task<bool> RequestBudget(string entityId, double amount);
     }
 }

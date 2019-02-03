@@ -23,7 +23,8 @@ namespace Lucent.Common.Test
                     {
                         typeof(Geo).CreateFilter(FilterType.IN, "Country", "USA"),
                     }
-                }
+                },
+                ConversionPrice = 1,
             };
         }
     }

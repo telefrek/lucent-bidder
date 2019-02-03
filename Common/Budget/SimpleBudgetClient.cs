@@ -42,7 +42,7 @@ namespace Lucent.Common.Budget
         /// <param name="entityId"></param>
         /// <param name="amount"></param>
         /// <returns></returns>
-        public async Task<bool> RequestBudget(string entityId, decimal amount)
+        public async Task<bool> RequestBudget(string entityId, double amount)
         {
             var req = new BudgetRequest { EntityId = entityId, Amount = amount };
             using (var ms = new MemoryStream())

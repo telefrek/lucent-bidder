@@ -12,7 +12,7 @@ namespace Lucent.Common.Budget
         /// Get the remaining budget
         /// </summary>
         /// <returns></returns>
-        Task<decimal> GetRemaining(string id);
+        Task<double> GetRemaining(string id);
 
         /// <summary>
         /// Get additional budget, unbounded
@@ -27,7 +27,7 @@ namespace Lucent.Common.Budget
         /// <param name="amount"></param>
         /// <param name="id"></param>
         /// <returns></returns>
-        Task GetAdditional(decimal amount, string id);
+        Task GetAdditional(double amount, string id);
 
         /// <summary>
         /// Check if the budget is exhausted
@@ -42,6 +42,6 @@ namespace Lucent.Common.Budget
         /// <param name="amount"></param>
         /// <param name="id"></param>
         /// <returns></returns>
-        Task<bool> TrySpend(decimal amount, string id);
+        Task<bool> TrySpend(double amount, string id);
     }
 }

@@ -9,7 +9,7 @@ namespace Lucent.Common.Budget
     /// </summary>
     public class SimpleBudgetManager : IBudgetManager
     {
-        ConcurrentDictionary<string, decimal> _budgets = new ConcurrentDictionary<string, decimal>();
+        ConcurrentDictionary<string, double> _budgets = new ConcurrentDictionary<string, double>();
         IMessageSubscriber<BudgetEventMessage> _budgetSubscriber;
         IBudgetClient _budgetClient;
 
@@ -35,24 +35,24 @@ namespace Lucent.Common.Budget
         }
 
         /// <inheritdoc/>
-        public async Task GetAdditional(string id) => await GetAdditional(1m, id);
+        public async Task GetAdditional(string id) => await GetAdditional(1, id);
 
         /// <inheritdoc/>
-        public async Task GetAdditional(decimal amount, string id) => await _budgetClient.RequestBudget(id, amount);
+        public async Task GetAdditional(double amount, string id) => await _budgetClient.RequestBudget(id, amount);
 
         /// <inheritdoc/>
-        public async Task<decimal> GetRemaining(string id)
+        public async Task<double> GetRemaining(string id)
         {
-            return await Task.FromResult(_budgets.GetOrAdd(id, 0m));
+            return await Task.FromResult(_budgets.GetOrAdd(id, 0));
         }
 
         /// <inheritdoc/>
-        public bool IsExhausted(string id) => _budgets.GetOrAdd(id, 0m) <= 0m;
+        public bool IsExhausted(string id) => _budgets.GetOrAdd(id, 0) <= 0;
 
         /// <inheritdoc/>
-        public async Task<bool> TrySpend(decimal amount, string id)
+        public async Task<bool> TrySpend(double amount, string id)
         {
-            return await Task.FromResult(_budgets.AddOrUpdate(id, -amount, (i, o) => o - amount) >= 0m);
+            return await Task.FromResult(_budgets.AddOrUpdate(id, -amount, (i, o) => o - amount) >= 0);
         }
     }
 }

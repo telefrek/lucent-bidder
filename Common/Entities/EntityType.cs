@@ -19,5 +19,7 @@ namespace Lucent.Common.Entities
         Ledger = 5,
         /// <value></value>
         BidderFilter = 6,
+        /// <value></value>
+        Bid = 7,
     }
 }

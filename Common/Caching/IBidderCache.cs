@@ -8,6 +8,21 @@ namespace Lucent.Common.Caching
     public interface IBidderCache
     {
         /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        Task<bool> TryUpdateBudget(string key, double value);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        Task<double> GetBudget(string key);
+
+        /// <summary>
         /// Store something
         /// </summary>
         /// <typeparam name="T"></typeparam>
