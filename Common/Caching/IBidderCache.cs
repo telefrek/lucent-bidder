@@ -5,7 +5,7 @@ namespace Lucent.Common.Caching
     /// <summary>
     /// 
     /// </summary>
-    public interface IBidderCache
+    public interface IBudgetCache
     {
         /// <summary>
         /// 

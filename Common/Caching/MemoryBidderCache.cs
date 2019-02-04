@@ -10,7 +10,7 @@ namespace Lucent.Common.Caching
     /// <summary>
     /// 
     /// </summary>
-    public class MemoryBidderCache : IBidderCache
+    public class MemoryBidderCache : IBudgetCache
     {
         ILogger _log;
         ISerializationContext _serializationContext;

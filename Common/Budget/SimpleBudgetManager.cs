@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
+using Lucent.Common.Caching;
 using Lucent.Common.Messaging;
 
 namespace Lucent.Common.Budget
@@ -9,18 +10,19 @@ namespace Lucent.Common.Budget
     /// </summary>
     public class SimpleBudgetManager : IBudgetManager
     {
-        ConcurrentDictionary<string, double> _budgets = new ConcurrentDictionary<string, double>();
+        IBudgetCache _budgetCache;
         IMessageSubscriber<BudgetEventMessage> _budgetSubscriber;
         IBudgetClient _budgetClient;
 
         /// <summary>
         /// Useless
         /// </summary>
-        public SimpleBudgetManager(IMessageFactory messageFactory, IBudgetClient budgetClient)
+        public SimpleBudgetManager(IMessageFactory messageFactory, IBudgetClient budgetClient, IBudgetCache budgetCache)
         {
             _budgetSubscriber = messageFactory.CreateSubscriber<BudgetEventMessage>("budget", 0, messageFactory.WildcardFilter);
             _budgetSubscriber.OnReceive = HandleBudgetRequests;
             _budgetClient = budgetClient;
+            _budgetCache = budgetCache;
         }
 
         /// <summary>
@@ -28,11 +30,7 @@ namespace Lucent.Common.Budget
         /// </summary>
         /// <param name="budgetEvent"></param>
         /// <returns></returns>
-        async Task HandleBudgetRequests(BudgetEventMessage budgetEvent)
-        {
-            _budgets.AddOrUpdate(budgetEvent.Body.EntityId, budgetEvent.Body.Amount, (eid, o) => o += budgetEvent.Body.Amount);
-            await Task.CompletedTask;
-        }
+        async Task HandleBudgetRequests(BudgetEventMessage budgetEvent) => await _budgetCache.TryUpdateBudget(budgetEvent.Body.EntityId, budgetEvent.Body.Amount);
 
         /// <inheritdoc/>
         public async Task GetAdditional(string id) => await GetAdditional(1, id);
@@ -41,18 +39,12 @@ namespace Lucent.Common.Budget
         public async Task GetAdditional(double amount, string id) => await _budgetClient.RequestBudget(id, amount);
 
         /// <inheritdoc/>
-        public async Task<double> GetRemaining(string id)
-        {
-            return await Task.FromResult(_budgets.GetOrAdd(id, 0));
-        }
+        public async Task<double> GetRemaining(string id) => await _budgetCache.GetBudget(id);
 
         /// <inheritdoc/>
-        public bool IsExhausted(string id) => _budgets.GetOrAdd(id, 0) <= 0;
+        public bool IsExhausted(string id) => GetRemaining(id).Result <= 0;
 
         /// <inheritdoc/>
-        public async Task<bool> TrySpend(double amount, string id)
-        {
-            return await Task.FromResult(_budgets.AddOrUpdate(id, -amount, (i, o) => o - amount) >= 0);
-        }
+        public async Task<bool> TrySpend(double amount, string id) => await _budgetCache.TryUpdateBudget(id, amount);
     }
 }

@@ -49,7 +49,7 @@ namespace Lucent.Common
                 {
                     opts.ExpirationScanFrequency = TimeSpan.FromSeconds(30);
                     opts.SizeLimit = 1024 * 1024 * 256L;
-                }).AddSingleton<IMemoryCache, MemoryCache>().AddSingleton<IBidderCache, MemoryBidderCache>();
+                }).AddSingleton<IMemoryCache, MemoryCache>().AddSingleton<IBudgetCache, MemoryBidderCache>();
                 services.AddSingleton<IStorageManager, InMemoryStorage>();
                 services.AddSingleton<IMessageFactory, InMemoryMessageFactory>();
                 services.Configure<BudgetLedgerConfig>(configuration.GetSection("ledger"))
@@ -63,7 +63,7 @@ namespace Lucent.Common
                 {
                     opts.ExpirationScanFrequency = TimeSpan.FromSeconds(30);
                     opts.SizeLimit = 1024 * 1024 * 256L;
-                }).AddSingleton<IMemoryCache, MemoryCache>().AddSingleton<IBidderCache, MemoryBidderCache>();
+                }).AddSingleton<IMemoryCache, MemoryCache>().AddSingleton<IBudgetCache, MemoryBidderCache>();
 
                 // Setup storage
                 services.Configure<CassandraConfiguration>(configuration.GetSection("cassandra"))

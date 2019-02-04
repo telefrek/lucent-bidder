@@ -33,7 +33,7 @@ namespace Lucent.Common.Middleware
         IMessageFactory _messageFactory;
         IExchangeRegistry _exchangeRegistry;
         IStorageManager _storageManager;
-        IBidderCache _bidCache;
+        IBudgetCache _bidCache;
         UpdatingCollection<BidderFilter> _bidFiltersCollection;
         List<Func<BidRequest, bool>> _bidFilters;
         RequestDelegate _nextHandler;
@@ -53,7 +53,7 @@ namespace Lucent.Common.Middleware
         /// <param name="exchangeRegistry"></param>
         /// <param name="storageManager"></param>
         /// <param name="bidderCache"></param>
-        public BiddingMiddleware(RequestDelegate next, ILogger<BiddingMiddleware> logger, IMessageFactory messageFactory, ISerializationContext serializationContext, IExchangeRegistry exchangeRegistry, IStorageManager storageManager, IBidderCache bidderCache)
+        public BiddingMiddleware(RequestDelegate next, ILogger<BiddingMiddleware> logger, IMessageFactory messageFactory, ISerializationContext serializationContext, IExchangeRegistry exchangeRegistry, IStorageManager storageManager, IBudgetCache bidderCache)
         {
             _log = logger;
             _serializationContext = serializationContext;

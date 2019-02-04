@@ -26,7 +26,7 @@ namespace Lucent.Common.Middleware
         ILogger<PostbackMiddleware> _log;
         ISerializationContext _serializationContext;
         IStorageManager _storageManager;
-        IBidderCache _bidCache;
+        IBudgetCache _bidCache;
         IBudgetLedger _ledger;
 
         /// <summary>
@@ -39,7 +39,7 @@ namespace Lucent.Common.Middleware
         /// <param name="storageManager"></param>
         /// <param name="bidderCache"></param>
         /// <param name="budgetLedger"></param>
-        public PostbackMiddleware(RequestDelegate next, ILogger<PostbackMiddleware> log, IMessageFactory factory, ISerializationContext serializationContext, IStorageManager storageManager, IBidderCache bidderCache, IBudgetLedger budgetLedger)
+        public PostbackMiddleware(RequestDelegate next, ILogger<PostbackMiddleware> log, IMessageFactory factory, ISerializationContext serializationContext, IStorageManager storageManager, IBudgetCache bidderCache, IBudgetLedger budgetLedger)
         {
             _log = log;
             _serializationContext = serializationContext;

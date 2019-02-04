@@ -86,8 +86,8 @@ namespace Lucent.Common.Budget
         protected override async Task Initialize()
         {
 
-            _getStatement = await PrepareAsync("SELECT etype, amount, format, updated, contents FROM {0} WHERE id=?".FormatWith(_tableName));
-            _insertStatement = await PrepareAsync("INSERT INTO {0} (id, ledger, etype, amount, format, updated, contents) VALUES (?, ?, ?, ?, ?, ?) IF NOT EXISTS".FormatWith(_tableName));
+            _getStatement = await PrepareAsync("SELECT ledgerDate, etype, amount, format, updated, contents FROM {0} WHERE id=?".FormatWith(_tableName));
+            _insertStatement = await PrepareAsync("INSERT INTO {0} (id, ledgerDate, etype, amount, format, updated, contents) VALUES (?, ?, ?, ?, ?, ?) IF NOT EXISTS".FormatWith(_tableName));
         }
     }
 }
