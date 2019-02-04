@@ -64,7 +64,7 @@ namespace Lucent.Common.Bidding
             {
                 // Get the potential matches
                 var matches = _campaign.Creatives.SelectMany(c => c.Contents.Where(cc => !cc.Filter(imp))
-                    .Select(cc => new BidMatch { Impression = imp, Campaign = _campaign, Creative = c, Content = cc })).ToList();
+                    .Select(cc => new BidMatch { Request = request, Impression = imp, Campaign = _campaign, Creative = c, Content = cc })).ToList();
 
                 allMatched &= matches.Count > 0;
                 impList.AddRange(matches);
@@ -86,14 +86,7 @@ namespace Lucent.Common.Bidding
 
             return impList.Select(bm =>
             {
-                var bidContext = new BidContext
-                {
-                    BidDate = DateTime.UtcNow,
-                    BidId = SequentialGuid.NextGuid(),
-                    CampaignId = Guid.Parse(bm.Campaign.Id),
-                    ExchangeId = (httpContext.Items["exchange"] as AdExchange).ExchangeId,
-                    CPM = bm.Impression.BidFloor,
-                };
+                var bidContext = bm.CreateContext(httpContext);
 
                 // TODO: This is a terrible cpm calculation lol
                 var cpm = score * Campaign.ConversionPrice;

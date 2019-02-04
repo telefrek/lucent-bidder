@@ -22,7 +22,7 @@ namespace Lucent.Common.Budget
         /// </summary>
         public SimpleBudgetManager(IMessageFactory messageFactory, IBudgetClient budgetClient, IBudgetCache budgetCache)
         {
-            _budgetSubscriber = messageFactory.CreateSubscriber<BudgetEventMessage>("budget", 0, messageFactory.WildcardFilter);
+            _budgetSubscriber = messageFactory.CreateSubscriber<BudgetEventMessage>(Topics.BUDGET, 0, messageFactory.WildcardFilter);
             _budgetSubscriber.OnReceive = HandleBudgetRequests;
             _budgetClient = budgetClient;
             _budgetCache = budgetCache;

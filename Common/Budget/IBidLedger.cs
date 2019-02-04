@@ -7,11 +7,11 @@ namespace Lucent.Common.Budget
     /// <summary>
     /// Stores bid history
     /// </summary>
-    public interface IBudgetLedger
+    public interface IBidLedger
     {
         /// <summary>
         /// Tries to record an entry with the source and amount
         /// </summary>
-        Task<bool> TryRecordEntry<T>(string ledgerId, T source, EntityType eType, double amount) where T : class, new();
+        Task<bool> TryRecordEntry(string ledgerId, BidEntry source);
     }
 }

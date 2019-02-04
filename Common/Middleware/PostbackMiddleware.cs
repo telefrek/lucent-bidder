@@ -27,7 +27,7 @@ namespace Lucent.Common.Middleware
         ISerializationContext _serializationContext;
         IStorageManager _storageManager;
         IBudgetCache _bidCache;
-        IBudgetLedger _ledger;
+        IBidLedger _ledger;
 
         /// <summary>
         /// Default constructor
@@ -39,7 +39,7 @@ namespace Lucent.Common.Middleware
         /// <param name="storageManager"></param>
         /// <param name="bidderCache"></param>
         /// <param name="budgetLedger"></param>
-        public PostbackMiddleware(RequestDelegate next, ILogger<PostbackMiddleware> log, IMessageFactory factory, ISerializationContext serializationContext, IStorageManager storageManager, IBudgetCache bidderCache, IBudgetLedger budgetLedger)
+        public PostbackMiddleware(RequestDelegate next, ILogger<PostbackMiddleware> log, IMessageFactory factory, ISerializationContext serializationContext, IStorageManager storageManager, IBudgetCache bidderCache, IBidLedger budgetLedger)
         {
             _log = log;
             _serializationContext = serializationContext;
@@ -89,8 +89,9 @@ namespace Lucent.Common.Middleware
                                 // TODO: handle errors
                                 var acpm = cpm / 1000d;
                                 _log.LogInformation("Updating budgets for win {0} ({1})", cpm, acpm);
-                                await _ledger.TryRecordEntry(bidContext.ExchangeId.ToString(), bid, EntityType.Bid, acpm);
-                                await _ledger.TryRecordEntry(bidContext.CampaignId.ToString(), bid, EntityType.Bid, acpm);
+                                var entry = new BidEntry { Bid = bid, RequestId = bidContext.RequestId, Cost = acpm };
+                                await _ledger.TryRecordEntry(bidContext.ExchangeId.ToString(), entry);
+                                await _ledger.TryRecordEntry(bidContext.CampaignId.ToString(), entry);
                                 await _bidCache.TryUpdateBudget(bidContext.ExchangeId.ToString(), -acpm);
                                 await _bidCache.TryUpdateBudget(bidContext.CampaignId.ToString(), -acpm);
                             }

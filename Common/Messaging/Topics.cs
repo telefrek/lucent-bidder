@@ -14,5 +14,10 @@ namespace Lucent.Common.Messaging
         /// Entities change topic
         /// </summary>
         public const string ENTITIES = "entities";
+
+        /// <summary>
+        /// Budget topic
+        /// </summary>
+        public const string BUDGET = "budget";
     }
 }

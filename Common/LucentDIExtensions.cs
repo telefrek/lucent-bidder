@@ -54,7 +54,7 @@ namespace Lucent.Common
                 services.AddSingleton<IMessageFactory, InMemoryMessageFactory>();
                 services.Configure<BudgetLedgerConfig>(configuration.GetSection("ledger"))
                     .AddSingleton<IBudgetLedgerManager, InMemoryBudgetLedgerManager>();
-                services.AddSingleton<IBudgetLedger, MemoryBudgetLedger>();
+                services.AddSingleton<IBidLedger, MemoryBudgetLedger>();
             }
             else
             {
@@ -73,7 +73,7 @@ namespace Lucent.Common
                     .AddSingleton<IMessageFactory, RabbitFactory>();
 
                 var storageManager = services.BuildServiceProvider().GetRequiredService<IStorageManager>();
-                services.AddSingleton<IBudgetLedger, BudgetLedger>();
+                services.AddSingleton<IBidLedger, BidLedger>();
 
                 // Register custom repositories
                 storageManager.RegisterRepository<LedgerEntryRepository, LedgerEntry>();
@@ -91,7 +91,7 @@ namespace Lucent.Common
                 // Setup bidder
                 services
                     .AddSingleton<IScoringService, RandomScoring>()
-                    .Configure<BudgetConfig>(configuration.GetSection("budget"))
+                    .Configure<BudgetConfig>(configuration.GetSection(Topics.BUDGET))
                     .AddScoped<IBudgetClient, SimpleBudgetClient>()
                     .AddScoped<IBudgetManager, SimpleBudgetManager>()
                     .AddScoped<IBiddingManager, BiddingManager>()

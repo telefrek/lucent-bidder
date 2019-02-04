@@ -80,14 +80,7 @@ namespace Lucent.Samples.SimpleExchange
         /// <inheritdoc/>
         public override Bid FormatBid(BidMatch match, HttpContext httpContext)
         {
-            var bidContext = new BidContext
-            {
-                BidDate = DateTime.UtcNow,
-                BidId = Guid.Parse(match.RawBid.Id),
-                CampaignId = Guid.Parse(match.Campaign.Id),
-                ExchangeId = ExchangeId,
-                CPM = match.RawBid.CPM,
-            };
+            var bidContext = match.CreateContext(httpContext);
 
             // Format and stash/attach markup
             switch (match.Content.ContentType)

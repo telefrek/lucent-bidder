@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Lucent.Common.Entities;
 
@@ -8,11 +9,15 @@ namespace Lucent.Common.Budget
     /// <summary>
     /// In memory version for testing
     /// </summary>
-    public class MemoryBudgetLedger : IBudgetLedger
+    public class MemoryBudgetLedger : IBidLedger
     {
-        ConcurrentDictionary<string, Tuple<object, EntityType, double>> _ledgers = new ConcurrentDictionary<string, Tuple<object, EntityType, double>>();
+        ConcurrentDictionary<string, List<BidEntry>> _ledgers = new ConcurrentDictionary<string, List<BidEntry>>();
 
         /// <inheritdoc/>
-        public Task<bool> TryRecordEntry<T>(string ledgerId, T source, EntityType eType, double amount) where T : class, new() => Task.FromResult(_ledgers.TryAdd(ledgerId, new Tuple<object, EntityType, double>(source, eType, amount)));
+        public Task<bool> TryRecordEntry(string ledgerId, BidEntry source)
+        {
+            _ledgers.AddOrUpdate(ledgerId, new List<BidEntry>(), (i, l) => l).Add(source);
+            return Task.FromResult(true);
+        }
     }
 }

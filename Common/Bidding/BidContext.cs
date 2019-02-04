@@ -35,6 +35,7 @@ namespace Lucent.Common.Bidding
                 context.CPM = protoReader.ReadDouble();
                 context.BidDate = DateTime.FromFileTimeUtc(protoReader.ReadInt64());
                 context.Operation = (BidOperation)protoReader.ReadInt32();
+                context.RequestId = protoReader.ReadString();
             }
 
             return context;
@@ -79,6 +80,12 @@ namespace Lucent.Common.Bidding
         public BidOperation Operation { get; set; }
 
         /// <summary>
+        /// Get the bid request
+        /// </summary>
+        /// <value></value>
+        public string RequestId { get; set; }
+
+        /// <summary>
         /// Get the operation parameter
         /// </summary>
         /// <param name="operation"></param>
@@ -110,6 +117,7 @@ namespace Lucent.Common.Bidding
                     protoWriter.Write(CPM);
                     protoWriter.Write(BidDate.ToFileTimeUtc());
                     protoWriter.Write((int)Operation);
+                    protoWriter.Write(RequestId);
                     protoWriter.Flush();
                 }
 

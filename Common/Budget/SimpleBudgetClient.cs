@@ -55,9 +55,10 @@ namespace Lucent.Common.Budget
                 {
                     content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
                     var res = await _clientManager.OrchestrationClient.PostAsync("/api/budget/request", content);
+                    
                     if (res.StatusCode != HttpStatusCode.Accepted)
                         _log.LogWarning("Failed to retrieve budget for {0} : {1}", entityId, res.StatusCode);
-                        
+
                     return res.StatusCode == HttpStatusCode.Accepted;
                 }
             }
