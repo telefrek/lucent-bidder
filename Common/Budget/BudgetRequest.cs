@@ -1,3 +1,4 @@
+using System;
 using Lucent.Common.Serialization;
 
 namespace Lucent.Common.Budget
@@ -20,5 +21,12 @@ namespace Lucent.Common.Budget
         /// <value></value>
         [SerializationProperty(2, "amt")]
         public double Amount { get; set; } = 1;
+
+        /// <summary>
+        /// Get/Set the correlation id
+        /// </summary>
+        /// <value></value>
+        [SerializationProperty(3, "correlationId")]
+        public Guid CorrelationId { get; set; }
     }
 }

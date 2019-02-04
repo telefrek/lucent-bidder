@@ -41,10 +41,11 @@ namespace Lucent.Common.Budget
         /// </summary>
         /// <param name="entityId"></param>
         /// <param name="amount"></param>
+        /// <param name="correlationId"></param>
         /// <returns></returns>
-        public async Task<bool> RequestBudget(string entityId, double amount)
+        public async Task<bool> RequestBudget(string entityId, double amount, Guid correlationId)
         {
-            var req = new BudgetRequest { EntityId = entityId, Amount = amount };
+            var req = new BudgetRequest { EntityId = entityId, Amount = amount, CorrelationId = correlationId };
             using (var ms = new MemoryStream())
             {
                 await _serializationContext.WriteTo(req, ms, true, SerializationFormat.JSON);
@@ -56,6 +57,7 @@ namespace Lucent.Common.Budget
                     var res = await _clientManager.OrchestrationClient.PostAsync("/api/budget/request", content);
                     if (res.StatusCode != HttpStatusCode.Accepted)
                         _log.LogWarning("Failed to retrieve budget for {0} : {1}", entityId, res.StatusCode);
+                        
                     return res.StatusCode == HttpStatusCode.Accepted;
                 }
             }

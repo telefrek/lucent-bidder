@@ -103,7 +103,7 @@ namespace Lucent.Common.Middleware
                     case "post":
                         // Add budget
                         var bmsg = _messageFactory.CreateMessage<BudgetEventMessage>();
-                        bmsg.Body = new BudgetEvent { EntityId = request.EntityId, Amount = request.Amount };
+                        bmsg.Body = new BudgetEvent { EntityId = request.EntityId, Amount = request.Amount, CorrelationId = request.CorrelationId };
                         bmsg.Route = "event_test";
                         if (await _messageFactory.CreatePublisher("budget").TryPublish(bmsg))
                             httpContext.Response.StatusCode = 202;

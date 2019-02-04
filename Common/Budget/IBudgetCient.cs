@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 
 namespace Lucent.Common.Budget
@@ -12,7 +13,8 @@ namespace Lucent.Common.Budget
         /// </summary>
         /// <param name="entityId"></param>
         /// <param name="amount"></param>
+        /// <param name="correlationId"></param>
         /// <returns></returns>
-        Task<bool> RequestBudget(string entityId, double amount);
+        Task<bool> RequestBudget(string entityId, double amount, Guid correlationId);
     }
 }
