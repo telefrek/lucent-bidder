@@ -87,6 +87,7 @@ namespace Lucent.Common.Bidding
             return impList.Select(bm =>
             {
                 var bidContext = bm.CreateContext(httpContext);
+                bidContext.BaseUri = baseUri;
 
                 // TODO: This is a terrible cpm calculation lol
                 var cpm = score * Campaign.ConversionPrice;
@@ -95,6 +96,7 @@ namespace Lucent.Common.Bidding
                     // This is ugly...
                     bm.RawBid = new Bid
                     {
+                        BidContext = bidContext,
                         ImpressionId = bm.Impression.ImpressionId,
                         Id = bidContext.BidId.ToString(),
                         CPM = cpm,

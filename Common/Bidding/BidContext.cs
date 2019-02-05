@@ -86,6 +86,12 @@ namespace Lucent.Common.Bidding
         public string RequestId { get; set; }
 
         /// <summary>
+        /// Get the base uri for the callbacks
+        /// </summary>
+        /// <value></value>
+        public UriBuilder BaseUri { get; set; }
+
+        /// <summary>
         /// Get the operation parameter
         /// </summary>
         /// <param name="operation"></param>
@@ -145,5 +151,11 @@ namespace Lucent.Common.Bidding
         Clicked,
         /// <value></value>
         Action,
+        /// <value></value>
+        Viewed,
+        /// <value></value>
+        NotViewed,
+        /// <value></value>
+        Error,
     }
 }

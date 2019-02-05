@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using Lucent.Common.Bidding;
 using Lucent.Common.Entities;
+using Lucent.Common.Middleware;
 using Lucent.Common.OpenRTB;
 
 namespace Lucent.Common
@@ -9,13 +11,24 @@ namespace Lucent.Common
     public static partial class LucentExtensions
     {
         /// <summary>
+        /// Replaces the macros in the landing page with the correct information
+        /// </summary>
+        /// <param name="campaign"></param>
+        /// <param name="creative"></param>
+        /// <param name="bid"></param>
+        /// <returns></returns>
+        public static string ReplaceMacros(this Campaign campaign, Creative creative, Bid bid)
+        {
+            return campaign.LandingPage.Replace(QueryParameters.LUCENT_REDIRECT_PARAMETER, bid.BidContext.GetOperationString(BidOperation.Clicked));
+        }
+
+        /// <summary>
         /// 
         /// </summary>
         /// <param name="content"></param>
         public static void HydrateFilter(this CreativeContent content)
         {
             var impParam = Expression.Parameter(typeof(Impression), "imp");
-            var fValue = Expression.Variable(typeof(bool), "isFiltered");
             var expressions = new List<Expression>();
 
             var ret = Expression.Label(typeof(bool)); // We're going to return a bool

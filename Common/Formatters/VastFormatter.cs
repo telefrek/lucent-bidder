@@ -4,6 +4,7 @@ using System.Security;
 using System.Xml;
 using Lucent.Common.Bidding;
 using Lucent.Common.Entities;
+using Lucent.Common.Middleware;
 using Lucent.Common.OpenRTB;
 
 namespace Lucent.Common.Formatters
@@ -209,11 +210,6 @@ namespace Lucent.Common.Formatters
     public static class VastXmlExtensions
     {
         /// <summary>
-        /// Default POSTBACK_URI
-        /// </summary>
-        public static string POSTBACK_URI = "";
-
-        /// <summary>
         /// 
         /// </summary>
         /// <param name="element"></param>
@@ -249,7 +245,7 @@ namespace Lucent.Common.Formatters
         public static void AddImpression(this XmlElement element, XmlDocument xDoc, Creative creative, Bid bid)
         {
             var impression = xDoc.CreateElement("Impression");
-            impression.AppendChild(xDoc.CreateCDataSection(POSTBACK_URI + "&a=imp&lctx=" + bid.Id.SafeBase64Encode()));
+            impression.AppendChild(xDoc.CreateCDataSection(GeneratePostback(BidOperation.Impression, bid)));
             impression.Attributes.Append(xDoc.CreateVastAttribute("id", SequentialGuid.NextGuid().ToString()));
             element.AppendChild(impression);
         }
@@ -305,7 +301,7 @@ namespace Lucent.Common.Formatters
         public static void AddErrorUri(this XmlElement element, XmlDocument xDoc, Creative creative, Bid bid)
         {
             var err = xDoc.CreateElement("Error");
-            err.AppendChild(xDoc.CreateCDataSection(POSTBACK_URI + "&a=err&lctx=" + bid.Id.SafeBase64Encode()));
+            err.AppendChild(xDoc.CreateCDataSection(GeneratePostback(BidOperation.Error, bid)));
             element.AppendChild(err);
         }
 
@@ -320,9 +316,9 @@ namespace Lucent.Common.Formatters
         {
             var viewImp = xDoc.CreateElement("ViewableImpression");
             var viewable = xDoc.CreateElement("Viewable");
-            viewable.AppendChild(xDoc.CreateCDataSection(POSTBACK_URI + "&a=view&lctx=" + bid.Id.SafeBase64Encode()));
+            viewable.AppendChild(xDoc.CreateCDataSection(GeneratePostback(BidOperation.Viewed, bid)));
             var notviewable = xDoc.CreateElement("NotViewable");
-            notviewable.AppendChild(xDoc.CreateCDataSection(POSTBACK_URI + "&a=noview&lctx=" + bid.Id.SafeBase64Encode()));
+            notviewable.AppendChild(xDoc.CreateCDataSection(GeneratePostback(BidOperation.NotViewed, bid)));
             viewImp.Attributes.Append(xDoc.CreateVastAttribute("id", SequentialGuid.NextGuid().ToString()));
             viewImp.AppendChild(viewable);
             viewImp.AppendChild(notviewable);
@@ -401,17 +397,25 @@ namespace Lucent.Common.Formatters
             var clicks = xDoc.CreateElement("VideoClicks");
 
             var clickThrough = xDoc.CreateElement("ClickThrough");
-            clickThrough.AppendChild(xDoc.CreateCDataSection(campaign.LandingPage.Replace("{lctx}", bid.Id.SafeBase64Encode())));
+            clickThrough.AppendChild(xDoc.CreateCDataSection(campaign.ReplaceMacros(creative, bid)));
             clickThrough.Attributes.Append(xDoc.CreateVastAttribute("id", SequentialGuid.NextGuid().ToString()));
             clicks.AppendChild(clickThrough);
 
             var clickTrack = xDoc.CreateElement("ClickTracking");
-            clickTrack.AppendChild(xDoc.CreateCDataSection(POSTBACK_URI + "&a=click&lctx=" + bid.Id.SafeBase64Encode()));
+            clickTrack.AppendChild(xDoc.CreateCDataSection(GeneratePostback(BidOperation.Clicked, bid)));
             clickTrack.Attributes.Append(xDoc.CreateVastAttribute("id", SequentialGuid.NextGuid().ToString()));
             clicks.AppendChild(clickTrack);
 
             element.AppendChild(clicks);
         }
+
+        /// <summary>
+        /// Generate an appropriate postback link
+        /// </summary>
+        /// <param name="operation"></param>
+        /// <param name="bid"></param>
+        /// <returns></returns>
+        public static string GeneratePostback(BidOperation operation, Bid bid) => new Uri(bid.BidContext.BaseUri.Uri, "/v1/postback?" + QueryParameters.LUCENT_BID_CONTEXT_PARAMETER + "=" + bid.BidContext.GetOperationString(operation)).AbsoluteUri;
 
         /// <summary>
         /// 

@@ -67,6 +67,10 @@ namespace Lucent.Common.Bidding
                 bidContext.BidId = Guid.Parse(RawBid.Id);
                 bidContext.CPM = RawBid.CPM;
             }
+            else
+            {
+                bidContext.BidId = SequentialGuid.NextGuid();
+            }
 
             return bidContext;
         }

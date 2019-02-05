@@ -1,3 +1,4 @@
+using Lucent.Common.Bidding;
 using Lucent.Common.Serialization;
 
 namespace Lucent.Common.OpenRTB
@@ -188,5 +189,11 @@ namespace Lucent.Common.OpenRTB
         /// <value></value>
         [SerializationProperty(27, "hratio")]
         public int HRatio { get; set; }
+
+        /// <summary>
+        /// Used for tracking bid information
+        /// </summary>
+        /// <value></value>
+        public BidContext BidContext {get;set;}
     }
 }
