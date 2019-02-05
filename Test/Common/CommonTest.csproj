@@ -23,6 +23,7 @@
     <None Include="$(ProjectDir)resources\**" CopyToOutputDirectory="PreserveNewest" />
     <None Include="$(ProjectDir)appsettings.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="$(ProjectDir)rose.png" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="$(ProjectDir)clouds.mp4" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 

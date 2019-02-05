@@ -271,6 +271,23 @@ namespace Lucent.Common.Bidding
                         Assert.AreEqual(HttpStatusCode.Created, message.StatusCode);
                     }
                 }
+
+                context = _orchestrationHost.Provider.GetRequiredService<ISerializationContext>();
+
+                using (var content =
+                    new MultipartFormDataContent("Upload----" + DateTime.Now.ToString(CultureInfo.InvariantCulture)))
+                {
+                    HttpContent httpContent = new StreamContent(File.OpenRead("clouds.mp4"));
+                    httpContent.Headers.ContentType = new MediaTypeHeaderValue("video/mp4");
+                    content.Add(httpContent, "content", "content.mp4");
+
+                    using (
+                       var message =
+                           await client.PostAsync("/api/creatives/{0}/content".FormatWith(creative.Id), content))
+                    {
+                        Assert.AreEqual(HttpStatusCode.Created, message.StatusCode);
+                    }
+                }
             }
         }
     }

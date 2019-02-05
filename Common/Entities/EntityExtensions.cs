@@ -83,7 +83,7 @@ namespace Lucent.Common
                 // Video Filters
                 var vValue = Expression.Property(impParam, "Video");
 
-                expressions.Add(Expression.Return(ret, Expression.Constant(false)));
+                expressions.Add(Expression.Return(ret, Expression.Constant(true)));
             }
             else
             {
