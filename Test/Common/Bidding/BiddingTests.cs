@@ -230,6 +230,7 @@ namespace Lucent.Common.Bidding
             Assert.AreEqual(HttpStatusCode.Created, resp.StatusCode);
 
             creative = await SetupCreative();
+            await SetupContents(creative);
             campaign.CreativeIds = new String[] { creative.Id };
 
             resp = await _orchestrationClient.PutJsonAsync(context, campaign, "/api/campaigns/{0}".FormatWith(campaign.Id));
@@ -237,7 +238,6 @@ namespace Lucent.Common.Bidding
 
             return campaign;
         }
-
 
         async Task<Creative> SetupCreative()
         {
@@ -247,6 +247,31 @@ namespace Lucent.Common.Bidding
             Assert.AreEqual(HttpStatusCode.Created, resp.StatusCode);
 
             return creative;
+        }
+
+        async Task SetupContents(Creative creative)
+        {
+            Assert.IsTrue(File.Exists("rose.png"), "Failed to find the rose");
+
+            using (var client = _orchestrationHost.CreateClient())
+            {
+                var context = _orchestrationHost.Provider.GetRequiredService<ISerializationContext>();
+
+                using (var content =
+                    new MultipartFormDataContent("Upload----" + DateTime.Now.ToString(CultureInfo.InvariantCulture)))
+                {
+                    HttpContent httpContent = new StreamContent(File.OpenRead("rose.png"));
+                    httpContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+                    content.Add(httpContent, "content", "content.png");
+
+                    using (
+                       var message =
+                           await client.PostAsync("/api/creatives/{0}/content".FormatWith(creative.Id), content))
+                    {
+                        Assert.AreEqual(HttpStatusCode.Created, message.StatusCode);
+                    }
+                }
+            }
         }
     }
 }

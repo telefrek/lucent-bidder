@@ -34,7 +34,7 @@ namespace Lucent.Common.Middleware
         /// <summary>
         /// 
         /// </summary>
-        protected readonly ILogger<EntityRestApi<T>> _logger;
+        protected readonly ILogger<EntityRestApi<T>> _log;
 
         /// <summary>
         /// 
@@ -60,7 +60,7 @@ namespace Lucent.Common.Middleware
             _entityRepository = storageManager.GetRepository<T>();
             _serializationContext = serializationContext;
             _messageFactory = messageFactory;
-            _logger = logger;
+            _log = logger;
 
             _messageFactory.CreateSubscriber<LucentMessage<T>>(Topics.ENTITIES, 0, _messageFactory.WildcardFilter).OnReceive += UpdateEntity;
         }
@@ -108,10 +108,11 @@ namespace Lucent.Common.Middleware
         protected virtual async Task<T> ReadEntity(HttpContext httpContext)
         {
             T entity = await _serializationContext.ReadAs<T>(httpContext);
+            var segments = httpContext.Request.Path.Value.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
 
-            if (entity == null && httpContext.Request.Path.Value.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries).Length > 0)
+            if (entity == null && segments.Length > 0)
             {
-                var id = httpContext.Request.Path.Value.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries).Last();
+                var id = segments[segments.Length - 1];
                 var t = new T();
                 t.Key.Parse(id);
                 return await _entityRepository.Get(t.Key);
@@ -126,7 +127,7 @@ namespace Lucent.Common.Middleware
         /// </summary>
         /// <param name="httpContext"></param>
         /// <returns></returns>
-        public async Task InvokeAsync(HttpContext httpContext)
+        public virtual async Task InvokeAsync(HttpContext httpContext)
         {
             var entity = await ReadEntity(httpContext);
             if (entity != null)

@@ -36,26 +36,7 @@ namespace Lucent.Common.Test
             return new Creative
             {
                 Id = "crid1",
-                Contents = new CreativeContent[]
-                {
-                    GenerateContent(),
-                }
             };
-        }
-
-        public static CreativeContent GenerateContent()
-        {
-            var content = new CreativeContent
-            {
-                CanScale = false,
-                H = 100,
-                W = 100,
-                ContentType = ContentType.Banner,
-                MimeType = "image/png",
-            };
-            content.HydrateFilter();
-
-            return content;
         }
     }
 

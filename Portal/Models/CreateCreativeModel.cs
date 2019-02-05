@@ -79,8 +79,8 @@ namespace Lucent.Portal.Models
 
                         if (content != null)
                         {
-                            content.RawUri = _contentHost + "/creatives/" + creative.Key + "/" + fileName;
-                            content.CreativeUri = _contentCache + "/creatives/" + creative.Key + "/" + fileName;
+                            content.RawUri = _contentHost + "/creatives/" + creative.Id + "/" + fileName;
+                            content.CreativeUri = _contentCache + "/creatives/" + creative.Id + "/" + fileName;
 
                             //creative.Contents.Add(content);
                         }

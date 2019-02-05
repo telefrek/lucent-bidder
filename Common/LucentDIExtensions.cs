@@ -101,7 +101,8 @@ namespace Lucent.Common
 
             if (includeOrchestration)
             {
-
+                services.Configure<MediaConfig>(configuration.GetSection("media"))
+                    .AddSingleton<IMediaScanner, MediaScanner>();
             }
 
             if (includeScoring)

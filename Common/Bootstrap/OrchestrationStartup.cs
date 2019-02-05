@@ -29,7 +29,7 @@ namespace Lucent.Common.Bootstrap
 
             app.Map("/api/creatives", (a) =>
             {
-                a.UseMiddleware<EntityRestApi<Creative>>();
+                a.UseMiddleware<CreativeApi>();
             });
 
             app.Map("/api/exchanges", (a) =>
