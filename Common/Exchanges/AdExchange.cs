@@ -39,13 +39,5 @@ namespace Lucent.Common.Exchanges
         /// Gets the exchange name
         /// </summary>
         public string Name { get; set; }
-
-        /// <summary>
-        /// Format the OpenRTB Bid object
-        /// </summary>
-        /// <param name="bid"></param>
-        /// <param name="httpContext"></param>
-        /// <returns></returns>
-        public abstract Bid FormatBid(BidMatch bid, HttpContext httpContext);
     }
 }

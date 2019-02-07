@@ -23,6 +23,6 @@ namespace Lucent.Common.Bidding
         /// <param name="request"></param>
         /// <param name="httpContext"></param>
         /// <returns>The set of impressions this bidder wants</returns>
-        Task<BidMatch[]> BidAsync(BidRequest request, HttpContext httpContext);
+        Task<BidContext[]> BidAsync(BidRequest request, HttpContext httpContext);
     }
 }

@@ -1,7 +1,11 @@
 using System;
 using System.IO;
 using System.Text;
+using Lucent.Common.Entities;
+using Lucent.Common.Exchanges;
+using Lucent.Common.OpenRTB;
 using Lucent.Common.Protobuf;
+using Microsoft.AspNetCore.Http;
 
 namespace Lucent.Common.Bidding
 {
@@ -10,6 +14,23 @@ namespace Lucent.Common.Bidding
     /// </summary>
     public class BidContext
     {
+        /// <summary>
+        /// Create a bid context for the request
+        /// </summary>
+        /// <param name="httpContext"></param>
+        /// <returns></returns>
+        public static BidContext Create(HttpContext httpContext)
+        {
+            var context = new BidContext
+            {
+                Exchange = httpContext.Items["exchange"] as AdExchange,
+            };
+
+            context.ExchangeId = context.Exchange.ExchangeId;
+
+            return context;
+        }
+
         /// <summary>
         /// Parse a bid context from a given string
         /// </summary>
@@ -77,19 +98,61 @@ namespace Lucent.Common.Bidding
         /// 
         /// </summary>
         /// <value></value>
+        public string RequestId { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
         public BidOperation Operation { get; set; }
 
         /// <summary>
-        /// Get the bid request
+        /// The request the bid is scoped to
         /// </summary>
         /// <value></value>
-        public string RequestId { get; set; }
+        public BidRequest Request { get; set; }
+
+        /// <summary>
+        /// The impression the bid is for
+        /// </summary>
+        /// <value></value>
+        public Impression Impression { get; set; }
 
         /// <summary>
         /// Get the base uri for the callbacks
         /// </summary>
         /// <value></value>
         public UriBuilder BaseUri { get; set; }
+
+        /// <summary>
+        /// Get the exchange in use
+        /// </summary>
+        /// <value></value>
+        public AdExchange Exchange { get; set; }
+
+        /// <summary>
+        /// Get the current campaign in use
+        /// </summary>
+        /// <value></value>
+        public Campaign Campaign { get; set; }
+
+        /// <summary>
+        /// The current creative in use
+        /// </summary>
+        /// <value></value>
+        public Creative Creative { get; set; }
+
+        /// <summary>
+        /// Get the 
+        /// </summary>
+        /// <value></value>
+        public CreativeContent Content { get; set; }
+
+        /// <summary>
+        /// The bid
+        /// </summary>
+        /// <value></value>
+        public Bid Bid { get; set; }
 
         /// <summary>
         /// Get the operation parameter
@@ -123,7 +186,7 @@ namespace Lucent.Common.Bidding
                     protoWriter.Write(CPM);
                     protoWriter.Write(BidDate.ToFileTimeUtc());
                     protoWriter.Write((int)Operation);
-                    protoWriter.Write(RequestId);
+                    protoWriter.Write(Request.Id);
                     protoWriter.Flush();
                 }
 

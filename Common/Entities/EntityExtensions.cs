@@ -13,13 +13,11 @@ namespace Lucent.Common
         /// <summary>
         /// Replaces the macros in the landing page with the correct information
         /// </summary>
-        /// <param name="campaign"></param>
-        /// <param name="creative"></param>
-        /// <param name="bid"></param>
+        /// <param name="bidContext"></param>
         /// <returns></returns>
-        public static string ReplaceMacros(this Campaign campaign, Creative creative, Bid bid)
+        public static string ReplaceMacros(this BidContext bidContext)
         {
-            return campaign.LandingPage.Replace(QueryParameters.LUCENT_REDIRECT_PARAMETER, bid.BidContext.GetOperationString(BidOperation.Clicked));
+            return bidContext.Campaign.LandingPage.Replace(QueryParameters.LUCENT_REDIRECT_PARAMETER, bidContext.GetOperationString(BidOperation.Clicked));
         }
 
         /// <summary>

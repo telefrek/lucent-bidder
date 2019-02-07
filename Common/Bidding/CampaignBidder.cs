@@ -42,7 +42,7 @@ namespace Lucent.Common.Bidding
         /// </summary>
         public Campaign Campaign => _campaign;
 
-        static BidMatch[] NO_MATCHES = new BidMatch[0];
+        static BidContext[] NO_MATCHES = new BidContext[0];
 
         /// <summary>
         /// Filters the bid request to get the set of Impressions that can be bid on
@@ -50,13 +50,13 @@ namespace Lucent.Common.Bidding
         /// <param name="request">The request to filder</param>
         /// <param name="httpContext"></param>
         /// <returns>The set of impressions that weren't filtered</returns>
-        public async Task<BidMatch[]> BidAsync(BidRequest request, HttpContext httpContext)
+        public async Task<BidContext[]> BidAsync(BidRequest request, HttpContext httpContext)
         {
             // Apply campaign filters
             if (_campaign.IsFiltered(request))
                 return NO_MATCHES;
 
-            var impList = new List<BidMatch>();
+            var impList = new List<BidContext>();
             var allMatched = true;
 
             // Make sure there is at least one content per impression
@@ -64,7 +64,18 @@ namespace Lucent.Common.Bidding
             {
                 // Get the potential matches
                 var matches = _campaign.Creatives.SelectMany(c => c.Contents.Where(cc => !cc.Filter(imp))
-                    .Select(cc => new BidMatch { Request = request, Impression = imp, Campaign = _campaign, Creative = c, Content = cc })).ToList();
+                    .Select(cc => 
+                    {
+                        var ctx = BidContext.Create(httpContext);
+                        ctx.Request = request;
+                        ctx.Impression = imp;
+                        ctx.Campaign = _campaign;
+                        ctx.Creative = c;
+                        ctx.Content = cc;
+                        ctx.BidId = SequentialGuid.NextGuid();
+                        
+                        return ctx;
+                    })).ToList();
 
                 allMatched &= matches.Count > 0;
                 impList.AddRange(matches);
@@ -84,38 +95,34 @@ namespace Lucent.Common.Bidding
                 Host = httpContext.Request.Host.Value,
             };
 
-            return impList.Select(bm =>
+            return impList.Select(bidContext =>
             {
-                var bidContext = bm.CreateContext(httpContext);
-                bidContext.BaseUri = baseUri;
-
                 // TODO: This is a terrible cpm calculation lol
                 var cpm = score * Campaign.ConversionPrice;
-                if (cpm >= bm.Impression.BidFloor)
+                if (cpm >= bidContext.Impression.BidFloor)
                 {
-                    // This is ugly...
-                    bm.RawBid = new Bid
+                    bidContext.BaseUri = baseUri;
+                    bidContext.Bid = new Bid
                     {
-                        BidContext = bidContext,
-                        ImpressionId = bm.Impression.ImpressionId,
+                        ImpressionId = bidContext.Impression.ImpressionId,
                         Id = bidContext.BidId.ToString(),
                         CPM = cpm,
                         WinUrl = new Uri(baseUri.Uri, "/v1/postback?" + QueryParameters.LUCENT_BID_CONTEXT_PARAMETER + "=" + bidContext.GetOperationString(BidOperation.Win) + "&cpm=${AUCTION_PRICE}").AbsoluteUri,
                         LossUrl = new Uri(baseUri.Uri, "/v1/postback?" + QueryParameters.LUCENT_BID_CONTEXT_PARAMETER + "=" + bidContext.GetOperationString(BidOperation.Loss)).AbsoluteUri,
                         BillingUrl = new Uri(baseUri.Uri, "/v1/postback?" + QueryParameters.LUCENT_BID_CONTEXT_PARAMETER + "=" + bidContext.GetOperationString(BidOperation.Impression)).AbsoluteUri,
-                        H = bm.Content.H,
-                        W = bm.Content.W,
-                        AdDomain = bm.Campaign.AdDomains.ToArray(),
+                        H = bidContext.Content.H,
+                        W = bidContext.Content.W,
+                        AdDomain = bidContext.Campaign.AdDomains.ToArray(),
                         BidExpiresSeconds = 300,
-                        Bundle = bm.Campaign.BundleId,
-                        ContentCategories = bm.Content.Categories,
-                        ImageUrl = bm.Content.RawUri,
-                        AdId = bm.Creative.Id,
-                        CreativeId = bm.Creative.Id,
-                        CampaignId = bm.Campaign.Id,
+                        Bundle = bidContext.Campaign.BundleId,
+                        ContentCategories = bidContext.Content.Categories,
+                        ImageUrl = bidContext.Content.RawUri,
+                        AdId = bidContext.Creative.Id,
+                        CreativeId = bidContext.Creative.Id,
+                        CampaignId = bidContext.Campaign.Id,
                     };
 
-                    return bm;
+                    return bidContext;
                 }
                 return null;
             }).Where(b => b != null).ToArray();

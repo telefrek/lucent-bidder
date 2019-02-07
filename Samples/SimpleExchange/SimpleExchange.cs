@@ -23,7 +23,7 @@ namespace Lucent.Samples.SimpleExchange
     {
         IBiddingManager _bidManager;
         ILogger<SimpleExchange> _log;
-
+        MarkupGenerator _markup = new MarkupGenerator();
 
         /// <inheritdoc/>
         public override Task Initialize(IServiceProvider provider)
@@ -33,6 +33,15 @@ namespace Lucent.Samples.SimpleExchange
             _bidManager = provider.CreateScope().ServiceProvider.GetRequiredService<IBiddingManager>();
 
             return Task.CompletedTask;
+        }
+
+        public Bid ExtractBid(BidContext bidContext)
+        {
+            var bid = bidContext.Bid;
+
+            bid.AdMarkup = _markup.GenerateMarkup(bidContext);
+
+            return bid;
         }
 
         /// <inheritdoc/>
@@ -60,7 +69,7 @@ namespace Lucent.Samples.SimpleExchange
                     var seat = new SeatBid
                     {
                         BuyerId = c.BuyerId,
-                        Bids = bid.Select(b => FormatBid(b, httpContext)).ToArray()
+                        Bids = bid.Select(b => b.Bid).ToArray()
                     };
 
                     if (seat.Bids.Length > 0)
@@ -75,31 +84,6 @@ namespace Lucent.Samples.SimpleExchange
             }
 
             return null;
-        }
-
-        /// <inheritdoc/>
-        public override Bid FormatBid(BidMatch match, HttpContext httpContext)
-        {
-            var bidContext = match.CreateContext(httpContext);
-
-            // Format and stash/attach markup
-            switch (match.Content.ContentType)
-            {
-                case ContentType.Banner:
-                    match.RawBid.AdMarkup = match.ToImageLinkMarkup(bidContext, new UriBuilder
-                    {
-                        Scheme = httpContext.Request.Scheme,
-                        Host = httpContext.Request.Host.Value,
-                    }.Uri);
-                    break;
-                case ContentType.Video:
-                    match.RawBid.AdMarkup = match.ToVast();
-                    break;
-                default:
-                    return null;
-            }
-
-            return match.RawBid;
         }
     }
 }
