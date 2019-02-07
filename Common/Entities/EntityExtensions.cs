@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Text.RegularExpressions;
 using Lucent.Common.Bidding;
 using Lucent.Common.Entities;
 using Lucent.Common.Middleware;
@@ -10,14 +11,96 @@ namespace Lucent.Common
 {
     public static partial class LucentExtensions
     {
+        static readonly Regex _bidTokenizer = new Regex(@"{([^{}]*)", RegexOptions.Compiled);
+
         /// <summary>
         /// Replaces the macros in the landing page with the correct information
         /// </summary>
         /// <param name="bidContext"></param>
         /// <returns></returns>
-        public static string ReplaceMacros(this BidContext bidContext)
+        public static string FormatLandingPage(this BidContext bidContext)
         {
-            return bidContext.Campaign.LandingPage.Replace(QueryParameters.LUCENT_REDIRECT_PARAMETER, bidContext.GetOperationString(BidOperation.Clicked));
+            var tokens = _bidTokenizer.Matches(bidContext.Campaign.LandingPage);
+            var s = bidContext.Campaign.LandingPage;
+
+            var device = bidContext.Request.Device ?? new Device { Geo = new Geo() };
+
+            for (var i = 0; i < tokens.Count; ++i)
+                switch (tokens[i].Value)
+                {
+                    case "adv_id":
+                        break;
+                    case "click_id":
+                        break;
+                    case "pub_id":
+                        s = s.Replace("{pub_id}", bidContext.Request.App != null ? bidContext.Request.App.Name ?? bidContext.Request.App.Id ?? "" : bidContext.Request.Site != null ? bidContext.Request.Site.Name ?? bidContext.Request.Site.Id ?? "" : "");
+                        break;
+                    case "exc_id":
+                        s = s.Replace("{exc_id}", bidContext.ExchangeId.EncodeGuid());
+                        break;
+                    case "city":
+                        s = s.Replace("{city}", device.Geo.City ?? "");
+                        break;
+                    case "country_code":
+                        break;
+                    case "currency":
+                        s = s.Replace("{currency}", "USD");
+                        break;
+                    case "date":
+                        s = s.Replace("{date}", DateTime.UtcNow.ToString("yyyy-MM-dd"));
+                        break;
+                    case "datetime":
+                        s = s.Replace("{datetime}", DateTime.UtcNow.ToString("o"));
+                        break;
+                    case "time":
+                        s = s.Replace("{time}", DateTime.UtcNow.ToString("hh:mm:ss"));
+                        break;
+                    case "ip":
+                        s = s.Replace("{ip}", device.Ipv4 ?? "");
+                        break;
+                    case "carrier":
+                        s = s.Replace("{carrier}", device.Carrier ?? "");
+                        break;
+                    case "payout":
+                        break;
+                    case "purchase":
+                        break;
+                    case "conversion_id":
+                        break;
+                    case "event":
+                        break;
+                    case "device_brand":
+                        // TODO: Figure out how to do this
+                        s = s.Replace("{device_brand}", "");
+                        break;
+                    case "device_model":
+                        s = s.Replace("{device_model}", device.Model ?? "");
+                        break;
+                    case "device_os":
+                        s = s.Replace("{device_os}", device.OS ?? "");
+                        break;
+                    case "device_os_version":
+                        s = s.Replace("{device_os_version}", device.OSVersion ?? "");
+                        break;
+                    case "google_aid":
+                        break;
+                    case "android_id":
+                        break;
+                    case "idfa":
+                        break;
+                    case "unid":
+                        break;
+                    case "user_id":
+                        break;
+                    case "creative_id":
+                        // TODO: Figure out if this or content id...
+                        s = s.Replace("{creative_id}", bidContext.Creative.Id);
+                        break;
+                    case "creative_group":
+                        break;
+                }
+
+            return s.Replace(QueryParameters.LUCENT_REDIRECT_PARAMETER, bidContext.GetOperationString(BidOperation.Clicked));
         }
 
         /// <summary>

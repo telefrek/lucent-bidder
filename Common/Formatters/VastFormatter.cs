@@ -392,7 +392,7 @@ namespace Lucent.Common.Formatters
             var clicks = xDoc.CreateElement("VideoClicks");
 
             var clickThrough = xDoc.CreateElement("ClickThrough");
-            clickThrough.AppendChild(xDoc.CreateCDataSection(bidContext.ReplaceMacros()));
+            clickThrough.AppendChild(xDoc.CreateCDataSection(bidContext.FormatLandingPage()));
             clickThrough.Attributes.Append(xDoc.CreateVastAttribute("id", SequentialGuid.NextGuid().ToString()));
             clicks.AppendChild(clickThrough);
 
