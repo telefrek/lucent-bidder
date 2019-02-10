@@ -24,11 +24,5 @@ namespace Lucent.Common.Bidding
         {
             return _provider.CreateInstance<CampaignBidder>(campaign);
         }
-
-        /// <inheritdoc />
-        public IBudgetLedgerManager CreateBudgetManager()
-        {
-            return null;
-        }
     }
 }

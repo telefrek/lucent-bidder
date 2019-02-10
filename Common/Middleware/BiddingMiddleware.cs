@@ -119,42 +119,51 @@ namespace Lucent.Common.Middleware
         /// <returns>A completed pipeline step</returns>
         public async Task InvokeAsync(HttpContext httpContext)
         {
-            var request = await _serializationContext.ReadAs<BidRequest>(httpContext);
-
-            if (request != null && !_bidFilters.Any(f => f.Invoke(request)))
+            try
             {
-                // Validate we can find a matching exchange
-                var exchange = _exchangeRegistry.GetExchange(httpContext);
-                if (exchange == null)
+
+                var request = await _serializationContext.ReadAs<BidRequest>(httpContext);
+
+                if (request != null && !_bidFilters.Any(f => f.Invoke(request)))
                 {
-                    httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
-                    return;
-                }
+                    // Validate we can find a matching exchange
+                    var exchange = _exchangeRegistry.GetExchange(httpContext);
+                    if (exchange == null)
+                    {
+                        httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
+                        return;
+                    }
 
-                httpContext.Items.Add("exchange", exchange);
-                var response = await exchange.Bid(request, httpContext);
+                    httpContext.Items.Add("exchange", exchange);
+                    var response = await exchange.Bid(request, httpContext);
 
-                if (response != null && (response.Bids ?? new SeatBid[0]).Length > 0)
-                {
-                    foreach (var seat in response.Bids)
-                        foreach (var bid in seat.Bids)
-                            try
-                            {
-                                await _bidCache.TryStore(bid, bid.Id);
-                            }
-                            catch
-                            {
+                    if (response != null && (response.Bids ?? new SeatBid[0]).Length > 0)
+                    {
+                        foreach (var seat in response.Bids)
+                            foreach (var bid in seat.Bids)
+                                try
+                                {
+                                    await _bidCache.TryStore(bid, bid.Id, TimeSpan.FromMinutes(5));
+                                }
+                                catch
+                                {
 
-                            }
+                                }
 
-                    httpContext.Response.StatusCode = StatusCodes.Status200OK;
-                    await _serializationContext.WriteTo(httpContext, response);
+                        httpContext.Response.StatusCode = StatusCodes.Status200OK;
+                        await _serializationContext.WriteTo(httpContext, response);
+                    }
+                    else
+                        httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
                 }
                 else
-                    httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
+                    httpContext.Response.StatusCode = request == null ? StatusCodes.Status400BadRequest : StatusCodes.Status204NoContent;
             }
-            else
-                httpContext.Response.StatusCode = request == null ? StatusCodes.Status400BadRequest : StatusCodes.Status204NoContent;
+            catch (Exception e)
+            {
+                _log.LogError(e, "Failed to bid");
+                httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
+            }
         }
     }
 }

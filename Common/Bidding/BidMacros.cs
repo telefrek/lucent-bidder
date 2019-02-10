@@ -41,18 +41,5 @@ namespace Lucent.Common.Bidding
             "{creative_id}", // ID of creative
             "{creative_group}", // id or name of a set of creatives
         };
-
-        /// <summary>
-        /// Resolve the macros in the uri
-        /// </summary>
-        /// <param name="uri"></param>
-        /// <param name="bid"></param>
-        /// <param name="exchange"></param>
-        /// <param name="request"></param>
-        /// <returns></returns>
-        public static string ResolveMacros(string uri, Bid bid, AdExchange exchange, BidRequest request)
-        {
-            return uri;
-        }
     }
 }

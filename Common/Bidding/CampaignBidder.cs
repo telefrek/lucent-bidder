@@ -19,7 +19,6 @@ namespace Lucent.Common.Bidding
     {
         Campaign _campaign;
         ILogger<CampaignBidder> _log;
-        ICampaignLedger _ledger;
         IScoringService _scoringService;
 
         /// <summary>
@@ -27,13 +26,11 @@ namespace Lucent.Common.Bidding
         /// </summary>
         /// <param name="c"></param>
         /// <param name="logger"></param>
-        /// <param name="ledgerManager"></param>
         /// <param name="scoringService"></param>
-        public CampaignBidder(Campaign c, ILogger<CampaignBidder> logger, IBudgetLedgerManager ledgerManager, IScoringService scoringService)
+        public CampaignBidder(Campaign c, ILogger<CampaignBidder> logger, IScoringService scoringService)
         {
             _campaign = c;
             _log = logger;
-            _ledger = ledgerManager.GetLedger(c);
             _scoringService = scoringService;
         }
 

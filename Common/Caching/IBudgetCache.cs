@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 
 namespace Lucent.Common.Caching
@@ -26,7 +27,7 @@ namespace Lucent.Common.Caching
         /// Store something
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        Task<bool> TryStore<T>(T instance, string key) where T : class, new();
+        Task<bool> TryStore<T>(T instance, string key, TimeSpan expiration) where T : class, new();
 
         /// <summary>
         /// Retrieve it
@@ -38,7 +39,7 @@ namespace Lucent.Common.Caching
         /// Update the cache instance
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        Task<bool> TryUpdate<T>(T instance, string key) where T : class, new();
+        Task<bool> TryUpdate<T>(T instance, string key, TimeSpan expiration) where T : class, new();
 
         /// <summary>
         /// Remove the object

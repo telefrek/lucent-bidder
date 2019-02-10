@@ -13,11 +13,5 @@ namespace Lucent.Common.Bidding
         /// <param name="campaign">The campaign</param>
         /// <returns>A bidder for the campaign</returns>
         ICampaignBidder CreateBidder(Campaign campaign);
-
-        /// <summary>
-        /// Gets a new budget ledger manager
-        /// </summary>
-        /// <returns>A new budget ledger manager</returns>
-        IBudgetLedgerManager CreateBudgetManager();
     }
 }
