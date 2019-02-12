@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using Lucent.Common;
 using Lucent.Common.Bootstrap;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
@@ -28,15 +24,17 @@ namespace Bidder
                 .ConfigureAppConfiguration((hostingContext, config) =>
                 {
                     var env = hostingContext.HostingEnvironment;
-                    config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                        .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: true);
+                    config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
                     config.AddEnvironmentVariables();
                 })
                 .ConfigureLogging((hostingContext, logging) =>
                 {
                     logging.AddConfiguration(hostingContext.Configuration.GetSection("Logging"));
                     logging.AddConsole();
-                    logging.AddDebug();
+                })
+                .ConfigureServices((hostingContext, services) =>
+                {
+                    services.AddLucentServices(hostingContext.Configuration, includeBidder: true);
                 })
                 .UseStartup<BidderStartup>();
     }

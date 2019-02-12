@@ -1,5 +1,7 @@
 replicaCount: 1
 
+fullnameOverride: orchestration
+
 image:
   repository: telefrek/lucent-orchestrator
   tag: latest

@@ -1,8 +1,10 @@
-﻿using Lucent.Common.Bootstrap;
-using Lucent.Common;
+﻿using Lucent.Common;
+using Lucent.Common.Bootstrap;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+
 
 namespace Orchestration
 {
@@ -15,9 +17,26 @@ namespace Orchestration
 
         public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
-            .ConfigureServices(services =>
-            {
-                services.AddLucentServices(new ConfigurationBuilder().Build(), includeOrchestration: true);
-            }).UseStartup<OrchestrationStartup>();
+                .UseKestrel()
+                .UseSockets(socketTransportOptions =>
+                {
+                    socketTransportOptions.IOQueueCount = 16;
+                })
+                .ConfigureAppConfiguration((hostingContext, config) =>
+                {
+                    var env = hostingContext.HostingEnvironment;
+                    config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+                    config.AddEnvironmentVariables();
+                })
+                .ConfigureLogging((hostingContext, logging) =>
+                {
+                    logging.AddConfiguration(hostingContext.Configuration.GetSection("Logging"));
+                    logging.AddConsole();
+                })
+                .ConfigureServices((hostingContext, services) =>
+                {
+                    services.AddLucentServices(hostingContext.Configuration, includeOrchestration: true);
+                })
+                .UseStartup<OrchestrationStartup>();
     }
 }

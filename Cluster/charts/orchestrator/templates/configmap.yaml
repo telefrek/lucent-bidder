@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: orchestrator-config
+data:
+  appsettings.json: |
+    {
+      "Logging": {
+        "LogLevel": {
+          "Default": "Information",
+          "System": "Information",
+          "Microsoft": "Warning"
+        }
+      },
+      "runtimeOptions": {
+        "configProperties": {
+          "System.GC.Server": true,
+          "System.GC.Concurrent": true
+        }
+      },
+      "AllowedHosts": "*",
+      "rabbit": {
+        "host": "rabbitmq.lucent.svc",
+        "user": "{{ .Values.rabbitmq.user }}",
+        "credentials": "{{ .Values.rabbitmq.password }}",
+        "clusters": {
+          "secondary" : {
+            "user": "{{ .Values.rabbitmq.user }}",
+            "credentials": "{{ .Values.rabbitmq.password }}",
+            "host": "{{ .Values.rabbitmq.secondaryHost }}"
+          }
+        }
+      },
+      "load_shedding": {
+        "strategy": "Head",
+        "maxlatencyms": 100,
+        "maxconcurrentrequests": 8,
+        "maxqueuedepth": 12,
+        "statuscode": 429,
+        "isadaptive": true
+      },
+      "cassandra": {
+        "endpoint": "cassandra.lucent.svc",
+        "user": "{{ default "test" .Values.cassandra.user }}",
+        "credentials": "{{ default "test" .Values.cassandra.password }}",
+        "keyspace": "{{ default "portal" .Values.cassandra.keyspace }}",
+        "format": "{{ default "PROTOBUF" .Values.cassandra.format }}"
+      },
+      "exchanges" : {
+        "exchangelocation": "/etc/exchanges"
+      }
+    }

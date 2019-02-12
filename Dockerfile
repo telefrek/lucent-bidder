@@ -1,28 +1,22 @@
 ########################
 # Build solution
 ########################
-FROM microsoft/dotnet:latest AS build-env
+FROM telefrek/lucent-builder:2.2.103 AS build-env
 WORKDIR /opt/lucent
 LABEL component=lucentbuild
 COPY . ./
-RUN dotnet restore && \
-    dotnet test ./Test/Common/CommonTest.csproj && \
-    dotnet publish -c Release
+RUN dotnet restore \
+    && dotnet test ./Test/Common/CommonTest.csproj \
+    && dotnet publish -c Release
 
 ########################
 # Create runtime images
 ########################
-FROM telefrek/aspnetcore:ffmpeg
+FROM telefrek/aspnet-core-ffmpeg:2.2.1
 WORKDIR /opt/lucent
 LABEL component=portal
 COPY --from=build-env /opt/lucent/Portal/bin/Release/netcoreapp2.2/publish .
-RUN apt-get update \
-    && apt-get install -y --allow-unauthenticated \
-        libc6-dev \
-        libgdiplus \
-        libx11-dev \
-     && rm -rf /var/lib/apt/lists/* && \
-     rm -rf appsettings*.json
+RUN rm -rf appsettings*.json
 ENTRYPOINT ["dotnet", "Portal.dll"]
 
 FROM microsoft/dotnet:aspnetcore-runtime
@@ -39,7 +33,7 @@ COPY --from=build-env /opt/lucent/Bidder/bin/Release/netcoreapp2.2/publish .
 RUN rm -rf appsettings*.json
 ENTRYPOINT ["dotnet", "Bidder.dll"]
 
-FROM microsoft/dotnet:aspnetcore-runtime
+FROM telefrek/aspnet-core-ffmpeg:2.2.1
 WORKDIR /opt/lucent
 LABEL component=orchestrator
 COPY --from=build-env /opt/lucent/Orchestration/bin/Release/netcoreapp2.2/publish .

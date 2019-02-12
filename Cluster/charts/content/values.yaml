@@ -1,5 +1,7 @@
 replicaCount: 1
 
+fullnameOverride: content
+
 image:
   repository: telefrek/lucent-content
   tag: latest

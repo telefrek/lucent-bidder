@@ -1,16 +1,16 @@
 #!/bin/bash
 set -e
-IMAGE_TAG=$(date '+%Y%m%d%H%M%S')
+IMAGE_TAG=${2:-alpha}
 LUCENT_VERSION="$(cat VERSION).$IMAGE_TAG"
 
 echo 'Pulling latest dotnet images'
-docker pull microsoft/dotnet
+docker pull telefrek/lucent-builder:2.2.103 
 docker pull microsoft/dotnet:aspnetcore-runtime
 
 docker image prune -f
 [[ ! -z "$(docker ps -aq)" ]] && docker rm -vf $(docker ps -qa)
 
-[[ ! -z "$(docker images | grep 'telefrek')" ]] && docker rmi -f $(docker images | grep 'telefrek' | awk '{print $3}')
+[[ ! -z "$(docker images | grep 'telefrek' | grep -v 'builder' | grep -v 'ffmpeg')" ]] && docker rmi -f $(docker images | grep 'telefrek' | grep -v 'builder' | grep -v 'ffmpeg' | awk '{print $3}')
 
 echo 'Building images'
 docker build --rm=false -t telefrek/lucent-build:$IMAGE_TAG . 
@@ -59,6 +59,6 @@ echo 'Cleanup local docker'
 
 docker rm -vf $(docker ps -aq)
 
-[[ ! -z "$(docker images | grep 'telefrek')" ]] && docker rmi -f $(docker images | grep 'telefrek' | awk '{print $3}')
+[[ ! -z "$(docker images | grep 'telefrek' | grep -v 'builder' | grep -v 'ffmpeg')" ]] && docker rmi -f $(docker images | grep 'telefrek' | grep -v 'builder' | grep -v 'ffmpeg' | awk '{print $3}')
 
 docker image prune -f

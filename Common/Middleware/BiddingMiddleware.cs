@@ -36,7 +36,6 @@ namespace Lucent.Common.Middleware
         IBudgetCache _bidCache;
         UpdatingCollection<BidderFilter> _bidFiltersCollection;
         List<Func<BidRequest, bool>> _bidFilters;
-        RequestDelegate _nextHandler;
         Histogram _serializerTiming = Metrics.CreateHistogram("serializer_latency", "Latency for each bidder call", new HistogramConfiguration
         {
             LabelNames = new string[] { "protocol", "direction" },

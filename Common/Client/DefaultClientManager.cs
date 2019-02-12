@@ -1,3 +1,4 @@
+using System;
 using System.Net.Http;
 
 namespace Lucent.Common.Client
@@ -7,9 +8,9 @@ namespace Lucent.Common.Client
     /// </summary>
     public class DefaultClientManager : IClientManager
     {
-        static readonly HttpClient _client = new HttpClient();
+        static readonly HttpClient _orchestrationClient = new HttpClient() { BaseAddress = new Uri("http://orchestration.lucent.svc") };
 
         /// <inheritdoc/>
-        public HttpClient OrchestrationClient => _client;
+        public HttpClient OrchestrationClient => _orchestrationClient;
     }
 }
