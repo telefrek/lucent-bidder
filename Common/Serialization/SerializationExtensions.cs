@@ -46,6 +46,33 @@ namespace Lucent.Common
         /// 
         /// </summary>
         /// <typeparam name="T"></typeparam>
+        public static async Task WriteTo<T>(this ISerializationContext serializationContext, HttpContext httpContext, ICollection<T> instance) where T : class, new()
+        {
+            var format = (httpContext.Request.ContentType ?? "").Contains("protobuf") ? SerializationFormat.PROTOBUF : SerializationFormat.JSON;
+
+            // Write the response encoding
+            switch (format)
+            {
+                case SerializationFormat.PROTOBUF:
+                    httpContext.Response.ContentType = "application/x-protobuf";
+                    break;
+                default:
+                    httpContext.Response.ContentType = "application/json";
+                    break;
+            }
+
+            var encoding = StringValues.Empty;
+            if (httpContext.Request.Headers.TryGetValue("Accept-Encoding", out encoding))
+                if (encoding.Any(e => e.Contains("gzip")))
+                    format |= SerializationFormat.COMPRESSED;
+
+            await serializationContext.WriteTo(instance, httpContext.Response.Body, false, format);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
         public static async Task WriteTo<T>(this ISerializationContext serializationContext, HttpContext httpContext, T instance) where T : class, new()
         {
             var format = (httpContext.Request.ContentType ?? "").Contains("protobuf") ? SerializationFormat.PROTOBUF : SerializationFormat.JSON;

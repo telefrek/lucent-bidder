@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -56,6 +57,18 @@ namespace Lucent.Common.Serialization
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
         Task WriteTo<T>(T instance, Stream target, bool leaveOpen, SerializationFormat format) where T : new();
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="instances"></param>
+        /// <param name="target"></param>
+        /// <param name="leaveOpen"></param>
+        /// <param name="format"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        Task WriteTo<T>(ICollection<T> instances, Stream target, bool leaveOpen, SerializationFormat format) where T : new();
 
         /// <summary>
         /// Read the next object from the stream

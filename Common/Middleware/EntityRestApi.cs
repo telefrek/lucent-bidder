@@ -141,6 +141,12 @@ namespace Lucent.Common.Middleware
 
                 switch (httpContext.Request.Method.ToLowerInvariant())
                 {
+                    case "get":
+                        var entities = await _entityRepository.GetAll();
+                        httpContext.Response.StatusCode = entities.Count > 0 ? 200 : 204;
+                        if (entities.Count > 0)
+                            await _serializationContext.WriteTo(httpContext, entities);
+                        break;
                     case "post":
                         if (await _entityRepository.TryInsert(entity))
                         {
@@ -188,6 +194,13 @@ namespace Lucent.Common.Middleware
                     await _messageFactory.CreatePublisher(Topics.ENTITIES).TryBroadcast(msg);
                 }
             }
+            else if (httpContext.Request.Method.ToLowerInvariant() == "get")
+            {
+                httpContext.Response.StatusCode = 200;
+                await _serializationContext.WriteTo(httpContext, entity);
+            }
+            else
+                httpContext.Response.StatusCode = 404;
         }
     }
 }

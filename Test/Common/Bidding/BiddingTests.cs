@@ -91,29 +91,29 @@ namespace Lucent.Common.Bidding
         //[Ignore]
         public async Task TestSuccessfulBid()
         {
-            await SetupBidderFilters();
+            await SetupBidderFilters(_orchestrationClient, _orchestrationHost.Provider);
             exchangeId = SequentialGuid.NextGuid();
             var bid = BidGenerator.GenerateBid();
 
             var serializationContext = _biddingHost.Provider.GetRequiredService<ISerializationContext>();
 
             // Bid, no campaign or exchange should fail
-            var resp = await MakeBid(bid, serializationContext, exchangeId);
+            var resp = await MakeBid(_biddingClient, bid, serializationContext, exchangeId);
             Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
 
-            campaign = await SetupCampaign();
+            campaign = await SetupCampaign(_orchestrationClient, _orchestrationHost.Provider);
 
             // Bid again, should be failed
-            resp = await MakeBid(bid, serializationContext, exchangeId);
+            resp = await MakeBid(_biddingClient, bid, serializationContext, exchangeId);
             Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
 
             // Add the exchange
-            await SetupExchange(exchangeId);
+            await SetupExchange(exchangeId, _orchestrationClient, _orchestrationHost.Provider);
 
-            resp = await MakeBid(bid, serializationContext, exchangeId);
+            resp = await MakeBid(_biddingClient, bid, serializationContext, exchangeId);
             Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
 
-            resp = await MakeBid(bid, serializationContext, exchangeId);
+            resp = await MakeBid(_biddingClient, bid, serializationContext, exchangeId);
             Assert.AreEqual(HttpStatusCode.OK, resp.StatusCode);
 
             // Verify the response
@@ -122,21 +122,29 @@ namespace Lucent.Common.Bidding
 
             // Ensure we filter out an invalid bid
             bid.Impressions.First().Banner.H = 101;
-            resp = await MakeBid(bid, serializationContext, exchangeId);
+            resp = await MakeBid(_biddingClient, bid, serializationContext, exchangeId);
             Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
 
             // Ensure we filter out a global bid
             bid.Impressions.First().Banner.H = 100;
             bid.Site = new Site { Domain = "telefrek.com" };
-            resp = await MakeBid(bid, serializationContext, exchangeId);
+            resp = await MakeBid(_biddingClient, bid, serializationContext, exchangeId);
             Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
 
             // send a loss notification
-            resp = await AdvanceBid(serializationContext, bidResponse.Bids.First().Bids.First(), true);
+            resp = await AdvanceBid(_biddingClient, serializationContext, bidResponse.Bids.First().Bids.First(), true);
             Assert.AreEqual(HttpStatusCode.OK, resp.StatusCode);
         }
 
-        async Task<HttpResponseMessage> MakeBid(BidRequest bid, ISerializationContext serializationContext, Guid exchangeId)
+        [TestMethod]
+        public async Task TestRemoteBid()
+        {
+            // lol..sure
+
+            await TestSuccessfulBid();
+        }
+
+        async Task<HttpResponseMessage> MakeBid(HttpClient biddingClient, BidRequest bid, ISerializationContext serializationContext, Guid exchangeId)
         {
             using (var ms = new MemoryStream())
             {
@@ -145,7 +153,7 @@ namespace Lucent.Common.Bidding
 
                 using (var bidContent = new StreamContent(ms, 4096))
                 {
-                    return await _biddingClient.PostAsync("/v1/bidder?exchg={0}".FormatWith(exchangeId), bidContent);
+                    return await biddingClient.PostAsync("/v1/bidder?exchg={0}".FormatWith(exchangeId), bidContent);
                 }
             }
         }
@@ -165,15 +173,15 @@ namespace Lucent.Common.Bidding
             return response;
         }
 
-        async Task<HttpResponseMessage> AdvanceBid(ISerializationContext serializationContext, Bid bid, bool win = true, double? amount = null)
+        async Task<HttpResponseMessage> AdvanceBid(HttpClient biddingClient, ISerializationContext serializationContext, Bid bid, bool win = true, double? amount = null)
         {
             TestContext.WriteLine("Advancing {0} ({1})", bid.Id, win);
             var uri = new Uri(win ? bid.WinUrl.UrlDecode().Replace("${AUCTION_PRICE}", (amount ?? (double)bid.CPM).ToString()) : bid.LossUrl);
 
-            return await _biddingClient.PostAsync(uri.PathAndQuery, null);
+            return await biddingClient.PostAsync(uri.PathAndQuery, null);
         }
 
-        async Task SetupBidderFilters()
+        async Task SetupBidderFilters(HttpClient orchestrationClient, IServiceProvider serviceProvider)
         {
             bidderFilter = new BidderFilter
             {
@@ -184,12 +192,12 @@ namespace Lucent.Common.Bidding
                 }
             };
 
-            var context = _orchestrationHost.Provider.GetRequiredService<ISerializationContext>();
-            var resp = await _orchestrationClient.PostJsonAsync(context, bidderFilter, "/api/filters");
+            var context = serviceProvider.GetRequiredService<ISerializationContext>();
+            var resp = await orchestrationClient.PostJsonAsync(context, bidderFilter, "/api/filters");
             Assert.AreEqual(HttpStatusCode.Created, resp.StatusCode);
         }
 
-        async Task SetupExchange(Guid id)
+        async Task SetupExchange(Guid id, HttpClient orchestrationClient, IServiceProvider serviceProvider)
         {
             var target = Path.Combine(Directory.GetCurrentDirectory(), "SimpleExchange.dll");
             Assert.IsTrue(File.Exists(target), "Corrupt test environment");
@@ -201,92 +209,87 @@ namespace Lucent.Common.Bidding
                 LastCodeUpdate = DateTime.UtcNow,
             };
 
-            using (var client = _orchestrationHost.CreateClient())
+            var context = serviceProvider.GetRequiredService<ISerializationContext>();
+            var resp = await orchestrationClient.PostJsonAsync(context, entity, "api/exchanges");
+            Assert.AreEqual(HttpStatusCode.Created, resp.StatusCode);
+
+            using (var content =
+                new MultipartFormDataContent("Upload----" + DateTime.Now.ToString(CultureInfo.InvariantCulture)))
             {
-                var context = _orchestrationHost.Provider.GetRequiredService<ISerializationContext>();
-                var resp = await client.PostJsonAsync(context, entity, "api/exchanges");
-                Assert.AreEqual(HttpStatusCode.Created, resp.StatusCode);
+                content.Add(new StreamContent(File.OpenRead(target)), "exchange", "simple.dll");
 
-                using (var content =
-                    new MultipartFormDataContent("Upload----" + DateTime.Now.ToString(CultureInfo.InvariantCulture)))
+                using (
+                   var message =
+                       await orchestrationClient.PutAsync("/api/exchanges/{0}".FormatWith(id), content))
                 {
-                    content.Add(new StreamContent(File.OpenRead(target)), "exchange", "simple.dll");
-
-                    using (
-                       var message =
-                           await client.PutAsync("/api/exchanges/{0}".FormatWith(id), content))
-                    {
-                        Assert.AreEqual(HttpStatusCode.Accepted, message.StatusCode);
-                    }
+                    Assert.AreEqual(HttpStatusCode.Accepted, message.StatusCode);
                 }
             }
         }
 
-        async Task<Campaign> SetupCampaign()
+        async Task<Campaign> SetupCampaign(HttpClient orchestrationClient, IServiceProvider serviceProvider)
         {
             campaign = CampaignGenerator.GenerateCampaign();
-            var context = _orchestrationHost.Provider.GetRequiredService<ISerializationContext>();
-            var resp = await _orchestrationClient.PostJsonAsync(context, campaign, "/api/campaigns");
+            var context = serviceProvider.GetRequiredService<ISerializationContext>();
+            var resp = await orchestrationClient.PostJsonAsync(context, campaign, "/api/campaigns");
             Assert.AreEqual(HttpStatusCode.Created, resp.StatusCode);
 
-            creative = await SetupCreative();
-            await SetupContents(creative);
+            creative = await SetupCreative(orchestrationClient, serviceProvider);
+            await SetupContents(creative, orchestrationClient, serviceProvider);
             campaign.CreativeIds = new String[] { creative.Id };
 
-            resp = await _orchestrationClient.PutJsonAsync(context, campaign, "/api/campaigns/{0}".FormatWith(campaign.Id));
+            resp = await orchestrationClient.PutJsonAsync(context, campaign, "/api/campaigns/{0}".FormatWith(campaign.Id));
             Assert.AreEqual(HttpStatusCode.Accepted, resp.StatusCode);
 
             return campaign;
         }
 
-        async Task<Creative> SetupCreative()
+        async Task<Creative> SetupCreative(HttpClient orchestrationClient, IServiceProvider serviceProvider)
         {
             creative = CreativeGenerator.GenerateCreative();
-            var context = _orchestrationHost.Provider.GetRequiredService<ISerializationContext>();
-            var resp = await _orchestrationClient.PostJsonAsync(context, creative, "/api/creatives");
+            var context = serviceProvider.GetRequiredService<ISerializationContext>();
+            var resp = await orchestrationClient.PostJsonAsync(context, creative, "/api/creatives");
             Assert.AreEqual(HttpStatusCode.Created, resp.StatusCode);
 
             return creative;
         }
 
-        async Task SetupContents(Creative creative)
+        async Task SetupContents(Creative creative, HttpClient orchestrationClient, IServiceProvider serviceProvider)
         {
             Assert.IsTrue(File.Exists("rose.png"), "Failed to find the rose");
 
-            using (var client = _orchestrationHost.CreateClient())
+
+            var context = serviceProvider.GetRequiredService<ISerializationContext>();
+
+            using (var content =
+                new MultipartFormDataContent("Upload----" + DateTime.Now.ToString(CultureInfo.InvariantCulture)))
             {
-                var context = _orchestrationHost.Provider.GetRequiredService<ISerializationContext>();
+                HttpContent httpContent = new StreamContent(File.OpenRead("rose.png"));
+                httpContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+                content.Add(httpContent, "content", "content.png");
 
-                using (var content =
-                    new MultipartFormDataContent("Upload----" + DateTime.Now.ToString(CultureInfo.InvariantCulture)))
+                using (
+                   var message =
+                       await orchestrationClient.PostAsync("/api/creatives/{0}/content".FormatWith(creative.Id), content))
                 {
-                    HttpContent httpContent = new StreamContent(File.OpenRead("rose.png"));
-                    httpContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
-                    content.Add(httpContent, "content", "content.png");
-
-                    using (
-                       var message =
-                           await client.PostAsync("/api/creatives/{0}/content".FormatWith(creative.Id), content))
-                    {
-                        Assert.AreEqual(HttpStatusCode.Created, message.StatusCode);
-                    }
+                    Assert.AreEqual(HttpStatusCode.Created, message.StatusCode);
                 }
+            }
 
-                context = _orchestrationHost.Provider.GetRequiredService<ISerializationContext>();
+            context = serviceProvider.GetRequiredService<ISerializationContext>();
 
-                using (var content =
-                    new MultipartFormDataContent("Upload----" + DateTime.Now.ToString(CultureInfo.InvariantCulture)))
+            using (var content =
+                new MultipartFormDataContent("Upload----" + DateTime.Now.ToString(CultureInfo.InvariantCulture)))
+            {
+                HttpContent httpContent = new StreamContent(File.OpenRead("clouds.mp4"));
+                httpContent.Headers.ContentType = new MediaTypeHeaderValue("video/mp4");
+                content.Add(httpContent, "content", "content.mp4");
+
+                using (
+                   var message =
+                       await orchestrationClient.PostAsync("/api/creatives/{0}/content".FormatWith(creative.Id), content))
                 {
-                    HttpContent httpContent = new StreamContent(File.OpenRead("clouds.mp4"));
-                    httpContent.Headers.ContentType = new MediaTypeHeaderValue("video/mp4");
-                    content.Add(httpContent, "content", "content.mp4");
-
-                    using (
-                       var message =
-                           await client.PostAsync("/api/creatives/{0}/content".FormatWith(creative.Id), content))
-                    {
-                        Assert.AreEqual(HttpStatusCode.Created, message.StatusCode);
-                    }
+                    Assert.AreEqual(HttpStatusCode.Created, message.StatusCode);
                 }
             }
         }

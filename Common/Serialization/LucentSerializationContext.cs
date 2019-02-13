@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -129,5 +130,33 @@ namespace Lucent.Common.Serialization
             }
         }
 
+        /// <inheritdoc/>
+        public async Task WriteTo<T>(ICollection<T> instances, Stream target, bool leaveOpen, SerializationFormat format) where T : new()
+        {
+            if (format.HasFlag(SerializationFormat.COMPRESSED))
+                target = new GZipStream(target, CompressionMode.Compress);
+
+            switch (format)
+            {
+                case SerializationFormat.PROTOBUF:
+                    using (var writer = new ProtobufWriter(target, leaveOpen))
+                    using (var aWriter = new LucentProtoArrayWriter(writer))
+                    {
+                        foreach (var element in instances)
+                            await WriteArrayObject(aWriter, element);
+                        await aWriter.WriteEnd();
+                    }
+                    break;
+                default:
+                    using (var writer = new JsonTextWriter(new StreamWriter(target)) { CloseOutput = !leaveOpen })
+                    using (var aWriter = new LucentJsonArrayWriter(writer))
+                    {
+                        foreach (var element in instances)
+                            await WriteArrayObject(aWriter, element);
+                        await aWriter.WriteEnd();
+                    }
+                    break;
+            }
+        }
     }
 }
