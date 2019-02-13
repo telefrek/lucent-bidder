@@ -29,7 +29,7 @@ namespace Lucent.Common.Budget
         /// <param name="serializationContext"></param>
         /// <param name="logger"></param>
         /// <returns></returns>
-        public BidLedger(ISession session, SerializationFormat serializationFormat, ISerializationContext serializationContext, ILogger logger) : base(session, serializationFormat, serializationContext, logger)
+        public BidLedger(ISession session, SerializationFormat serializationFormat, ISerializationContext serializationContext, ILogger<BidLedger> logger) : base(session, serializationFormat, serializationContext, logger)
         {
 
         }
@@ -137,7 +137,7 @@ namespace Lucent.Common.Budget
         }
 
         /// <inheritdoc/>
-        protected override async Task Initialize()
+        public override async Task Initialize(IServiceProvider serviceProvider)
         {
 
             _getStatement = await PrepareAsync("SELECT ledgerDate, requestId, amount, format, updated, contents FROM {0} WHERE id=?".FormatWith(_tableName));

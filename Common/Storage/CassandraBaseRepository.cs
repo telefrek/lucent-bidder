@@ -68,7 +68,7 @@ namespace Lucent.Common.Storage
         public virtual Task CreateTableAsync() => Task.CompletedTask;
 
         /// <summary>
-        /// Creates a repository of the given type asynchronously
+        /// Creates a repository of the given type
         /// </summary>
         /// <param name="session">The current session</param>
         /// <param name="serializationFormat">The serialization format to use</param>
@@ -76,18 +76,14 @@ namespace Lucent.Common.Storage
         /// <param name="logger">A logger to use for queries</param>
         /// <typeparam name="T">The type of base repository to create</typeparam>
         /// <returns>An initialized repository of the given type</returns>
-        public static async Task<T> CreateAsync<T>(ISession session, SerializationFormat serializationFormat, ISerializationContext serializationContext, ILogger logger)
-        {
-            var repo = (T)Activator.CreateInstance(typeof(T), session, serializationFormat, serializationContext, logger);
-            await (repo as CassandraBaseRepository).Initialize();
-            return repo;
-        }
+        public static T CreateRepo<T>(ISession session, SerializationFormat serializationFormat, ISerializationContext serializationContext, ILogger logger)
+        => (T)Activator.CreateInstance(typeof(T), session, serializationFormat, serializationContext, logger); 
 
         /// <summary>
         /// Initialize the repository
         /// </summary>
         /// <returns></returns>
-        protected abstract Task Initialize();
+        public abstract Task Initialize(IServiceProvider provider);
 
         /// <summary>
         /// Sync method

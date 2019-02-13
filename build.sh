@@ -50,7 +50,7 @@ docker push telefrek/lucent-orchestrator:$LUCENT_VERSION
 docker push telefrek/lucent-orchestrator:latest
 fi
 
-if [ "${1:-contenta}" == "content" ]; then
+if [ "${1:-contents}" == "content" ]; then
     docker push telefrek/lucent-content:$LUCENT_VERSION
     docker push telefrek/lucent-content:latest
 fi

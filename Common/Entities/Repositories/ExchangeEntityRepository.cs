@@ -28,15 +28,15 @@ namespace Lucent.Common.Entities.Repositories
         IServiceProvider _provider;
 
         /// <inheritdoc/>
-        public ExchangeEntityRespositry(IServiceProvider provider, ISession session, SerializationFormat serializationFormat, ISerializationContext serializationContext, ILogger logger) : base(session, serializationFormat, serializationContext, logger)
+        public ExchangeEntityRespositry(ISession session, SerializationFormat serializationFormat, ISerializationContext serializationContext, ILogger logger) : base(session, serializationFormat, serializationContext, logger)
         {
-            _provider = provider;
             _tableName = "exchanges";
         }
 
         /// <inheritdoc/>
-        protected override async Task Initialize()
+        public override async Task Initialize(IServiceProvider provider)
         {
+            _provider = provider;
             _getAllExchanges = new SimpleStatement("SELECT etag, format, updated, contents, code FROM {0}".FormatWith(_tableName));
 
             _getExchangeEntity = await PrepareAsync("SELECT etag, format, updated, contents, code FROM {0} WHERE id = ?".FormatWith(_tableName));

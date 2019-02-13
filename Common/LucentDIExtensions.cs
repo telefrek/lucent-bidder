@@ -61,12 +61,19 @@ namespace Lucent.Common
 
                 services.Configure<RabbitConfiguration>(configuration.GetSection("rabbit"))
                     .AddSingleton<IMessageFactory, RabbitFactory>();
+                services.AddSingleton<IBidLedger>(provider =>
+                {
+                    using (var scope = provider.CreateScope())
+                    {
+                        var sm = scope.ServiceProvider.GetRequiredService<IStorageManager>();
+                        return (BidLedger)scope.ServiceProvider.CreateInstance<BidLedger>((sm as CassandraStorageManager).Session, SerializationFormat.PROTOBUF);
+
+                    }
+                });
 
                 var storageManager = services.BuildServiceProvider().GetRequiredService<IStorageManager>();
-                services.AddSingleton<IBidLedger, BidLedger>();
 
                 // Register custom repositories
-                storageManager.RegisterRepository<LedgerEntryRepository, LedgerEntry>();
                 storageManager.RegisterRepository<ExchangeEntityRespositry, Exchange>();
             }
 

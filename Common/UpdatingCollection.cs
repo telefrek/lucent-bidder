@@ -6,6 +6,7 @@ using Lucent.Common.Entities;
 using Lucent.Common.Entities.Events;
 using Lucent.Common.Messaging;
 using Lucent.Common.Storage;
+using Microsoft.Extensions.Logging;
 
 namespace Lucent.Common
 {
@@ -18,34 +19,51 @@ namespace Lucent.Common
         IStorageRepository<T> _storageRepository;
         IMessageSubscriber<EntityEventMessage> _entitySubscriber;
         EntityType _entityType;
+        List<T> _entities;
 
         /// <summary>
         /// 
         /// </summary>
         /// <param name="messageFactory"></param>
         /// <param name="storageManager"></param>
+        /// <param name="logger"></param>
         /// <param name="entityType"></param>
-        public UpdatingCollection(IMessageFactory messageFactory, IStorageManager storageManager, EntityType entityType)
+        public UpdatingCollection(IMessageFactory messageFactory, IStorageManager storageManager, ILogger logger, EntityType entityType)
         {
-            _entitySubscriber = messageFactory.CreateSubscriber<EntityEventMessage>(Topics.BIDDING, 0, messageFactory.WildcardFilter);
-            _entitySubscriber.OnReceive = HandleMessageAsync;
-            _storageRepository = storageManager.GetRepository<T>();
-            _entityType = entityType;
+            try
+            {
+                logger.LogInformation("getting subscriber");
+                _entitySubscriber = messageFactory.CreateSubscriber<EntityEventMessage>(Topics.BIDDING, 0, messageFactory.WildcardFilter);
+                _entitySubscriber.OnReceive = HandleMessageAsync;
 
-            Entities = _storageRepository.GetAll().Result.ToList();
+                logger.LogInformation("getting repo");
+                _storageRepository = storageManager.GetRepository<T>();
+
+
+                logger.LogInformation("setting etype");
+                _entityType = entityType;
+
+                logger.LogInformation("getting all entities {0}", _storageRepository == null); ;
+                _entities = _storageRepository.GetAll().Result.ToList();
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, "Failed to create collection for {0}", typeof(T).Name);
+                throw;
+            }
         }
 
         /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
-        public List<T> Entities { get; private set; } = new List<T>();
+        public List<T> Entities { get => _entities; }
 
         /// <summary>
         /// 
         /// </summary>
         /// <value></value>
-        public Func<Task> OnUpdate { get; set; } = () => Task.CompletedTask;
+        public Func<Task> OnUpdate { get; set; }
 
         /// <summary>
         /// Update the entity collection
@@ -56,8 +74,9 @@ namespace Lucent.Common
         {
             if (message.Body.EntityType == _entityType)
             {
-                Entities = (await _storageRepository.GetAll()).ToList();
-                await OnUpdate();
+                _entities = (await _storageRepository.GetAll()).ToList();
+                if (OnUpdate != null)
+                    await OnUpdate();
             }
         }
     }

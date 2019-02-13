@@ -44,8 +44,9 @@ namespace Lucent.Common.Storage
             await ExecuteAsync("CREATE TABLE IF NOT EXISTS {0} (id text PRIMARY KEY, etag text, format text, updated timestamp, contents blob );".FormatWith(_tableName), "create_table_" + _tableName);
 
         /// <inheritdoc/>
-        protected override async Task Initialize()
+        public override async Task Initialize(IServiceProvider serviceProvider)
         {
+            _log.LogInformation("Initializing {0}", typeof(T).Name);
             _getAllStatement = new SimpleStatement("SELECT etag, format, updated, contents FROM {0}".FormatWith(_tableName));
 
             _getStatement = await PrepareAsync("SELECT etag, format, updated, contents FROM {0} WHERE id=?".FormatWith(_tableName));
