@@ -198,8 +198,6 @@ namespace Lucent.Common.Middleware
                 else if (httpContext.Request.Method.ToLowerInvariant() == "get")
                 {
                     var entities = await _entityRepository.GetAll();
-                    foreach (var e in entities)
-                        _log.LogInformation("{0}", Encoding.UTF8.GetString(await _serializationContext.AsBytes(e, SerializationFormat.JSON)));
                     httpContext.Response.StatusCode = entities.Count > 0 ? 200 : 204;
                     if (entities.Count > 0)
                         await _serializationContext.WriteTo(httpContext, entities);
