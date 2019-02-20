@@ -89,6 +89,18 @@ namespace Lucent.Common.Serialization
         /// <summary>
         /// Create a new object writer
         /// </summary>
+        /// <returns></returns>
+        Task<ILucentObjectWriter> CreateObjectWriter();
+
+        /// <summary>
+        /// Create a new array writer
+        /// </summary>
+        /// <returns></returns>
+        Task<ILucentArrayWriter> CreateArrayWriter();
+
+        /// <summary>
+        /// Create a new object writer
+        /// </summary>
         /// <param name="property"></param>
         /// <returns></returns>
         Task<ILucentObjectWriter> CreateObjectWriter(PropertyId property);

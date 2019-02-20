@@ -1,4 +1,6 @@
+using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -38,7 +40,7 @@ namespace Lucent.Common.Middleware
         /// <returns>A completed pipeline step</returns>
         public async Task InvokeAsync(HttpContext httpContext)
         {
-            var instance = _apiLatency.WithLabels(httpContext.Request.Method, httpContext.Request.Path);
+            var instance = _apiLatency.WithLabels(httpContext.Request.Method, string.Join('/', httpContext.Request.Path.Value.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries).Take(2).ToArray()));
             var sw = Stopwatch.StartNew();
             await _nextHandler(httpContext).ContinueWith(t =>
             {

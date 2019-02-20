@@ -85,6 +85,22 @@ namespace Lucent.Common.Serialization
         public async Task<T> ReadArrayObject<T>(ILucentArrayReader reader) where T : new() => await Read<T>(await reader.GetObjectReader());
 
         /// <inheritdoc />
+        public async Task<T[]> ReadArrayFrom<T>(Stream target, bool leaveOpen, SerializationFormat format)
+            where T : new()
+        {
+            if (format.HasFlag(SerializationFormat.COMPRESSED))
+                target = new GZipStream(target, CompressionMode.Decompress);
+
+            switch (format)
+            {
+                case SerializationFormat.PROTOBUF:
+                    return await ReadArray<T>(new LucentProtoReader(target, leaveOpen));
+                default:
+                    return await ReadArray<T>(new LucentJsonReader(target, leaveOpen));
+            }
+        }
+
+        /// <inheritdoc />
         public async Task<T> ReadFrom<T>(Stream target, bool leaveOpen, SerializationFormat format)
             where T : new()
         {
@@ -139,22 +155,13 @@ namespace Lucent.Common.Serialization
             switch (format)
             {
                 case SerializationFormat.PROTOBUF:
-                    using (var writer = new ProtobufWriter(target, leaveOpen))
-                    using (var aWriter = new LucentProtoArrayWriter(writer))
-                    {
-                        foreach (var element in instances)
-                            await WriteArrayObject(aWriter, element);
-                        await aWriter.WriteEnd();
-                    }
+                    using (var aWriter = await new LucentProtoWriter(target, leaveOpen).CreateArrayWriter())
+                        await aWriter.Write(this, instances.ToArray());
                     break;
                 default:
                     using (var writer = new JsonTextWriter(new StreamWriter(target)) { CloseOutput = !leaveOpen })
-                    using (var aWriter = new LucentJsonArrayWriter(writer))
-                    {
-                        foreach (var element in instances)
-                            await WriteArrayObject(aWriter, element);
-                        await aWriter.WriteEnd();
-                    }
+                    using (var aWriter = await new LucentJsonWriter(writer).CreateArrayWriter())
+                        await aWriter.Write(this, instances.ToArray());
                     break;
             }
         }

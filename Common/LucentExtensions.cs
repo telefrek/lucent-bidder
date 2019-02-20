@@ -20,6 +20,7 @@ public static partial class LucentExtensions
 {
     static MD5 _md5 = System.Security.Cryptography.MD5.Create();
     static double _t2ms = 1000d / Stopwatch.Frequency;
+    static double _t2s = 1d / Stopwatch.Frequency;
 
     /// <summary>
     /// Get the timer milliseconds
@@ -27,6 +28,13 @@ public static partial class LucentExtensions
     /// <param name="timer"></param>
     /// <returns></returns>
     public static double GetMilliseconds(this Stopwatch timer) => timer.ElapsedTicks * _t2ms;
+
+    /// <summary>
+    /// Get the timer milliseconds
+    /// </summary>
+    /// <param name="timer"></param>
+    /// <returns></returns>
+    public static double GetSeconds(this Stopwatch timer) => timer.ElapsedTicks * _t2s;
 
     /// <summary>
     /// Calculate the hash of an buffer

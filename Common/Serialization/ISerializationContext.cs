@@ -113,6 +113,16 @@ namespace Lucent.Common.Serialization
         Task<T> ReadFrom<T>(Stream target, bool leaveOpen, SerializationFormat format) where T : new();
 
         /// <summary>
+        /// Read an array of objects from the stream
+        /// </summary>
+        /// <param name="target"></param>
+        /// <param name="leaveOpen"></param>
+        /// <param name="format"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        Task<T[]> ReadArrayFrom<T>(Stream target, bool leaveOpen, SerializationFormat format) where T : new();
+
+        /// <summary>
         /// Get the serialized bytes for an object
         /// </summary>
         /// <param name="instance"></param>

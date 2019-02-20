@@ -124,6 +124,20 @@ namespace Lucent.Common.Serialization.Json
         }
 
         /// <inheritdoc/>
+        public async Task<ILucentObjectWriter> CreateObjectWriter()
+        {
+            await _jsonWriter.WriteStartObjectAsync();
+            return new LucentJsonObjectWriter(_jsonWriter);
+        }
+
+        /// <inheritdoc/>
+        public async Task<ILucentArrayWriter> CreateArrayWriter()
+        {
+            await _jsonWriter.WriteStartArrayAsync();
+            return new LucentJsonArrayWriter(_jsonWriter);
+        }
+
+        /// <inheritdoc/>
         public async Task<ILucentObjectWriter> CreateObjectWriter(PropertyId property)
         {
             await _jsonWriter.WritePropertyNameAsync(property.Name);

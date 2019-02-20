@@ -140,7 +140,6 @@ namespace Lucent.Common.Bidding
         public async Task TestRemoteBid()
         {
             // lol..sure
-
             await TestSuccessfulBid();
         }
 
@@ -192,9 +191,38 @@ namespace Lucent.Common.Bidding
                 }
             };
 
-            var context = serviceProvider.GetRequiredService<ISerializationContext>();
-            var resp = await orchestrationClient.PostJsonAsync(context, bidderFilter, "/api/filters");
+            var serializationContext = serviceProvider.GetRequiredService<ISerializationContext>();
+            var resp = await orchestrationClient.PostJsonAsync(serializationContext, bidderFilter, "/api/filters");
             Assert.AreEqual(HttpStatusCode.Created, resp.StatusCode);
+
+            var filters = await GetFilters(orchestrationClient, serializationContext);
+            Assert.IsTrue(filters.Any(f => f.Id == bidderFilter.Id), "Filter not in get all");
+            Assert.IsNotNull(await GetFilter(orchestrationClient, bidderFilter.Id, serializationContext), "Failed to get bid filter");
+        }
+
+        public async Task<List<BidderFilter>> GetFilters(HttpClient orchestrationClient, ISerializationContext serializationContext)
+        {
+            var filters = new List<BidderFilter>();
+            var resp = await orchestrationClient.GetAsync("api/filters");
+            if (resp.StatusCode == HttpStatusCode.OK)
+            {
+                var contents = await serializationContext.ReadArrayFrom<BidderFilter>(await resp.Content.ReadAsStreamAsync(), false, SerializationFormat.JSON);
+
+                if (contents != null)
+                    filters.AddRange(contents);
+            }
+            return filters;
+        }
+
+        public async Task<BidderFilter> GetFilter(HttpClient orchestrationClient, String filterId, ISerializationContext serializationContext)
+        {
+            var resp = await orchestrationClient.GetAsync("api/filters/" + filterId);
+            if (resp.StatusCode == HttpStatusCode.OK)
+            {
+                return await serializationContext.ReadFrom<BidderFilter>(await resp.Content.ReadAsStreamAsync(), false, SerializationFormat.JSON);
+            }
+
+            return null;
         }
 
         async Task SetupExchange(Guid id, HttpClient orchestrationClient, IServiceProvider serviceProvider)

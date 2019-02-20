@@ -129,78 +129,90 @@ namespace Lucent.Common.Middleware
         /// <returns></returns>
         public virtual async Task InvokeAsync(HttpContext httpContext)
         {
-            var entity = await ReadEntity(httpContext);
-            if (entity != null)
+            try
             {
-                // Validate
-                var evt = new EntityEvent
+                var entity = await ReadEntity(httpContext);
+                if (entity != null)
                 {
-                    EntityType = (EntityType)Enum.Parse(typeof(EntityType), typeof(T).Name),
-                    EntityId = entity.Key.ToString(),
-                };
+                    // Validate
+                    var evt = new EntityEvent
+                    {
+                        EntityType = (EntityType)Enum.Parse(typeof(EntityType), typeof(T).Name),
+                        EntityId = entity.Key.ToString(),
+                    };
 
-                switch (httpContext.Request.Method.ToLowerInvariant())
-                {
-                    case "get":
-                        var entities = await _entityRepository.GetAll();
-                        httpContext.Response.StatusCode = entities.Count > 0 ? 200 : 204;
-                        if (entities.Count > 0)
-                            await _serializationContext.WriteTo(httpContext, entities);
-                        break;
-                    case "post":
-                        if (await _entityRepository.TryInsert(entity))
-                        {
-                            httpContext.Response.StatusCode = 201;
-                            evt.EventType = EventType.EntityAdd;
-                            evt.EntityId = entity.Key.ToString();
-                            await _serializationContext.WriteTo(httpContext, entity);
-                        }
-                        else
-                            httpContext.Response.StatusCode = 409;
-                        break;
-                    case "put":
-                    case "patch":
-                        if (await _entityRepository.TryUpdate(entity))
-                        {
-                            httpContext.Response.StatusCode = 202;
-                            evt.EventType = EventType.EntityUpdate;
-                            await _serializationContext.WriteTo(httpContext, entity);
-                        }
-                        else
-                            httpContext.Response.StatusCode = 409;
-                        break;
-                    case "delete":
-                        if (await _entityRepository.TryRemove(entity))
-                        {
-                            evt.EventType = EventType.EntityDelete;
-                            httpContext.Response.StatusCode = 204;
-                        }
-                        else
-                            httpContext.Response.StatusCode = 404;
-                        break;
+                    switch (httpContext.Request.Method.ToLowerInvariant())
+                    {
+                        case "get":
+                            httpContext.Response.StatusCode = entity != null ? 200 : 404;
+                            if (entity != null)
+                                await _serializationContext.WriteTo(httpContext, entity);
+                            break;
+                        case "post":
+                            if (await _entityRepository.TryInsert(entity))
+                            {
+                                httpContext.Response.StatusCode = 201;
+                                evt.EventType = EventType.EntityAdd;
+                                evt.EntityId = entity.Key.ToString();
+                                await _serializationContext.WriteTo(httpContext, entity);
+                            }
+                            else
+                                httpContext.Response.StatusCode = 409;
+                            break;
+                        case "put":
+                        case "patch":
+                            if (await _entityRepository.TryUpdate(entity))
+                            {
+                                httpContext.Response.StatusCode = 202;
+                                evt.EventType = EventType.EntityUpdate;
+                                await _serializationContext.WriteTo(httpContext, entity);
+                            }
+                            else
+                                httpContext.Response.StatusCode = 409;
+                            break;
+                        case "delete":
+                            if (await _entityRepository.TryRemove(entity))
+                            {
+                                evt.EventType = EventType.EntityDelete;
+                                httpContext.Response.StatusCode = 204;
+                            }
+                            else
+                                httpContext.Response.StatusCode = 404;
+                            break;
+                    }
+
+                    // Notify
+                    if (evt.EventType != EventType.Unknown)
+                    {
+                        var msg = _messageFactory.CreateMessage<EntityEventMessage>();
+                        msg.Body = evt;
+                        msg.Route = typeof(T).Name.ToLowerInvariant();
+                        await _messageFactory.CreatePublisher(Topics.BIDDING).TryPublish(msg);
+
+                        var sync = _messageFactory.CreateMessage<LucentMessage<T>>();
+                        sync.Body = entity;
+                        sync.Route = typeof(T).Name.ToLowerInvariant();
+                        await _messageFactory.CreatePublisher(Topics.ENTITIES).TryBroadcast(msg);
+                    }
                 }
-
-                // Notify
-                if (evt.EventType != EventType.Unknown)
+                else if (httpContext.Request.Method.ToLowerInvariant() == "get")
                 {
-                    var msg = _messageFactory.CreateMessage<EntityEventMessage>();
-                    msg.Body = evt;
-                    msg.Route = typeof(T).Name.ToLowerInvariant();
-                    await _messageFactory.CreatePublisher(Topics.BIDDING).TryPublish(msg);
-
-                    var sync = _messageFactory.CreateMessage<LucentMessage<T>>();
-                    sync.Body = entity;
-                    sync.Route = typeof(T).Name.ToLowerInvariant();
-                    await _messageFactory.CreatePublisher(Topics.ENTITIES).TryBroadcast(msg);
+                    var entities = await _entityRepository.GetAll();
+                    foreach (var e in entities)
+                        _log.LogInformation("{0}", Encoding.UTF8.GetString(await _serializationContext.AsBytes(e, SerializationFormat.JSON)));
+                    httpContext.Response.StatusCode = entities.Count > 0 ? 200 : 204;
+                    if (entities.Count > 0)
+                        await _serializationContext.WriteTo(httpContext, entities);
                 }
+                else
+                    httpContext.Response.StatusCode = 404;
             }
-            else if (httpContext.Request.Method.ToLowerInvariant() == "get")
+            catch (Exception e)
             {
-                httpContext.Response.StatusCode = 200;
-                await _serializationContext.WriteTo(httpContext, entity);
+                _log.LogError(e, "Failed rest API call");
+                httpContext.Response.StatusCode = 500;
             }
-            else
-                httpContext.Response.StatusCode = 404;
+
         }
     }
 }

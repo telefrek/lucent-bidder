@@ -84,6 +84,7 @@ namespace Lucent.Common.Storage
         /// <inheritdoc/>
         public async Task<T> Get(StorageKey key)
         {
+            _log.LogInformation("Getting {0}", key.RawValue().First());
             try
             {
                 var rowSet = await ExecuteAsync(_getStatement.Bind(key.RawValue()), "get_" + _tableName);
@@ -113,13 +114,15 @@ namespace Lucent.Common.Storage
         /// <inheritdoc/>
         public async Task<bool> TryInsert(T obj)
         {
-            _log.LogInformation("Inserting new item");
             try
             {
                 var contents = await _serializationContext.AsBytes(obj, _serializationFormat);
                 obj.ETag = contents.CalculateETag();
 
-                var rowSet = await ExecuteAsync(_insertStatement.Bind(obj.Key.RawValue().Concat(new object[] { obj.ETag, _serializationFormat.ToString(), DateTime.UtcNow, contents })), "insert_" + _tableName);
+                var parameters = new object[] { null, obj.ETag, _serializationFormat.ToString(), DateTime.UtcNow, contents };
+                parameters[0] = obj.Key.RawValue()[0];
+
+                var rowSet = await ExecuteAsync(_insertStatement.Bind(parameters), "insert_" + _tableName);
 
                 return rowSet != null;
             }
@@ -142,7 +145,9 @@ namespace Lucent.Common.Storage
             _log.LogInformation("Deleting obj");
             try
             {
-                var rowSet = await ExecuteAsync(_deleteStatement.Bind(obj.Key.RawValue().Concat(new object[] { obj.ETag })), "delete_" + _tableName);
+                var parameters = new object[] { null, obj.ETag };
+                parameters[0] = obj.Key.RawValue()[0];
+                var rowSet = await ExecuteAsync(_deleteStatement.Bind(parameters), "delete_" + _tableName);
 
                 return rowSet != null;
             }
@@ -169,7 +174,10 @@ namespace Lucent.Common.Storage
                 var contents = await _serializationContext.AsBytes(obj, _serializationFormat);
                 obj.ETag = contents.CalculateETag();
 
-                var rowSet = await ExecuteAsync(_updateStatement.Bind(new object[] { obj.ETag, DateTime.UtcNow, contents, _serializationFormat.ToString() }.Concat(obj.Key.RawValue().Concat(new object[] { oldEtag }))), "update_" + _tableName);
+                var parameters = new object[] { obj.ETag, DateTime.UtcNow, contents, _serializationFormat.ToString(), null, oldEtag };
+                parameters[4] = obj.Key.RawValue()[0];
+
+                var rowSet = await ExecuteAsync(_updateStatement.Bind(parameters), "update_" + _tableName);
 
                 return rowSet != null;
             }

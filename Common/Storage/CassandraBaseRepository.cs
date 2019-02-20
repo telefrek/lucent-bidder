@@ -8,6 +8,7 @@ using Lucent.Common;
 using Prometheus;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 
 namespace Lucent.Common.Storage
 {
@@ -77,7 +78,7 @@ namespace Lucent.Common.Storage
         /// <typeparam name="T">The type of base repository to create</typeparam>
         /// <returns>An initialized repository of the given type</returns>
         public static T CreateRepo<T>(ISession session, SerializationFormat serializationFormat, ISerializationContext serializationContext, ILogger logger)
-        => (T)Activator.CreateInstance(typeof(T), session, serializationFormat, serializationContext, logger); 
+        => (T)Activator.CreateInstance(typeof(T), session, serializationFormat, serializationContext, logger);
 
         /// <summary>
         /// Initialize the repository
@@ -127,7 +128,7 @@ namespace Lucent.Common.Storage
             }
             catch (InvalidQueryException queryError)
             {
-                _log.LogError(queryError, "Checking for table missing error");
+                _log.LogError(queryError, "Checking for table missing error ({0})", queryName);
 
                 if ((queryError.Message ?? "").ToLowerInvariant().Contains("columnfamily") ||
                 (queryError.Message ?? "").ToLowerInvariant().Contains("table"))

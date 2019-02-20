@@ -25,7 +25,7 @@ namespace Lucent.Common
         /// <summary>
         /// Dispose implementation
         /// </summary>
-        public void Dispose() => _target.Observe(_timer.GetMilliseconds());
+        public void Dispose() => _target.Observe(_timer.GetSeconds());
     }
 
     /// <summary>

@@ -7,6 +7,7 @@ metadata:
     chart: {{ template "orchestrator.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
+    component: orchestrator
 spec:
   type: {{ .Values.service.type }}
   ports:
@@ -17,3 +18,20 @@ spec:
   selector:
     app: {{ template "orchestrator.name" . }}
     release: {{ .Release.Name }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: orchestrator-sm
+  labels:
+    prometheus: monitoring
+    app: {{ template "orchestrator.name" . }}
+    chart: {{ template "orchestrator.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  selector:
+    matchLabels:
+      component: orchestrator
+  endpoints:
+  - port: http
