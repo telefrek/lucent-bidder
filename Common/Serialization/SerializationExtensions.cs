@@ -61,11 +61,6 @@ namespace Lucent.Common
                     break;
             }
 
-            var encoding = StringValues.Empty;
-            if (httpContext.Request.Headers.TryGetValue("Accept-Encoding", out encoding))
-                if (encoding.Any(e => e.Contains("gzip")))
-                    format |= SerializationFormat.COMPRESSED;
-
             await serializationContext.WriteTo(instance, httpContext.Response.Body, false, format);
         }
 
@@ -87,11 +82,6 @@ namespace Lucent.Common
                     httpContext.Response.ContentType = "application/json";
                     break;
             }
-
-            var encoding = StringValues.Empty;
-            if (httpContext.Request.Headers.TryGetValue("Accept-Encoding", out encoding))
-                if (encoding.Any(e => e.Contains("gzip")))
-                    format |= SerializationFormat.COMPRESSED;
 
             await serializationContext.WriteTo(instance, httpContext.Response.Body, false, format);
         }

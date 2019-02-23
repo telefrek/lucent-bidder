@@ -42,7 +42,7 @@ namespace Lucent.Common.Entities.Repositories
             _getExchangeEntity = await PrepareAsync("SELECT etag, format, updated, contents, code FROM {0} WHERE id = ?".FormatWith(_tableName));
 
             // no code on insert, only update
-            _insertExchangeEntity = await PrepareAsync("INSERT INTO {0} (id, etag, format, updated, contents) VALUES (?, ?, ?, ?, ?, ?) IF NOT EXISTS".FormatWith(_tableName));
+            _insertExchangeEntity = await PrepareAsync("INSERT INTO {0} (id, etag, format, updated, contents) VALUES (?, ?, ?, ?, ?) IF NOT EXISTS".FormatWith(_tableName));
 
             // Allow updates with no code
             _updateExchangeEntity = await PrepareAsync("UPDATE {0} SET etag=?, updated=?, contents=?, format=? WHERE id=? IF etag=?".FormatWith(_tableName));
@@ -123,7 +123,10 @@ namespace Lucent.Common.Entities.Repositories
 
                 obj.ETag = contents.CalculateETag();
 
-                var rowSet = await ExecuteAsync(_insertExchangeEntity.Bind(obj.Key.RawValue().Concat(new object[] { obj.ETag, _serializationFormat.ToString(), DateTime.UtcNow, contents })), "insert_" + _tableName);
+                var parameters = new object[] { null, obj.ETag, _serializationFormat.ToString(), DateTime.UtcNow, contents };
+                parameters[0] = obj.Key.RawValue()[0];
+
+                var rowSet = await ExecuteAsync(_insertExchangeEntity.Bind(parameters), "insert_" + _tableName);
 
                 if (rowSet != null && obj.Code != null)
                 {
@@ -146,7 +149,9 @@ namespace Lucent.Common.Entities.Repositories
             try
             {
                 _log.LogInformation("Removing exchange {0}", obj.Key);
-                var rowSet = await ExecuteAsync(_deleteExchangeEntity.Bind(obj.Key.RawValue().Concat(new object[] { obj.ETag })), "delete_" + _tableName);
+                var parameters = new object[] { null, obj.ETag };
+                parameters[0] = obj.Key.RawValue()[0];
+                var rowSet = await ExecuteAsync(_deleteExchangeEntity.Bind(parameters), "delete_" + _tableName);
 
                 return rowSet != null;
             }
@@ -178,10 +183,18 @@ namespace Lucent.Common.Entities.Repositories
 
                 obj.ETag = contents.CalculateETag();
 
-                var rowSet = await ExecuteAsync(_updateExchangeEntity.Bind(new object[] { obj.ETag, DateTime.UtcNow, contents, _serializationFormat.ToString() }.Concat(obj.Key.RawValue().Concat(new object[] { oldEtag }))), "update_" + _tableName);
+                var parameters = new object[] { obj.ETag, DateTime.UtcNow, contents, _serializationFormat.ToString(), null, oldEtag };
+                parameters[4] = obj.Key.RawValue()[0];
+
+                var rowSet = await ExecuteAsync(_updateExchangeEntity.Bind(parameters), "update_" + _tableName);
 
                 if (rowSet != null && obj.Code != null)
-                    return await ExecuteAsync(_updateExchangeCode.Bind(new object[] { obj.Code.ToArray() }.Concat(obj.Key.RawValue().Concat(new object[] { obj.ETag }))), "update_code_" + _tableName) != null;
+                {
+                    parameters = new object[] { obj.Code.ToArray(), null, obj.ETag };
+                    parameters[1] = obj.Key.RawValue()[0];
+                    return await ExecuteAsync(_updateExchangeCode.Bind(parameters), "update_code_" + _tableName) != null;
+
+                }
 
                 return rowSet != null;
             }
@@ -196,7 +209,7 @@ namespace Lucent.Common.Entities.Repositories
         /// <inheritdoc/>
         public override async Task CreateTableAsync() =>
             // optimize this to happen once later
-            await ExecuteAsync("CREATE TABLE IF NOT EXISTS {0} (id uuid, etag text, format text, updated timestamp, contents blob, code blob, PRIMARY KEY(id);".FormatWith(_tableName), "create_table_" + _tableName);
+            await ExecuteAsync("CREATE TABLE IF NOT EXISTS {0} (id uuid, etag text, format text, updated timestamp, contents blob, code blob, PRIMARY KEY(id) );".FormatWith(_tableName), "create_table_" + _tableName);
 
         /// <inheritdoc/>
         protected override async Task ReadExtraAsync<T>(Row row, T instance)

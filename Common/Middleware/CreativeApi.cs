@@ -65,12 +65,14 @@ namespace Lucent.Common.Middleware
                                     using (var stream = new FileStream(tempFile, FileMode.Create))
                                     {
                                         await httpContext.Request.Body.CopyToAsync(stream);
+                                        await stream.FlushAsync();
                                     }
 
                                     var content = _mediaScanner.Scan(tempFile, section.ContentType);
                                     if (content != null)
                                     {
                                         File.Copy(tempFile, fileName, true);
+
                                         content.ContentLocation = tempFile;
                                         content.RawUri = "/content/creatives/" + creative.Id + "/" + fileName;
                                         content.CreativeUri = "/content/creatives/" + creative.Id + "/" + fileName;

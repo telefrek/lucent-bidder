@@ -48,7 +48,7 @@ namespace Lucent.Common.Media
                                 return content;
                             return null;
                         case "video":
-                            if(TryLoadMedia(content))
+                            if (TryLoadMedia(content))
                                 return content;
                             return null;
                         default:
@@ -60,7 +60,7 @@ namespace Lucent.Common.Media
             }
             catch (Exception e)
             {
-                _log.LogError(e, "Failed to load media");
+                _log.LogError(e, "Failed to load media {0} ({1})", path, mimeType);
             }
 
             return null;
@@ -82,7 +82,8 @@ namespace Lucent.Common.Media
                         content.BitRate = media.Metadata.VideoData.BitRateKbs.GetValueOrDefault();
                         content.Codec = media.Metadata.VideoData.Format;
                         var frame = media.Metadata.VideoData.FrameSize;
-                        if(frame.Contains("x")){
+                        if (frame.Contains("x"))
+                        {
                             var hw = frame.Split("x");
                             content.W = int.Parse(hw[0]);
                             content.H = int.Parse(hw[1]);
@@ -112,6 +113,7 @@ namespace Lucent.Common.Media
                 using (var fStream = new FileStream(content.ContentLocation, FileMode.Open, FileAccess.Read))
                 using (var img = new Bitmap(fStream))
                 {
+                    _log.LogInformation("Loaded {0} : {1}x{2}", content.ContentLocation, img.Height, img.Width);
                     content.H = img.Height;
                     content.W = img.Width;
                     content.ContentType = ContentType.Banner;

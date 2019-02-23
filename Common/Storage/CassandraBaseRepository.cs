@@ -211,17 +211,14 @@ namespace Lucent.Common.Storage
 
                 while (rowEnum.MoveNext())
                 {
-                    for (var i = 0; i < numRows && rowEnum.MoveNext(); ++i)
-                    {
-                        var contents = rowEnum.Current.GetValue<byte[]>("contents");
-                        var format = Enum.Parse<SerializationFormat>(rowEnum.Current.GetValue<string>("format"));
+                    var contents = rowEnum.Current.GetValue<byte[]>("contents");
+                    var format = Enum.Parse<SerializationFormat>(rowEnum.Current.GetValue<string>("format"));
 
-                        using (var ms = new MemoryStream(contents))
-                        {
-                            var obj = await _serializationContext.ReadFrom<T>(ms, false, format);
-                            await ReadExtraAsync<T>(rowEnum.Current, obj);
-                            instances.Add(obj);
-                        }
+                    using (var ms = new MemoryStream(contents))
+                    {
+                        var obj = await _serializationContext.ReadFrom<T>(ms, false, format);
+                        await ReadExtraAsync<T>(rowEnum.Current, obj);
+                        instances.Add(obj);
                     }
                 }
 
