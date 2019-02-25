@@ -4,8 +4,8 @@ IMAGE_TAG=${2:-alpha}
 LUCENT_VERSION="$(cat VERSION).$IMAGE_TAG"
 
 echo 'Pulling latest dotnet images'
-docker pull telefrek/lucent-builder:2.2.103 
-docker pull microsoft/dotnet:aspnetcore-runtime
+docker pull telefrek/lucent-builder:2.2
+docker pull telefrek/aspnet-core-ffmpeg:2.2
 
 docker image prune -f
 [[ ! -z "$(docker ps -aq)" ]] && docker rm -vf $(docker ps -qa)

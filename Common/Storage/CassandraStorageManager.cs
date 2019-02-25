@@ -22,7 +22,7 @@ namespace Lucent.Common.Storage
         ISerializationContext _serializationContext;
         CassandraConfiguration _config;
         ILogger _log;
-        ConcurrentDictionary<Type, object> _registry;
+        static readonly ConcurrentDictionary<Type, object> _registry = new ConcurrentDictionary<Type, object>();
 
         /// <summary>
         /// Default constructor
@@ -36,7 +36,6 @@ namespace Lucent.Common.Storage
             _provider = provider;
             _serializationContext = serializationContext;
             _log = log;
-            _registry = new ConcurrentDictionary<Type, object>();
             _config = options.Value;
             _cluster = new CassandraConnectionStringBuilder
             {
@@ -77,11 +76,18 @@ namespace Lucent.Common.Storage
         /// <inheritdoc/>
         public void RegisterRepository<R, T>() where R : IStorageRepository<T> where T : IStorageEntity, new()
         {
-            var repository = CassandraBaseRepository.CreateRepo<R>(_session, _config.Format, _serializationContext, _log);
-            if (repository is CassandraBaseRepository)
-                (repository as CassandraBaseRepository).Initialize(_provider);
+            _log.LogInformation("Registerring {0} with {1}", typeof(T).Name, typeof(R).Name);
 
-            _registry.AddOrUpdate(typeof(T), repository, (t, oldRepo) => repository);
+            var repository = _provider.CreateInstance<R>(_session, _config.Format, _serializationContext, _log);
+            if (repository == null)
+                _log.LogError("No repo created, failure!");
+            else
+            {
+                if (repository is CassandraBaseRepository)
+                    (repository as CassandraBaseRepository).Initialize(_provider);
+
+                _registry.AddOrUpdate(typeof(T), repository, (t, oldRepo) => repository);
+            }
         }
     }
 }

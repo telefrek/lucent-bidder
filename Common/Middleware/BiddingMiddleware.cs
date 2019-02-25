@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Lucent.Common.Budget;
 using Lucent.Common.Caching;
 using Lucent.Common.Entities;
 using Lucent.Common.Entities.Events;
@@ -76,51 +77,15 @@ namespace Lucent.Common.Middleware
         }
 
         /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="entityEvent"></param>
-        /// <returns></returns>
-        public async Task TrackEntities(EntityEventMessage entityEvent)
-        {
-            switch (entityEvent.Body.EventType)
-            {
-                case EventType.EntityAdd:
-                case EventType.EntityUpdate:
-                    switch (entityEvent.Body.EntityType)
-                    {
-                        case EntityType.Exchange:
-                            var exchange = await _storageManager.GetRepository<Exchange>().Get(new GuidStorageKey(Guid.Parse(entityEvent.Body.EntityId)));
-                            if (exchange != null)
-                            {
-                                using (var ms = new MemoryStream())
-                                {
-                                    await _serializationContext.WriteTo(exchange, ms, true, SerializationFormat.JSON);
-                                    _log.LogInformation("Received Exchange:\n{0}", Encoding.UTF8.GetString(ms.ToArray()));
-                                }
-                            }
-                            break;
-                        default:
-                            break;
-                    }
-                    break;
-                case EventType.EntityDelete:
-                    break;
-                default:
-                    _log.LogWarning("Invalid event type: {0}", entityEvent.Body.EventType);
-                    break;
-            }
-        }
-
-        /// <summary>
         /// Handle the request asynchronously
         /// </summary>
         /// <param name="httpContext">The current http context</param>
+        /// <param name="client"></param>
         /// <returns>A completed pipeline step</returns>
-        public async Task InvokeAsync(HttpContext httpContext)
+        public async Task InvokeAsync(HttpContext httpContext, IBudgetClient client)
         {
             try
             {
-
                 var request = await _serializationContext.ReadAs<BidRequest>(httpContext);
 
                 if (request != null && !_bidFilters.Any(f => f.Invoke(request)))
@@ -134,7 +99,7 @@ namespace Lucent.Common.Middleware
                     }
 
                     httpContext.Items.Add("exchange", exchange);
-                    var response = await exchange.Bid(request, httpContext);
+                    var response = await exchange.Bid(request, httpContext, client);
 
                     if (response != null && (response.Bids ?? new SeatBid[0]).Length > 0)
                     {

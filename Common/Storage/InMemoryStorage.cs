@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Lucent.Common.Entities;
+using Lucent.Common.Serialization;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Lucent.Common.Storage
@@ -53,7 +55,7 @@ namespace Lucent.Common.Storage
         }
 
         /// <inheritdoc />
-        public class InMemoryRepository<T> : IStorageRepository<T> where T : IStorageEntity
+        public class InMemoryRepository<T> : IStorageRepository<T> where T : IStorageEntity, new()
         {
             IServiceProvider _provider;
             ILogger _log;
@@ -79,21 +81,12 @@ namespace Lucent.Common.Storage
             public Task<ICollection<T>> GetAll() => Task.FromResult((ICollection<T>)Entities);
 
             /// <inheritdoc />
-            public async Task<T> Get(StorageKey key)
+            public Task<T> Get(StorageKey key)
             {
                 _log.LogInformation("Getting {0} ({1})", key, typeof(T).Name);
                 var instance = Entities.FirstOrDefault(e => e.Key.Equals(key));
-                if (typeof(Exchange).IsAssignableFrom(typeof(T)))
-                {
-                    var exchange = (Exchange)(object)instance;
-                    if (exchange.Code != null)
-                    {
-                        await exchange.LoadExchange(_provider, exchange.Code.ToArray());
-                        exchange.Code = null;
-                    }
-                }
 
-                return instance;
+                return Task.FromResult(instance);
             }
 
 
@@ -101,16 +94,17 @@ namespace Lucent.Common.Storage
             public Task<ICollection<T>> GetAny(StorageKey key) => Task.FromResult((ICollection<T>)Entities.Where(e => e.Key.Equals(key)).ToList());
 
             /// <inheritdoc />
-            public Task<bool> TryInsert(T obj)
+            public async Task<bool> TryInsert(T obj)
             {
+                obj.ETag = await _provider.GetRequiredService<ISerializationContext>().CalculateETag(obj, SerializationFormat.PROTOBUF);
                 _log.LogInformation("Inserting {0} ({1})", obj.Key, typeof(T).Name);
                 if (!Entities.Exists(e => e.Key.Equals(obj.Key)))
                 {
                     Entities.Add(obj);
-                    return Task.FromResult(true);
+                    return true;
                 }
 
-                return Task.FromResult(false);
+                return false;
             }
 
             /// <inheritdoc />
@@ -125,7 +119,10 @@ namespace Lucent.Common.Storage
             public async Task<bool> TryUpdate(T obj)
             {
                 _log.LogInformation("Updating {0} ({1})", obj.Key, typeof(T).Name);
-                return await TryRemove(obj) ? await TryInsert(obj) : false;
+                if (await TryRemove(obj))
+                    return await TryInsert(obj);
+
+                return false;
             }
         }
     }

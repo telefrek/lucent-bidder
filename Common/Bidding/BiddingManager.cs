@@ -62,7 +62,7 @@ namespace Lucent.Common.Bidding
             foreach (var creativeId in campaign.CreativeIds)
             {
                 var cr = await _creativeRepo.Get(new StringStorageKey(creativeId));
-                foreach (var content in cr.Contents)
+                foreach (var content in cr.Contents ?? new CreativeContent[0])
                     if (content.Filter == null)
                         content.HydrateFilter();
 
@@ -81,38 +81,45 @@ namespace Lucent.Common.Bidding
         {
             if (message.Body != null)
             {
-                var id = message.Body.EntityId;
-                switch (message.Body.EntityType)
+                try
                 {
-                    case EntityType.Campaign:
-                        switch (message.Body.EventType)
-                        {
-                            case EventType.EntityAdd:
-                            case EventType.EntityUpdate:
-                                var entity = await _storageManager.GetRepository<Campaign>().Get(new StringStorageKey(id));
-                                Bidders.RemoveAll(b => b.Campaign.Key.Equals(id));
-                                if (entity != null)
-                                {
-                                    _log.LogInformation("Added bidder for campaign : {0}", id);
-                                    Bidders.Add(_bidFactory.CreateBidder(entity));
-                                }
-                                break;
-                            case EventType.EntityDelete:
-                                _log.LogInformation("Removing bidder for campaign : {0}", id);
-                                Bidders.RemoveAll(b => b.Campaign.Key.Equals(id));
-                                break;
-                        }
-                        break;
+                    var id = message.Body.EntityId;
+                    switch (message.Body.EntityType)
+                    {
+                        case EntityType.Campaign:
+                            switch (message.Body.EventType)
+                            {
+                                case EventType.EntityAdd:
+                                case EventType.EntityUpdate:
+                                    var entity = await _storageManager.GetRepository<Campaign>().Get(new StringStorageKey(id));
+                                    Bidders.RemoveAll(b => b.Campaign.Key.Equals(id));
+                                    if (entity != null)
+                                    {
+                                        _log.LogInformation("Added bidder for campaign : {0}", id);
+                                        Bidders.Add(_bidFactory.CreateBidder(entity));
+                                    }
+                                    break;
+                                case EventType.EntityDelete:
+                                    _log.LogInformation("Removing bidder for campaign : {0}", id);
+                                    Bidders.RemoveAll(b => b.Campaign.Key.Equals(id));
+                                    break;
+                            }
+                            break;
+                    }
+                }
+                catch (Exception e)
+                {
+                    _log.LogWarning(e, "Failed to process message {0}", message.MessageId ?? "unknown");
                 }
             }
         }
 
         /// <inheritdoc/>
-        public async Task<bool> CanBid(string id)
+        public async Task<bool> CanBid(string id, IBudgetClient client)
         {
             if (_budgetManager.IsExhausted(id))
             {
-                await _budgetManager.GetAdditional(id);
+                await _budgetManager.GetAdditional(id, client);
                 return false;
             }
 

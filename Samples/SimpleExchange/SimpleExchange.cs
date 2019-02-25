@@ -13,6 +13,7 @@ using Lucent.Common.Storage;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Lucent.Common.Budget;
 
 namespace Lucent.Samples.SimpleExchange
 {
@@ -29,8 +30,7 @@ namespace Lucent.Samples.SimpleExchange
         public override Task Initialize(IServiceProvider provider)
         {
             _log = provider.GetRequiredService<ILogger<SimpleExchange>>();
-
-            _bidManager = provider.CreateScope().ServiceProvider.GetRequiredService<IBiddingManager>();
+            _bidManager = provider.GetRequiredService<IBiddingManager>();
 
             return Task.CompletedTask;
         }
@@ -45,9 +45,10 @@ namespace Lucent.Samples.SimpleExchange
         }
 
         /// <inheritdoc/>
-        public override async Task<BidResponse> Bid(BidRequest request, HttpContext httpContext)
+        public override async Task<BidResponse> Bid(BidRequest request, HttpContext httpContext, IBudgetClient client)
         {
-            if (await _bidManager.CanBid(ExchangeId.ToString()) && _bidManager.Bidders.Count > 0)
+
+            if (await _bidManager.CanBid(ExchangeId.ToString(), client) && _bidManager.Bidders.Count > 0)
             {
                 var resp = new BidResponse
                 {

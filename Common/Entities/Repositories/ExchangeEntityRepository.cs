@@ -28,18 +28,19 @@ namespace Lucent.Common.Entities.Repositories
         IServiceProvider _provider;
 
         /// <inheritdoc/>
-        public ExchangeEntityRespositry(ISession session, SerializationFormat serializationFormat, ISerializationContext serializationContext, ILogger logger) : base(session, serializationFormat, serializationContext, logger)
+        public ExchangeEntityRespositry(ISession session, SerializationFormat serializationFormat, ISerializationContext serializationContext, ILogger logger, IServiceProvider provider) : base(session, serializationFormat, serializationContext, logger)
         {
-            _tableName = "exchanges";
+            _tableName = "exchange";
+            _provider = provider;
         }
 
         /// <inheritdoc/>
         public override async Task Initialize(IServiceProvider provider)
         {
-            _provider = provider;
+            await CreateTableAsync();
             _getAllExchanges = new SimpleStatement("SELECT etag, format, updated, contents, code FROM {0}".FormatWith(_tableName));
 
-            _getExchangeEntity = await PrepareAsync("SELECT etag, format, updated, contents, code FROM {0} WHERE id = ?".FormatWith(_tableName));
+            _getExchangeEntity = await PrepareAsync("SELECT etag, format, updated, contents, code FROM {0} WHERE id=?".FormatWith(_tableName));
 
             // no code on insert, only update
             _insertExchangeEntity = await PrepareAsync("INSERT INTO {0} (id, etag, format, updated, contents) VALUES (?, ?, ?, ?, ?) IF NOT EXISTS".FormatWith(_tableName));
@@ -48,10 +49,15 @@ namespace Lucent.Common.Entities.Repositories
             _updateExchangeEntity = await PrepareAsync("UPDATE {0} SET etag=?, updated=?, contents=?, format=? WHERE id=? IF etag=?".FormatWith(_tableName));
 
             // second call to update
-            _updateExchangeCode = await PrepareAsync("UPDATE {0} SET code=? WHERE id=? IF etag=?".FormatWith(_tableName));
+            _updateExchangeCode = await PrepareAsync("UPDATE {0} SET code=? WHERE id=?".FormatWith(_tableName));
 
             _deleteExchangeEntity = await PrepareAsync("DELETE FROM {0} WHERE id=? IF etag=?".FormatWith(_tableName));
         }
+
+        /// <inheritdoc/>
+        public override async Task CreateTableAsync() =>
+            // optimize this to happen once later
+            await ExecuteAsync("CREATE TABLE IF NOT EXISTS {0} (id uuid, etag text, format text, updated timestamp, contents blob, code blob, PRIMARY KEY(id) );".FormatWith(_tableName), "create_table_" + _tableName);
 
         /// <inheritdoc/>
         public async Task<Exchange> Get(StorageKey id)
@@ -130,7 +136,10 @@ namespace Lucent.Common.Entities.Repositories
 
                 if (rowSet != null && obj.Code != null)
                 {
-                    return await ExecuteAsync(_updateExchangeCode.Bind(new object[] { obj.Code.ToArray() }.Concat(obj.Key.RawValue().Concat(new object[] { obj.ETag }))), "update_code_" + _tableName) != null;
+                    parameters = new object[] { obj.Code.ToArray(), null };
+                    _log.LogInformation("Updating exchange code for {0} ({1} bytes)", obj.Key, ((byte[])parameters[0]).Length);
+                    parameters[1] = obj.Key.RawValue()[0];
+                    return await ExecuteAsync(_updateExchangeCode.Bind(parameters), "update_code_" + _tableName) != null;
                 }
 
                 return rowSet != null;
@@ -190,10 +199,10 @@ namespace Lucent.Common.Entities.Repositories
 
                 if (rowSet != null && obj.Code != null)
                 {
-                    parameters = new object[] { obj.Code.ToArray(), null, obj.ETag };
+                    parameters = new object[] { obj.Code.ToArray(), null };
+                    _log.LogInformation("Updating exchange code for {0} ({1} bytes)", obj.Key, ((byte[])parameters[0]).Length);
                     parameters[1] = obj.Key.RawValue()[0];
                     return await ExecuteAsync(_updateExchangeCode.Bind(parameters), "update_code_" + _tableName) != null;
-
                 }
 
                 return rowSet != null;
@@ -207,28 +216,23 @@ namespace Lucent.Common.Entities.Repositories
         }
 
         /// <inheritdoc/>
-        public override async Task CreateTableAsync() =>
-            // optimize this to happen once later
-            await ExecuteAsync("CREATE TABLE IF NOT EXISTS {0} (id uuid, etag text, format text, updated timestamp, contents blob, code blob, PRIMARY KEY(id) );".FormatWith(_tableName), "create_table_" + _tableName);
-
-        /// <inheritdoc/>
         protected override async Task ReadExtraAsync<T>(Row row, T instance)
         {
-            if (row.GetColumn("code") != null)
+            try
             {
-                var contents = row.GetValue<byte[]>("code");
-                if (contents != null)
-                    try
-                    {
-                        var exchange = ((Exchange)(object)instance);
-                        await exchange.LoadExchange(_provider, contents);
-                        if (exchange.Instance != null)
-                            _log.LogInformation("Loaded {0} ({1})", exchange.Instance.Name, exchange.Key);
-                    }
-                    catch (Exception e)
-                    {
-                        _log.LogError(e, "Failed to load exchange : {0}", instance.Key);
-                    }
+                if (row.GetColumn("code") != null)
+                {
+                    _log.LogInformation("Loading code for exchange {0}", instance.Key.ToString());
+                    var contents = row.GetValue<byte[]>("code");
+                    if (contents != null)
+                        (instance as Exchange).Code = new MemoryStream(contents);
+                }
+                else
+                    _log.LogInformation("No code for exchange {0}", instance.Key.ToString());
+            }
+            catch (Exception e)
+            {
+                _log.LogError(e, "Failed to read the code segment");
             }
 
             await Task.CompletedTask;

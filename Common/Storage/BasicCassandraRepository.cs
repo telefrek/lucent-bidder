@@ -46,6 +46,8 @@ namespace Lucent.Common.Storage
         /// <inheritdoc/>
         public override async Task Initialize(IServiceProvider serviceProvider)
         {
+            await CreateTableAsync();
+            
             _log.LogInformation("Initializing {0}", typeof(T).Name);
             _getAllStatement = new SimpleStatement("SELECT etag, format, updated, contents FROM {0}".FormatWith(_tableName));
 
@@ -142,7 +144,7 @@ namespace Lucent.Common.Storage
         /// <inheritdoc/>
         public async Task<bool> TryRemove(T obj)
         {
-            _log.LogInformation("Deleting obj");
+            _log.LogInformation("Deleting {0} ({1})", obj.Key, obj.ETag);
             try
             {
                 var parameters = new object[] { null, obj.ETag };

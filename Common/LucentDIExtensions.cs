@@ -59,6 +59,11 @@ namespace Lucent.Common
                 services.Configure<CassandraConfiguration>(configuration.GetSection("cassandra"))
                     .AddSingleton<IStorageManager, CassandraStorageManager>();
 
+                var storageManager = services.BuildServiceProvider().GetRequiredService<IStorageManager>();
+
+                // Register custom repositories
+                storageManager.RegisterRepository<ExchangeEntityRespositry, Exchange>();
+
                 services.Configure<RabbitConfiguration>(configuration.GetSection("rabbit"))
                     .AddSingleton<IMessageFactory, RabbitFactory>();
                 services.AddSingleton<IBidLedger>(provider =>
@@ -66,15 +71,11 @@ namespace Lucent.Common
                     using (var scope = provider.CreateScope())
                     {
                         var sm = scope.ServiceProvider.GetRequiredService<IStorageManager>();
-                        return (BidLedger)scope.ServiceProvider.CreateInstance<BidLedger>((sm as CassandraStorageManager).Session, SerializationFormat.PROTOBUF);
-
+                        var ledger = (BidLedger)scope.ServiceProvider.CreateInstance<BidLedger>((sm as CassandraStorageManager).Session, SerializationFormat.PROTOBUF);
+                        ledger.Initialize(provider).Wait();
+                        return ledger;
                     }
                 });
-
-                var storageManager = services.BuildServiceProvider().GetRequiredService<IStorageManager>();
-
-                // Register custom repositories
-                storageManager.RegisterRepository<ExchangeEntityRespositry, Exchange>();
             }
 
             if (includePortal)
@@ -90,8 +91,8 @@ namespace Lucent.Common
                     .AddSingleton<IScoringService, RandomScoring>()
                     .Configure<BudgetConfig>(configuration.GetSection(Topics.BUDGET))
                     .AddScoped<IBudgetClient, SimpleBudgetClient>()
-                    .AddScoped<IBudgetManager, SimpleBudgetManager>()
-                    .AddScoped<IBiddingManager, BiddingManager>()
+                    .AddSingleton<IBudgetManager, SimpleBudgetManager>()
+                    .AddSingleton<IBiddingManager, BiddingManager>()
                     .AddSingleton<IBidFactory, BidFactory>()
                     .AddSingleton<IExchangeRegistry, ExchangeRegistry>();
             }

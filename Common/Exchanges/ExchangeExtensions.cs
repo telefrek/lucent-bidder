@@ -15,28 +15,22 @@ namespace Lucent.Common
         /// </summary>
         /// <param name="exchange"></param>
         /// <param name="provider"></param>
-        /// <param name="contents"></param>
         /// <returns></returns>
-        public static async Task LoadExchange(this Exchange exchange, IServiceProvider provider, byte[] contents)
+        public static async Task LoadExchange(this Exchange exchange, IServiceProvider provider)
         {
-            using (var ms = new MemoryStream(contents))
+            using (var ms = exchange.Code)
             {
                 var asm = AssemblyLoadContext.Default.LoadFromStream(ms);
-                if (asm != null)
+                var exchgType = asm.GetTypes().FirstOrDefault(t => typeof(AdExchange).IsAssignableFrom(t));
+                var exchg = provider.CreateInstance(exchgType) as AdExchange;
+                if (exchg != null)
                 {
-                    var exchgType = asm.GetTypes().FirstOrDefault(t => typeof(AdExchange).IsAssignableFrom(t));
-                    if (exchgType != null)
-                    {
-                        var exchg = provider.CreateInstance(exchgType) as AdExchange;
-                        if (exchg != null)
-                        {
-                            exchg.ExchangeId = exchange.Id; 
-                            await exchg.Initialize(provider);
-                            (exchange as Exchange).Instance = exchg;
-                        }
-                    }
+                    exchg.ExchangeId = exchange.Id;
+                    await exchg.Initialize(provider);
+                    (exchange as Exchange).Instance = exchg;
                 }
             }
+            exchange.Code = null; // clear id
         }
     }
 }

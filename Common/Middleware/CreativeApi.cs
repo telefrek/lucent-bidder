@@ -8,6 +8,7 @@ using Lucent.Common.Messaging;
 using Lucent.Common.Serialization;
 using Lucent.Common.Storage;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using Microsoft.Net.Http.Headers;
@@ -60,18 +61,21 @@ namespace Lucent.Common.Middleware
 
                                     _log.LogInformation("Creating {0}", fileName);
                                     _log.LogInformation("ContentType: {0}", section.ContentType);
+                                    _log.LogInformation("ContentSize: {0}", section.GetContentDispositionHeader().Size.GetValueOrDefault());
 
                                     var tempFile = Path.GetTempFileName();
                                     using (var stream = new FileStream(tempFile, FileMode.Create))
                                     {
-                                        await httpContext.Request.Body.CopyToAsync(stream);
+                                        await section.Body.CopyToAsync(stream);
                                         await stream.FlushAsync();
                                     }
 
                                     var content = _mediaScanner.Scan(tempFile, section.ContentType);
                                     if (content != null)
                                     {
+                                        _log.LogInformation("Adding file {0}", fileName);
                                         File.Copy(tempFile, fileName, true);
+                                        File.Delete(tempFile);
 
                                         content.ContentLocation = tempFile;
                                         content.RawUri = "/content/creatives/" + creative.Id + "/" + fileName;
@@ -80,6 +84,7 @@ namespace Lucent.Common.Middleware
                                         Array.Resize(ref contents, contents.Length + 1);
                                         contents[contents.Length - 1] = content;
                                         creative.Contents = contents;
+                                        _log.LogInformation("Content count {0}", (creative.Contents ?? new CreativeContent[0]).Length);
 
                                         if (await _entityRepository.TryUpdate(creative))
                                         {
@@ -94,7 +99,10 @@ namespace Lucent.Common.Middleware
                                         }
                                     }
                                     else
+                                    {
                                         _log.LogWarning("Failed to parse contents");
+                                        File.Delete(tempFile);
+                                    }
 
                                 }
                             }

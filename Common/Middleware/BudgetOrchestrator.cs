@@ -40,46 +40,7 @@ namespace Lucent.Common.Middleware
             _serializationContext = serializationContext;
             _messageFactory = messageFactory;
             _logger = logger;
-
-            //_messageFactory.CreateSubscriber<LucentMessage<Campaign>>(Topics.ENTITIES, 0, "campaign").OnReceive += UpdateCampaigns;
         }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="campaignEvent"></param>
-        /// <returns></returns>
-        async Task UpdateCampaigns(LucentMessage<Campaign> campaignEvent)
-        {
-
-            if (campaignEvent.Body != null)
-            {
-                var evt = new EntityEvent
-                {
-                    EntityType = EntityType.Campaign,
-                    EntityId = campaignEvent.Body.Key.ToString(),
-                };
-
-                // This is awful, don't do this for real
-                if (await _campaignRepository.TryUpdate(campaignEvent.Body))
-                    evt.EventType = EventType.EntityUpdate;
-                else if (await _campaignRepository.TryInsert(campaignEvent.Body))
-                    evt.EventType = EventType.EntityAdd;
-                else if (await _campaignRepository.TryRemove(campaignEvent.Body))
-                    evt.EventType = EventType.EntityDelete;
-
-                // Notify
-                if (evt.EventType != EventType.Unknown)
-                {
-                    var msg = _messageFactory.CreateMessage<EntityEventMessage>();
-                    msg.Body = evt;
-                    msg.Route = "campaign";
-
-                    await _messageFactory.CreatePublisher(Topics.BIDDING).TryPublish(msg);
-                }
-            }
-        }
-
 
         /// <summary>
         /// Handle the call asynchronously
@@ -88,9 +49,13 @@ namespace Lucent.Common.Middleware
         /// <returns></returns>
         public async Task InvokeAsync(HttpContext httpContext)
         {
+            _logger.LogInformation("Reading request");
             var request = await _serializationContext.ReadAs<BudgetRequest>(httpContext);
+
             if (request != null)
             {
+                _logger.LogInformation("Request : {0}", request.CorrelationId);
+                
                 // Validate
                 var evt = new EntityEvent
                 {

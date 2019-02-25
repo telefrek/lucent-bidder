@@ -52,16 +52,48 @@ namespace Lucent.Common.Bidding
         public async Task TestCleanup()
         {
             if (campaign != null)
-                await _orchestrationClient.DeleteAsync("/api/campaigns/{0}".FormatWith(campaign.Id));
+            {
+                var resp = await _orchestrationClient.GetAsync("/api/campaigns/{0}".FormatWith(campaign.Id));
+                if (resp.StatusCode != HttpStatusCode.NotFound)
+                {
+                    var msg = new HttpRequestMessage(HttpMethod.Delete, "/api/campaigns/{0}".FormatWith(campaign.Id));
+                    msg.Headers.Add("X-LUCENT-ETAG", resp.Headers.GetValues("X-LUCENT-ETAG").Single());
+                    await _orchestrationClient.SendAsync(msg);
+                }
+            }
 
             if (creative != null)
-                await _orchestrationClient.DeleteAsync("/api/creatives/{0}".FormatWith(creative.Id));
+            {
+                var resp = await _orchestrationClient.GetAsync("/api/creatives/{0}".FormatWith(creative.Id));
+                if (resp.StatusCode != HttpStatusCode.NotFound)
+                {
+                    var msg = new HttpRequestMessage(HttpMethod.Delete, "/api/creatives/{0}".FormatWith(creative.Id));
+                    msg.Headers.Add("X-LUCENT-ETAG", resp.Headers.GetValues("X-LUCENT-ETAG").Single());
+                    await _orchestrationClient.SendAsync(msg);
+                }
+            }
 
             if (exchangeId != null)
-                await _orchestrationClient.DeleteAsync("/api/exchanges/{0}".FormatWith(exchangeId));
+            {
+                var resp = await _orchestrationClient.GetAsync("/api/exchanges/{0}".FormatWith(exchangeId));
+                if (resp.StatusCode != HttpStatusCode.NotFound)
+                {
+                    var msg = new HttpRequestMessage(HttpMethod.Delete, "/api/exchanges/{0}".FormatWith(exchangeId));
+                    msg.Headers.Add("X-LUCENT-ETAG", resp.Headers.GetValues("X-LUCENT-ETAG").Single());
+                    await _orchestrationClient.SendAsync(msg);
+                }
+            }
 
             if (bidderFilter != null)
-                await _orchestrationClient.DeleteAsync("/api/filters/{0}".FormatWith(bidderFilter.Id));
+            {
+                var resp = await _orchestrationClient.GetAsync("/api/filters/{0}".FormatWith(bidderFilter.Id));
+                if (resp.StatusCode != HttpStatusCode.NotFound)
+                {
+                    var msg = new HttpRequestMessage(HttpMethod.Delete, "/api/filters/{0}".FormatWith(bidderFilter.Id));
+                    msg.Headers.Add("X-LUCENT-ETAG", resp.Headers.GetValues("X-LUCENT-ETAG").Single());
+                    await _orchestrationClient.SendAsync(msg);
+                }
+            }
         }
 
         [TestInitialize]
@@ -110,9 +142,11 @@ namespace Lucent.Common.Bidding
             // Add the exchange
             await SetupExchange(exchangeId, _orchestrationClient, _orchestrationHost.Provider);
 
+            await Task.Delay(5000);
             resp = await MakeBid(_biddingClient, bid, serializationContext, exchangeId);
             Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
 
+            await Task.Delay(5000);
             resp = await MakeBid(_biddingClient, bid, serializationContext, exchangeId);
             Assert.AreEqual(HttpStatusCode.OK, resp.StatusCode);
 
@@ -134,13 +168,6 @@ namespace Lucent.Common.Bidding
             // send a loss notification
             resp = await AdvanceBid(_biddingClient, serializationContext, bidResponse.Bids.First().Bids.First(), true);
             Assert.AreEqual(HttpStatusCode.OK, resp.StatusCode);
-        }
-
-        [TestMethod]
-        public async Task TestRemoteBid()
-        {
-            // lol..sure
-            await TestSuccessfulBid();
         }
 
         async Task<HttpResponseMessage> MakeBid(HttpClient biddingClient, BidRequest bid, ISerializationContext serializationContext, Guid exchangeId)
@@ -261,12 +288,16 @@ namespace Lucent.Common.Bidding
             var context = serviceProvider.GetRequiredService<ISerializationContext>();
             var resp = await orchestrationClient.PostJsonAsync(context, campaign, "/api/campaigns");
             Assert.AreEqual(HttpStatusCode.Created, resp.StatusCode);
+            var tags = (IEnumerable<string>)null;
+            var etag = "";
+            if (resp.Headers.TryGetValues("X-LUCENT-ETAG", out tags))
+                etag = tags.FirstOrDefault() ?? "";
 
             creative = await SetupCreative(orchestrationClient, serviceProvider);
             await SetupContents(creative, orchestrationClient, serviceProvider);
             campaign.CreativeIds = new String[] { creative.Id };
 
-            resp = await orchestrationClient.PutJsonAsync(context, campaign, "/api/campaigns/{0}".FormatWith(campaign.Id));
+            resp = await orchestrationClient.PutJsonAsync(context, campaign, "/api/campaigns/{0}".FormatWith(campaign.Id), etag);
             Assert.AreEqual(HttpStatusCode.Accepted, resp.StatusCode);
 
             return campaign;

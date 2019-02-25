@@ -1,4 +1,4 @@
-FROM microsoft/dotnet:latest
+FROM microsoft/dotnet:2.2-sdk
 WORKDIR /opt/ffmpeg
 RUN apt-get update && \
   apt-get -y --no-install-recommends install \
@@ -95,7 +95,7 @@ RUN apt-get update && \
   zlib1g-dev && \
   rm -rf /var/lib/apt/lists/*
 
-FROM microsoft/dotnet:latest
+FROM microsoft/dotnet:2.2-sdk
 RUN mkdir -p /opt/ffmpeg/bin && mkdir -p /opt/ffmpeg/build
 COPY --from=0 /opt/ffmpeg/bin/ /opt/ffmpeg/bin/
 COPY --from=0 /opt/ffmpeg/build/ /opt/ffmpeg/build/

@@ -16,7 +16,7 @@ namespace Lucent.Common.Budget
     /// </summary>
     public class BidLedger : CassandraBaseRepository, IBidLedger
     {
-        static readonly string _tableName = "ledgers";
+        static readonly string _tableName = "ledger";
 
         PreparedStatement _getStatement;
         PreparedStatement _insertStatement;
@@ -35,8 +35,17 @@ namespace Lucent.Common.Budget
         }
 
         /// <inheritdoc/>
-        public override async Task CreateTableAsync() => await ExecuteAsync("CREATE TABLE IF NOT EXISTS {0} (id text, ledgerDate timeuuid, format text, updated timestamp, contents blob, PRIMARY KEY(id, ledgerDate) ) WITH CLUSTERING ORDER BY (ledgerDate DESC) AND {'compaction_window_size': '7', 'compaction_window_unit': 'DAYS', 'class': 'org.apache.cassandra.db.compaction.TimeWindowCompactionStrategy'};".FormatWith(_tableName), "create_ledger");
+        public override async Task CreateTableAsync() => await ExecuteAsync("CREATE TABLE IF NOT EXISTS {0} (id text, ledgerDate timeuuid, format text, updated timestamp, contents blob, PRIMARY KEY(id, ledgerDate) ) WITH CLUSTERING ORDER BY (ledgerDate DESC) AND compaction={{'compaction_window_size': '7', 'compaction_window_unit': 'DAYS', 'class': 'org.apache.cassandra.db.compaction.TimeWindowCompactionStrategy'}};".FormatWith(_tableName), "create_ledger");
 
+
+        /// <inheritdoc/>
+        public override async Task Initialize(IServiceProvider serviceProvider)
+        {
+            _log.LogInformation("Initializing ledger queries");
+            await CreateTableAsync();
+            _getStatement = await PrepareAsync("SELECT id, ledgerDate, format, updated, contents FROM {0} WHERE id=?".FormatWith(_tableName));
+            _insertStatement = await PrepareAsync("INSERT INTO {0} (id, ledgerDate, format, updated, contents) VALUES (?, ?, ?, ?, ?) IF NOT EXISTS".FormatWith(_tableName));
+        }
 
         /// <inheritdoc/>
         public async Task<ICollection<BidEntry>> GetLedger(string ledgerId)
@@ -134,14 +143,6 @@ namespace Lucent.Common.Budget
             }
 
             return false;
-        }
-
-        /// <inheritdoc/>
-        public override async Task Initialize(IServiceProvider serviceProvider)
-        {
-
-            _getStatement = await PrepareAsync("SELECT ledgerDate, requestId, amount, format, updated, contents FROM {0} WHERE id=?".FormatWith(_tableName));
-            _insertStatement = await PrepareAsync("INSERT INTO {0} (id, ledgerDate, format, updated, contents) VALUES (?, ?, ?, ?, ?) IF NOT EXISTS".FormatWith(_tableName));
         }
     }
 }

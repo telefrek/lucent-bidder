@@ -196,11 +196,13 @@ namespace Lucent.Common.Storage
                         {
                             var contents = rowEnum.Current.GetValue<byte[]>("contents");
                             var format = Enum.Parse<SerializationFormat>(rowEnum.Current.GetValue<string>("format"));
+                            var etag = rowEnum.Current.GetValue<string>("etag");
 
                             using (var ms = new MemoryStream(contents))
                             {
                                 var obj = await _serializationContext.ReadFrom<T>(ms, false, format);
                                 await ReadExtraAsync<T>(rowEnum.Current, obj);
+                                obj.ETag = etag;
                                 instances.Add(obj);
                             }
                         }
@@ -213,11 +215,13 @@ namespace Lucent.Common.Storage
                 {
                     var contents = rowEnum.Current.GetValue<byte[]>("contents");
                     var format = Enum.Parse<SerializationFormat>(rowEnum.Current.GetValue<string>("format"));
+                    var etag = rowEnum.Current.GetValue<string>("etag");
 
                     using (var ms = new MemoryStream(contents))
                     {
                         var obj = await _serializationContext.ReadFrom<T>(ms, false, format);
                         await ReadExtraAsync<T>(rowEnum.Current, obj);
+                        obj.ETag = etag;
                         instances.Add(obj);
                     }
                 }

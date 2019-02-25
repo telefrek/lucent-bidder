@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Lucent.Common.Caching;
 using Lucent.Common.Messaging;
+using Microsoft.Extensions.Logging;
 
 namespace Lucent.Common.Budget
 {
@@ -15,17 +16,17 @@ namespace Lucent.Common.Budget
         HashSet<Guid> _requestCache = new HashSet<Guid>();
         IBudgetCache _budgetCache;
         IMessageSubscriber<BudgetEventMessage> _budgetSubscriber;
-        IBudgetClient _budgetClient;
+        ILogger _log;
 
         /// <summary>
         /// Useless
         /// </summary>
-        public SimpleBudgetManager(IMessageFactory messageFactory, IBudgetClient budgetClient, IBudgetCache budgetCache)
+        public SimpleBudgetManager(IMessageFactory messageFactory, IBudgetCache budgetCache, ILogger<SimpleBudgetManager> logger)
         {
             _budgetSubscriber = messageFactory.CreateSubscriber<BudgetEventMessage>(Topics.BUDGET, 0, messageFactory.WildcardFilter);
-            _budgetSubscriber.OnReceive = HandleBudgetRequests;
-            _budgetClient = budgetClient;
+            _budgetSubscriber.OnReceive += HandleBudgetRequests;
             _budgetCache = budgetCache;
+            _log = logger;
         }
 
         /// <summary>
@@ -35,20 +36,29 @@ namespace Lucent.Common.Budget
         /// <returns></returns>
         async Task HandleBudgetRequests(BudgetEventMessage budgetEvent)
         {
+            _log.LogInformation("Recieved budget event");
+
             // Only update our requests
             if (_requestCache.Remove(budgetEvent.Body.CorrelationId))
-                await _budgetCache.TryUpdateBudget(budgetEvent.Body.EntityId, budgetEvent.Body.Amount);
+            {
+                if (await _budgetCache.TryUpdateBudget(budgetEvent.Body.EntityId, budgetEvent.Body.Amount))
+                    _log.LogInformation("Added {0} to {1}", budgetEvent.Body.Amount, budgetEvent.Body.EntityId);
+                else
+                    _log.LogWarning("Failed to add {0} to {1}", budgetEvent.Body.Amount, budgetEvent.Body.EntityId);
+            }
+            else
+                _log.LogInformation("Request {0} not in cache", budgetEvent.Body.CorrelationId);
         }
 
         /// <inheritdoc/>
-        public async Task GetAdditional(string id) => await GetAdditional(1, id);
+        public async Task GetAdditional(string id, IBudgetClient client) => await GetAdditional(1, id, client);
 
         /// <inheritdoc/>
-        public async Task GetAdditional(double amount, string id)
+        public async Task GetAdditional(double amount, string id, IBudgetClient client)
         {
             var correlationId = SequentialGuid.NextGuid();
             _requestCache.Add(correlationId);
-            if (!await _budgetClient.RequestBudget(id, amount, correlationId))
+            if (!await client.RequestBudget(id, amount, correlationId))
                 _requestCache.Remove(correlationId);
         }
 

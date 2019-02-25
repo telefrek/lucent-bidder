@@ -6,6 +6,7 @@ using MediaToolkit;
 using MediaToolkit.Model;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using SixLabors.ImageSharp;
 
 namespace Lucent.Common.Media
 {
@@ -108,10 +109,11 @@ namespace Lucent.Common.Media
 
         bool TryLoadImage(CreativeContent content)
         {
+            var fInfo = new FileInfo(content.ContentLocation);
             try
             {
-                using (var fStream = new FileStream(content.ContentLocation, FileMode.Open, FileAccess.Read))
-                using (var img = new Bitmap(fStream))
+                using (var fStream = fInfo.Open(FileMode.Open))
+                using (var img = Image.Load(fStream))
                 {
                     _log.LogInformation("Loaded {0} : {1}x{2}", content.ContentLocation, img.Height, img.Width);
                     content.H = img.Height;
@@ -123,6 +125,7 @@ namespace Lucent.Common.Media
             catch (Exception e)
             {
                 _log.LogWarning(e, "Failed to load {0}", content.ContentLocation);
+                _log.LogWarning("File Info: {0} ({1})", fInfo.ToString(), fInfo.Length);
             }
 
             return false;

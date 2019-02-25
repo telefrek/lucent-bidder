@@ -13,7 +13,8 @@ service:
 
 ingress:
   enabled: false
-  annotations: {}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 1024m
   path: /
   hosts:
     - chart-example.local

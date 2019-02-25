@@ -5,7 +5,7 @@ metadata:
 binaryData: {}
 ---
 apiVersion: apps/v1beta2
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: {{ template "bidder.fullname" . }}
   labels:

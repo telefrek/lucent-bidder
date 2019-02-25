@@ -134,9 +134,14 @@ namespace Lucent.Common.Middleware
                             var t = new T();
                             t.Key.Parse(segments.Last());
                             entity = await _entityRepository.Get(t.Key);
-                            httpContext.Response.StatusCode = entity != null ? 200 : 404;
                             if (entity != null)
+                            {
+                                httpContext.Response.StatusCode = 200;
+                                httpContext.Response.Headers.Add("X-LUCENT-ETAG", entity.ETag);
                                 await _serializationContext.WriteTo(httpContext, entity);
+                            }
+                            else
+                                httpContext.Response.StatusCode = 404;
                         }
                         else
                         {
@@ -155,6 +160,7 @@ namespace Lucent.Common.Middleware
                                 httpContext.Response.StatusCode = 201;
                                 evt.EventType = EventType.EntityAdd;
                                 evt.EntityId = entity.Key.ToString();
+                                httpContext.Response.Headers.Add("X-LUCENT-ETAG", entity.ETag);
                                 await _serializationContext.WriteTo(httpContext, entity);
                             }
                             else
@@ -170,11 +176,13 @@ namespace Lucent.Common.Middleware
                         entity = await ReadEntity(httpContext);
                         if (entity != null)
                         {
+                            entity.ETag = httpContext.Request.Headers["X-LUCENT-ETAG"];
                             if (await _entityRepository.TryUpdate(entity))
                             {
                                 httpContext.Response.StatusCode = 202;
                                 evt.EntityId = entity.Key.ToString();
                                 evt.EventType = EventType.EntityUpdate;
+                                httpContext.Response.Headers.Add("X-LUCENT-ETAG", entity.ETag);
                                 await _serializationContext.WriteTo(httpContext, entity);
                             }
                             else
@@ -191,14 +199,21 @@ namespace Lucent.Common.Middleware
                             var t = new T();
                             t.Key.Parse(segments.Last());
                             entity = await _entityRepository.Get(t.Key);
-                            if (entity != null && await _entityRepository.TryRemove(entity))
+
+                            if (entity != null)
                             {
-                                evt.EntityId = entity.Key.ToString();
-                                evt.EventType = EventType.EntityDelete;
-                                httpContext.Response.StatusCode = 204;
+                                entity.ETag = httpContext.Request.Headers["X-LUCENT-ETAG"];
+                                if (await _entityRepository.TryRemove(entity))
+                                {
+                                    evt.EntityId = entity.Key.ToString();
+                                    evt.EventType = EventType.EntityDelete;
+                                    httpContext.Response.StatusCode = 204;
+                                }
+                                else
+                                    httpContext.Response.StatusCode = 404;
                             }
                             else
-                                httpContext.Response.StatusCode = 404;
+                                httpContext.Response.StatusCode = 400;
                         }
                         else
                             httpContext.Response.StatusCode = 400;

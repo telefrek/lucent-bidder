@@ -21,6 +21,18 @@ namespace Lucent.Common
     /// </summary>
     public static partial class LucentExtensions
     {
+
+        /// <summary>
+        /// Create an etag from the object
+        /// </summary>
+        /// <param name="serializationContext"></param>
+        /// <param name="entity"></param>
+        /// <param name="serializationFormat"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public static async Task<string> CalculateETag<T>(this ISerializationContext serializationContext, T entity, SerializationFormat serializationFormat) where T : new()
+            => (await serializationContext.AsBytes(entity, serializationFormat)).CalculateETag();
+
         /// <summary>
         /// Get a reader from the current context
         /// </summary>
@@ -104,10 +116,10 @@ namespace Lucent.Common
             }
         }
 
-         /// <summary>
+        /// <summary>
         /// 
         /// </summary>
-        public async static Task<HttpResponseMessage> PutJsonAsync<T>(this HttpClient httpClient, ISerializationContext serializationContext, T instance, string path) where T : class, new()
+        public async static Task<HttpResponseMessage> PutJsonAsync<T>(this HttpClient httpClient, ISerializationContext serializationContext, T instance, string path, string etag) where T : class, new()
         {
             using (var ms = new MemoryStream())
             {
@@ -117,6 +129,7 @@ namespace Lucent.Common
                 using (var content = new StreamContent(ms, 4092))
                 {
                     content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+                    content.Headers.Add("X-LUCENT-ETAG", etag);
                     return await httpClient.PutAsync(path, content);
                 }
             }

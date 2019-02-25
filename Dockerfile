@@ -1,7 +1,7 @@
 ########################
 # Build solution
 ########################
-FROM telefrek/lucent-builder:2.2.103 AS build-env
+FROM telefrek/lucent-builder:2.2 AS build-env
 WORKDIR /opt/lucent
 LABEL component=lucentbuild
 COPY . ./
@@ -12,35 +12,35 @@ RUN dotnet restore \
 ########################
 # Create runtime images
 ########################
-FROM telefrek/aspnet-core-ffmpeg:2.2.1
+FROM telefrek/aspnet-core-ffmpeg:2.2
 WORKDIR /opt/lucent
 LABEL component=portal
 COPY --from=build-env /opt/lucent/Portal/bin/Release/netcoreapp2.2/publish .
 RUN rm -rf appsettings*.json
 ENTRYPOINT ["dotnet", "Portal.dll"]
 
-FROM microsoft/dotnet:aspnetcore-runtime
+FROM telefrek/aspnet-core-ffmpeg:2.2
 WORKDIR /opt/lucent
 LABEL component=content
 COPY --from=build-env /opt/lucent/ContentServer/bin/Release/netcoreapp2.2/publish .
 RUN rm -rf appsettings*.json
 ENTRYPOINT ["dotnet", "ContentServer.dll"]
 
-FROM microsoft/dotnet:aspnetcore-runtime
+FROM telefrek/aspnet-core-ffmpeg:2.2
 WORKDIR /opt/lucent
 LABEL component=bidder
 COPY --from=build-env /opt/lucent/Bidder/bin/Release/netcoreapp2.2/publish .
 RUN rm -rf appsettings*.json
 ENTRYPOINT ["dotnet", "Bidder.dll"]
 
-FROM telefrek/aspnet-core-ffmpeg:2.2.1
+FROM telefrek/aspnet-core-ffmpeg:2.2
 WORKDIR /opt/lucent
 LABEL component=orchestrator
 COPY --from=build-env /opt/lucent/Orchestration/bin/Release/netcoreapp2.2/publish .
 RUN rm -rf appsettings*.json
 ENTRYPOINT ["dotnet", "Orchestration.dll"]
 
-FROM microsoft/dotnet:aspnetcore-runtime
+FROM telefrek/aspnet-core-ffmpeg:2.2
 WORKDIR /opt/lucent
 LABEL component=scoring
 COPY --from=build-env /opt/lucent/Scoring/bin/Release/netcoreapp2.2/publish .

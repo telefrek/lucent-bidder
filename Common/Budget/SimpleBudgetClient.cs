@@ -45,6 +45,8 @@ namespace Lucent.Common.Budget
         /// <returns></returns>
         public async Task<bool> RequestBudget(string entityId, double amount, Guid correlationId)
         {
+            _log.LogInformation("Requesting {0} for {1} ({2})", amount, entityId, correlationId);
+            
             var req = new BudgetRequest { EntityId = entityId, Amount = amount, CorrelationId = correlationId };
             using (var ms = new MemoryStream())
             {
@@ -55,7 +57,7 @@ namespace Lucent.Common.Budget
                 {
                     content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
                     var res = await _clientManager.OrchestrationClient.PostAsync("/api/budget/request", content);
-                    
+
                     if (res.StatusCode != HttpStatusCode.Accepted)
                         _log.LogWarning("Failed to retrieve budget for {0} : {1}", entityId, res.StatusCode);
 

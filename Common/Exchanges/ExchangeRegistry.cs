@@ -22,6 +22,7 @@ namespace Lucent.Common.Exchanges
         IMessageFactory _messageFactory;
         IStorageRepository<Exchange> _storageRepository;
         IMessageSubscriber<EntityEventMessage> _subscriber;
+        IServiceProvider _serviceProvider;
 
         object _syncLock = new object();
 
@@ -31,38 +32,46 @@ namespace Lucent.Common.Exchanges
         /// <param name="logger"></param>
         /// <param name="messageFactory"></param>
         /// <param name="storageManager"></param>
-        public ExchangeRegistry(ILogger<ExchangeRegistry> logger, IMessageFactory messageFactory, IStorageManager storageManager)
+        /// <param name="provider"></param>
+        public ExchangeRegistry(ILogger<ExchangeRegistry> logger, IMessageFactory messageFactory, IStorageManager storageManager, IServiceProvider provider)
         {
             _log = logger;
             _messageFactory = messageFactory;
             _storageRepository = storageManager.GetRepository<Exchange>();
             _subscriber = messageFactory.CreateSubscriber<EntityEventMessage>(Topics.BIDDING, 0, messageFactory.WildcardFilter);
+            _subscriber.OnReceive += WatchExchanges;
+            _serviceProvider = provider;
+        }
 
-            _subscriber.OnReceive = async (message) =>
+        async Task WatchExchanges(EntityEventMessage message)
+        {
+            _log.LogInformation("New message {0} ({1} {2})", message.MessageId ?? "none", message.Body.EventType, message.Body.EntityType);
+            var evt = message.Body;
+
+            if (evt.EntityType != EntityType.Exchange) return;
+
+            switch (evt.EventType)
             {
-                var evt = message.Body;
+                case EventType.EntityAdd:
+                case EventType.EntityUpdate:
+                    Guid id;
+                    if (!Guid.TryParse(evt.EntityId, out id)) return;
+                    var entity = await _storageRepository.Get(new GuidStorageKey(id));
+                    
+                    if(entity.Code != null)
+                        await entity.LoadExchange(_serviceProvider);
 
-                if (evt.EntityType != EntityType.Exchange) return;
-
-                switch (evt.EventType)
-                {
-                    case EventType.EntityAdd:
-                    case EventType.EntityUpdate:
-                        Guid id;
-                        if (!Guid.TryParse(evt.EntityId, out id)) return;
-                        var entity = await _storageRepository.Get(new GuidStorageKey(id));
-                        if (entity.Instance != null)
-                        {
-                            _log.LogInformation("Loaded exchange : {0}", entity.Id);
-                            _exchangeMap[evt.EntityId] = entity.Instance;
-                        }
-                        break;
-                    case EventType.EntityDelete:
-                        if (_exchangeMap.Remove(evt.EntityId))
-                            _log.LogInformation("Unloaded : {0}", evt.EntityId);
-                        break;
-                }
-            };
+                    if (entity.Instance != null)
+                    {
+                        _log.LogInformation("Loaded exchange : {0}", entity.Id);
+                        _exchangeMap[evt.EntityId] = entity.Instance;
+                    }
+                    break;
+                case EventType.EntityDelete:
+                    if (_exchangeMap.Remove(evt.EntityId))
+                        _log.LogInformation("Unloaded : {0}", evt.EntityId);
+                    break;
+            }
         }
 
         /// <inheritdoc/>

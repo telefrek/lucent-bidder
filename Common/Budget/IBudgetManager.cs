@@ -18,16 +18,18 @@ namespace Lucent.Common.Budget
         /// Get additional budget, unbounded
         /// </summary>
         /// <param name="id"></param>
+        /// <param name="client"></param>
         /// <returns></returns>
-        Task GetAdditional(string id);
+        Task GetAdditional(string id, IBudgetClient client);
 
         /// <summary>
         /// Get up to an additional amount
         /// </summary>
         /// <param name="amount"></param>
         /// <param name="id"></param>
+        /// <param name="client"></param>
         /// <returns></returns>
-        Task GetAdditional(double amount, string id);
+        Task GetAdditional(double amount, string id, IBudgetClient client);
 
         /// <summary>
         /// Check if the budget is exhausted
