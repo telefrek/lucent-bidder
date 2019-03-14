@@ -226,6 +226,7 @@ namespace Lucent.Common.Middleware
                 // Notify
                 if (evt.EventType != EventType.Unknown)
                 {
+                    _log.LogInformation("Publishing {0} to {1}", evt.EventType, evt.EntityId);
                     var msg = _messageFactory.CreateMessage<EntityEventMessage>();
                     msg.Body = evt;
                     msg.Route = typeof(T).Name.ToLowerInvariant();

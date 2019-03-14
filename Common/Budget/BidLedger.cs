@@ -44,7 +44,7 @@ namespace Lucent.Common.Budget
             _log.LogInformation("Initializing ledger queries");
             await CreateTableAsync();
             _getStatement = await PrepareAsync("SELECT id, ledgerDate, format, updated, contents FROM {0} WHERE id=?".FormatWith(_tableName));
-            _insertStatement = await PrepareAsync("INSERT INTO {0} (id, ledgerDate, format, updated, contents) VALUES (?, ?, ?, ?, ?) IF NOT EXISTS".FormatWith(_tableName));
+            _insertStatement = await PrepareAsync("INSERT INTO {0} (id, ledgerDate, format, updated, contents) VALUES (?, ?, ?, ?, ?)".FormatWith(_tableName));
         }
 
         /// <inheritdoc/>

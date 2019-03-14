@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Lucent.Common.Entities;
 using Lucent.Common.Filters;
@@ -42,7 +43,8 @@ namespace Lucent.Common.Test
 
     public class BidGenerator
     {
-        public static BidRequest GenerateBid()
+        static Random _rng = new Random();
+        public static BidRequest GenerateBid(double cpmMax = 2)
         {
             return new BidRequest
             {
@@ -57,7 +59,8 @@ namespace Lucent.Common.Test
                             H = 100,
                             W = 100,
                             MimeTypes = new string[]{"image/png"}
-                        }
+                        },
+                        BidFloor = _rng.NextDouble() * cpmMax,
                     }
                 },
                 User = new User

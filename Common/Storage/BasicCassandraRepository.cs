@@ -41,7 +41,7 @@ namespace Lucent.Common.Storage
         /// <returns></returns>
         public override async Task CreateTableAsync() =>
             // optimize this to happen once later
-            await ExecuteAsync("CREATE TABLE IF NOT EXISTS {0} (id text PRIMARY KEY, etag text, format text, updated timestamp, contents blob );".FormatWith(_tableName), "create_table_" + _tableName);
+            await ExecuteAsync("CREATE TABLE IF NOT EXISTS {0} (id text PRIMARY KEY, etag text, format text, updated timestamp, contents blob ) WITH caching = {{'keys': 'all', 'rows_per_partition': 'none'}};".FormatWith(_tableName), "create_table_" + _tableName);
 
         /// <inheritdoc/>
         public override async Task Initialize(IServiceProvider serviceProvider)

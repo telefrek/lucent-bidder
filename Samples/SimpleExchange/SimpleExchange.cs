@@ -45,10 +45,10 @@ namespace Lucent.Samples.SimpleExchange
         }
 
         /// <inheritdoc/>
-        public override async Task<BidResponse> Bid(BidRequest request, HttpContext httpContext, IBudgetClient client)
+        public override async Task<BidResponse> Bid(BidRequest request, HttpContext httpContext)
         {
 
-            if (await _bidManager.CanBid(ExchangeId.ToString(), client) && _bidManager.Bidders.Count > 0)
+            if (await _bidManager.CanBid(ExchangeId.ToString()) && _bidManager.Bidders.Count > 0)
             {
                 var resp = new BidResponse
                 {

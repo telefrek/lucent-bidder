@@ -23,9 +23,8 @@ namespace Lucent.Common.Exchanges
         /// </summary>
         /// <param name="request">The bid to process</param>
         /// <param name="httpContext"></param>
-        /// <param name="client"></param>
         /// <returns>A fully formed response</returns>
-        public abstract Task<BidResponse> Bid(BidRequest request, HttpContext httpContext, IBudgetClient client);
+        public abstract Task<BidResponse> Bid(BidRequest request, HttpContext httpContext);
 
         /// <summary>
         /// Gets the flag for suppressing the byte order marks during serialization

@@ -20,8 +20,7 @@ namespace Lucent.Common.Bidding
         /// Check to see if the exchange is available for bidding
         /// </summary>
         /// <param name="id"></param>
-        /// <param name="client"></param>
         /// <returns></returns>
-        Task<bool> CanBid(string id, IBudgetClient client);
+        Task<bool> CanBid(string id);
     }
 }

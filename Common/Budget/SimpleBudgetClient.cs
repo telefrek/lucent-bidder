@@ -28,7 +28,7 @@ namespace Lucent.Common.Budget
         /// <param name="config"></param>
         /// <param name="serializationContext"></param>
         /// <param name="clientManager"></param>
-        public SimpleBudgetClient(ILogger<SimpleBudgetClient> logger, IOptionsSnapshot<BudgetConfig> config, ISerializationContext serializationContext, IClientManager clientManager)
+        public SimpleBudgetClient(ILogger<SimpleBudgetClient> logger, IOptions<BudgetConfig> config, ISerializationContext serializationContext, IClientManager clientManager)
         {
             _log = logger;
             _config = config.Value;
@@ -44,9 +44,7 @@ namespace Lucent.Common.Budget
         /// <param name="correlationId"></param>
         /// <returns></returns>
         public async Task<bool> RequestBudget(string entityId, double amount, Guid correlationId)
-        {
-            _log.LogInformation("Requesting {0} for {1} ({2})", amount, entityId, correlationId);
-            
+        {            
             var req = new BudgetRequest { EntityId = entityId, Amount = amount, CorrelationId = correlationId };
             using (var ms = new MemoryStream())
             {

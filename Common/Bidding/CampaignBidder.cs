@@ -2,11 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Lucent.Common.Budget;
 using Lucent.Common.Entities;
+using Lucent.Common.Events;
 using Lucent.Common.Exchanges;
 using Lucent.Common.Middleware;
 using Lucent.Common.OpenRTB;
 using Lucent.Common.Scoring;
+using Lucent.Common.Storage;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
@@ -20,6 +23,7 @@ namespace Lucent.Common.Bidding
         Campaign _campaign;
         ILogger<CampaignBidder> _log;
         IScoringService _scoringService;
+        IBudgetManager _budgetManager;
 
         /// <summary>
         /// Default constructor
@@ -27,11 +31,15 @@ namespace Lucent.Common.Bidding
         /// <param name="c"></param>
         /// <param name="logger"></param>
         /// <param name="scoringService"></param>
-        public CampaignBidder(Campaign c, ILogger<CampaignBidder> logger, IScoringService scoringService)
+        /// <param name="budgetManager"></param>
+        /// <param name="watcher"></param>
+        /// <param name="storageManager"></param>
+        public CampaignBidder(Campaign c, ILogger<CampaignBidder> logger, IScoringService scoringService, IBudgetManager budgetManager, IEntityWatcher watcher, IStorageManager storageManager)
         {
             _campaign = c;
             _log = logger;
             _scoringService = scoringService;
+            _budgetManager = budgetManager;
         }
 
         /// <summary>
@@ -49,9 +57,19 @@ namespace Lucent.Common.Bidding
         /// <returns>The set of impressions that weren't filtered</returns>
         public async Task<BidContext[]> BidAsync(BidRequest request, HttpContext httpContext)
         {
-            // Apply campaign filters
+            // Apply campaign filters and check budget
             if (_campaign.IsFiltered(request))
+            {
+                _log.LogWarning("Campaign {0} filtered bid", _campaign.Id);
                 return NO_MATCHES;
+            }
+
+            if (await _budgetManager.IsExhausted(_campaign.Id))
+            {
+                _log.LogWarning("Campaign {0} has no budget", _campaign.Id);
+                await _budgetManager.GetAdditional(_campaign.Id);
+                return NO_MATCHES;
+            }
 
             var impList = new List<BidContext>();
             var allMatched = true;
@@ -61,7 +79,7 @@ namespace Lucent.Common.Bidding
             {
                 // Get the potential matches
                 var matches = _campaign.Creatives.SelectMany(c => c.Contents.Where(cc => !cc.Filter(imp))
-                    .Select(cc => 
+                    .Select(cc =>
                     {
                         var ctx = BidContext.Create(httpContext);
                         ctx.Request = request;
@@ -70,7 +88,8 @@ namespace Lucent.Common.Bidding
                         ctx.Creative = c;
                         ctx.Content = cc;
                         ctx.BidId = SequentialGuid.NextGuid();
-                        
+                        ctx.ExchangeId = ctx.Exchange.ExchangeId;
+
                         return ctx;
                     })).ToList();
 
@@ -92,7 +111,7 @@ namespace Lucent.Common.Bidding
                 Host = httpContext.Request.Host.Value,
             };
 
-            return impList.Select(bidContext =>
+            var ret = impList.Select(bidContext =>
             {
                 // TODO: This is a terrible cpm calculation lol
                 var cpm = score * Campaign.ConversionPrice;
@@ -123,6 +142,11 @@ namespace Lucent.Common.Bidding
                 }
                 return null;
             }).Where(b => b != null).ToArray();
+
+            if (ret.Length == 0)
+                _log.LogWarning("No matching creative for {0}", _campaign.Id);
+
+            return ret;
         }
     }
 }

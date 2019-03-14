@@ -53,7 +53,6 @@ namespace Lucent.Common.Bidding
             {
                 _log.LogInformation("Added bidder for campaign : {0}", campaign.Id);
                 Bidders.Add(_bidFactory.CreateBidder(FillCampaign(campaign).Result));
-
             }
         }
 
@@ -91,8 +90,9 @@ namespace Lucent.Common.Bidding
                             {
                                 case EventType.EntityAdd:
                                 case EventType.EntityUpdate:
+                                    _log.LogInformation("Updating bidder for campaign : {0}", id);
                                     var entity = await _storageManager.GetRepository<Campaign>().Get(new StringStorageKey(id));
-                                    Bidders.RemoveAll(b => b.Campaign.Key.Equals(id));
+                                    Bidders.RemoveAll(b => b.Campaign.Id.Equals(id));
                                     if (entity != null)
                                     {
                                         _log.LogInformation("Added bidder for campaign : {0}", id);
@@ -101,7 +101,7 @@ namespace Lucent.Common.Bidding
                                     break;
                                 case EventType.EntityDelete:
                                     _log.LogInformation("Removing bidder for campaign : {0}", id);
-                                    Bidders.RemoveAll(b => b.Campaign.Key.Equals(id));
+                                    Bidders.RemoveAll(b => b.Campaign.Id.Equals(id));
                                     break;
                             }
                             break;
@@ -115,11 +115,11 @@ namespace Lucent.Common.Bidding
         }
 
         /// <inheritdoc/>
-        public async Task<bool> CanBid(string id, IBudgetClient client)
+        public async Task<bool> CanBid(string id)
         {
-            if (_budgetManager.IsExhausted(id))
+            if (await _budgetManager.IsExhausted(id))
             {
-                await _budgetManager.GetAdditional(id, client);
+                await _budgetManager.GetAdditional(id);
                 return false;
             }
 

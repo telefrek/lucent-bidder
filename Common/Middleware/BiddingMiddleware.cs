@@ -43,6 +43,11 @@ namespace Lucent.Common.Middleware
             Buckets = new double[] { 0.001, 0.002, 0.005, 0.007, 0.01, 0.015 },
         });
 
+        Counter _noBidReason = Metrics.CreateCounter("no_bid_reasons", "Reasons the bidder didn't bid", new CounterConfiguration
+        {
+            LabelNames = new string[] { "reason" }
+        });
+
         /// <summary>
         /// Default constructor
         /// </summary>
@@ -80,52 +85,66 @@ namespace Lucent.Common.Middleware
         /// Handle the request asynchronously
         /// </summary>
         /// <param name="httpContext">The current http context</param>
-        /// <param name="client"></param>
         /// <returns>A completed pipeline step</returns>
-        public async Task InvokeAsync(HttpContext httpContext, IBudgetClient client)
+        public async Task InvokeAsync(HttpContext httpContext)
         {
             try
             {
                 var request = await _serializationContext.ReadAs<BidRequest>(httpContext);
 
-                if (request != null && !_bidFilters.Any(f => f.Invoke(request)))
+                if (request == null)
+                {
+                    _noBidReason.WithLabels("deserialization_failure").Inc();
+                    httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+                }
+                else if (!_bidFilters.Any(f => f.Invoke(request)))
                 {
                     // Validate we can find a matching exchange
                     var exchange = _exchangeRegistry.GetExchange(httpContext);
                     if (exchange == null)
                     {
+                        _noBidReason.WithLabels("no_exchange").Inc();
                         httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
                         return;
                     }
 
                     httpContext.Items.Add("exchange", exchange);
-                    var response = await exchange.Bid(request, httpContext, client);
+                    var response = await exchange.Bid(request, httpContext);
 
-                    if (response != null && (response.Bids ?? new SeatBid[0]).Length > 0)
+                    if (response != null)
                     {
-                        foreach (var seat in response.Bids)
-                            foreach (var bid in seat.Bids)
-                                try
-                                {
+                        response.Bids = response.Bids ?? new SeatBid[0];
+                        if (response.Bids.Length > 0)
+                        {
+                            foreach (var seat in response.Bids)
+                                foreach (var bid in seat.Bids)
                                     await _bidCache.TryStore(bid, bid.Id, TimeSpan.FromMinutes(5));
-                                }
-                                catch
-                                {
 
-                                }
-
-                        httpContext.Response.StatusCode = StatusCodes.Status200OK;
-                        await _serializationContext.WriteTo(httpContext, response);
+                            httpContext.Response.StatusCode = StatusCodes.Status200OK;
+                            await _serializationContext.WriteTo(httpContext, response);
+                        }
+                        else
+                        {
+                            httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
+                            _noBidReason.WithLabels("no_campaign_bids").Inc();
+                        }
                     }
                     else
+                    {
+                        _noBidReason.WithLabels("no_response").Inc();
                         httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
+                    }
                 }
                 else
-                    httpContext.Response.StatusCode = request == null ? StatusCodes.Status400BadRequest : StatusCodes.Status204NoContent;
+                {
+                    _noBidReason.WithLabels("bid_filtered").Inc();
+                    httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
+                }
             }
             catch (Exception e)
             {
                 _log.LogError(e, "Failed to bid");
+                _noBidReason.WithLabels("exception").Inc();
                 httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
             }
         }

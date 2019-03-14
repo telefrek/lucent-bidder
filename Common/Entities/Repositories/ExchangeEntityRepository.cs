@@ -57,7 +57,7 @@ namespace Lucent.Common.Entities.Repositories
         /// <inheritdoc/>
         public override async Task CreateTableAsync() =>
             // optimize this to happen once later
-            await ExecuteAsync("CREATE TABLE IF NOT EXISTS {0} (id uuid, etag text, format text, updated timestamp, contents blob, code blob, PRIMARY KEY(id) );".FormatWith(_tableName), "create_table_" + _tableName);
+            await ExecuteAsync("CREATE TABLE IF NOT EXISTS {0} (id uuid, etag text, format text, updated timestamp, contents blob, code blob, PRIMARY KEY(id) ) WITH caching = {{'keys': 'all', 'rows_per_partition': 'none'}};".FormatWith(_tableName), "create_table_" + _tableName);
 
         /// <inheritdoc/>
         public async Task<Exchange> Get(StorageKey id)

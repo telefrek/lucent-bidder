@@ -41,6 +41,7 @@ namespace Lucent.Common.Exchanges
             _subscriber = messageFactory.CreateSubscriber<EntityEventMessage>(Topics.BIDDING, 0, messageFactory.WildcardFilter);
             _subscriber.OnReceive += WatchExchanges;
             _serviceProvider = provider;
+            Task.Run(Initialize);
         }
 
         async Task WatchExchanges(EntityEventMessage message)
@@ -57,14 +58,14 @@ namespace Lucent.Common.Exchanges
                     Guid id;
                     if (!Guid.TryParse(evt.EntityId, out id)) return;
                     var entity = await _storageRepository.Get(new GuidStorageKey(id));
-                    
-                    if(entity.Code != null)
+
+                    if (entity.Code != null)
                         await entity.LoadExchange(_serviceProvider);
 
                     if (entity.Instance != null)
                     {
                         _log.LogInformation("Loaded exchange : {0}", entity.Id);
-                        _exchangeMap[evt.EntityId] = entity.Instance;
+                        _exchangeMap[entity.Id.ToString()] = entity.Instance;
                     }
                     break;
                 case EventType.EntityDelete:
@@ -89,12 +90,15 @@ namespace Lucent.Common.Exchanges
         /// <inheritdoc/>
         public async Task Initialize()
         {
-            foreach (var exchange in await _storageRepository.GetAll())
+            var exchanges = await _storageRepository.GetAll();
+            foreach (var entity in exchanges)
             {
-                if (exchange.Instance != null)
+                if (entity.Code != null)
+                    await entity.LoadExchange(_serviceProvider);
+                if (entity.Instance != null)
                 {
-                    _log.LogInformation("Loaded exchange : {0}", exchange.Id);
-                    _exchangeMap[exchange.Id.ToString()] = exchange.Instance;
+                    _log.LogInformation("Loaded exchange : {0}", entity.Id);
+                    _exchangeMap[entity.Id.ToString()] = entity.Instance;
                 }
             }
         }

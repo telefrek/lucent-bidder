@@ -14,6 +14,12 @@ using Lucent.Common.Client;
 using Microsoft.Extensions.Caching.Memory;
 using Lucent.Common.Caching;
 using Lucent.Common.Scoring;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.ResponseCompression;
+using System.Linq;
+using Microsoft.AspNetCore.Http;
+using System.Collections.Generic;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace Lucent.Common
 {
@@ -38,6 +44,16 @@ namespace Lucent.Common
             // Enable routing
             services.AddRouting();
 
+            // Enable compression
+            services.AddResponseCompression(options =>
+            {
+                options.Providers.Add<BrotliCompressionProvider>();
+                options.Providers.Add<GzipCompressionProvider>();
+                options.MimeTypes =
+                    ResponseCompressionDefaults.MimeTypes.Concat(
+                        new[] { "application/json" });
+            });
+
             // Add serialization
             services.AddSingleton<ISerializationContext, LucentSerializationContext>();
             services.AddTransient<IClientManager, DefaultClientManager>();
@@ -53,7 +69,9 @@ namespace Lucent.Common
             else
             {
                 // TODO: Update this to use redis
-                services.AddDistributedMemoryCache().AddSingleton<IBudgetCache, BudgetCache>();
+                services.Configure<AerospikeConfig>(configuration.GetSection("aerospike"))
+                    .AddSingleton<IDistributedCache, AerospikeCache>()
+                    .AddSingleton<IBudgetCache, BudgetCache>();
 
                 // Setup storage
                 services.Configure<CassandraConfiguration>(configuration.GetSection("cassandra"))
@@ -78,6 +96,8 @@ namespace Lucent.Common
                 });
             }
 
+            services.AddSingleton<IEntityWatcher, EntityWatcher>();
+
             if (includePortal)
             {
                 services.Configure<MediaConfig>(configuration.GetSection("media"))
@@ -90,9 +110,9 @@ namespace Lucent.Common
                 services
                     .AddSingleton<IScoringService, RandomScoring>()
                     .Configure<BudgetConfig>(configuration.GetSection(Topics.BUDGET))
-                    .AddScoped<IBudgetClient, SimpleBudgetClient>()
+                    .AddSingleton<IBudgetClient, SimpleBudgetClient>()
                     .AddSingleton<IBudgetManager, SimpleBudgetManager>()
-                    .AddSingleton<IBiddingManager, BiddingManager>()
+                    .AddTransient<IBiddingManager, BiddingManager>()
                     .AddSingleton<IBidFactory, BidFactory>()
                     .AddSingleton<IExchangeRegistry, ExchangeRegistry>();
             }

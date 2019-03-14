@@ -90,8 +90,8 @@ namespace Lucent.Common.Middleware
                                 var acpm = cpm / 1000d;
                                 _log.LogInformation("Updating budgets for win {0} ({1})", cpm, acpm);
                                 var entry = new BidEntry { Bid = bid, RequestId = bidContext.RequestId, Cost = acpm };
-                                await _ledger.TryRecordEntry(bidContext.ExchangeId.ToString(), entry);
-                                await _ledger.TryRecordEntry(bidContext.CampaignId.ToString(), entry);
+                                //await _ledger.TryRecordEntry(bidContext.ExchangeId.ToString(), entry);
+                                //await _ledger.TryRecordEntry(bidContext.CampaignId.ToString(), entry);
                                 await _bidCache.TryUpdateBudget(bidContext.ExchangeId.ToString(), -acpm);
                                 await _bidCache.TryUpdateBudget(bidContext.CampaignId.ToString(), -acpm);
                             }

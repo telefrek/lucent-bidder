@@ -26,6 +26,7 @@ namespace Lucent.Common.Bootstrap
 
             // Add metrics ftw
             app.UseMetricServer();
+            app.UseResponseCompression();
             app.UseMiddleware<MonitoringMiddleware>();
             app.ConfigureHealth();
 
