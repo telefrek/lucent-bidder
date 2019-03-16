@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System.Threading.Tasks;
+using Prometheus;
 
 namespace Lucent.Common.Messaging
 {
@@ -22,6 +23,17 @@ namespace Lucent.Common.Messaging
         readonly string _queueName;
         readonly IMessageFactory _factory;
         readonly ILogger _log;
+
+
+        /// <summary>
+        /// Metric for tracking publish latencies
+        /// </summary>
+        /// <value></value>
+        static Histogram _processLatency = Metrics.CreateHistogram("message_processing_latency", "Latency for message processing", new HistogramConfiguration
+        {
+            LabelNames = new string[] { "topic" },
+            Buckets = new double[] { 0.001, 0.005, 0.010, 0.015, 0.020, 0.025, 0.050, 0.075, 0.100 },
+        });
 
         /// <summary>
         /// 
@@ -54,34 +66,37 @@ namespace Lucent.Common.Messaging
             _consumer = new AsyncEventingBasicConsumer(_channel);
             _consumer.Received += async (model, ea) =>
             {
-                if (OnReceive != null)
+                using (var latency = _processLatency.CreateContext(Topic))
                 {
-                    try
+                    if (OnReceive != null)
                     {
-                        // Build the message
-                        var msg = _factory.CreateMessage<T>();
-                        msg.Route = ea.RoutingKey;
-                        msg.Timestamp = ea.BasicProperties.Timestamp.UnixTime;
-                        msg.CorrelationId = ea.BasicProperties.CorrelationId;
-                        msg.Headers = new Dictionary<string, object>();
-                        foreach (var header in ea.BasicProperties.Headers ?? new Dictionary<string, object>())
+                        try
                         {
-                            if (header.Value.GetType() == typeof(byte[]))
-                                msg.Headers.Add(header.Key, Encoding.UTF8.GetString(header.Value as byte[]));
-                            else
-                                msg.Headers.Add(header);
+                            // Build the message
+                            var msg = _factory.CreateMessage<T>();
+                            msg.Route = ea.RoutingKey;
+                            msg.Timestamp = ea.BasicProperties.Timestamp.UnixTime;
+                            msg.CorrelationId = ea.BasicProperties.CorrelationId;
+                            msg.Headers = new Dictionary<string, object>();
+                            foreach (var header in ea.BasicProperties.Headers ?? new Dictionary<string, object>())
+                            {
+                                if (header.Value.GetType() == typeof(byte[]))
+                                    msg.Headers.Add(header.Key, Encoding.UTF8.GetString(header.Value as byte[]));
+                                else
+                                    msg.Headers.Add(header);
+                            }
+                            msg.FirstDelivery = !ea.Redelivered;
+                            msg.ContentType = ea.BasicProperties.ContentType;
+                            if (ea.Body != null)
+                                await msg.Load(ea.Body);
+                            await OnReceive.Invoke(msg);
+                            _channel.BasicAck(ea.DeliveryTag, false);
                         }
-                        msg.FirstDelivery = !ea.Redelivered;
-                        msg.ContentType = ea.BasicProperties.ContentType;
-                        if (ea.Body != null)
-                            await msg.Load(ea.Body);
-                        await OnReceive.Invoke(msg);
-                        _channel.BasicAck(ea.DeliveryTag, false);
-                    }
-                    catch (Exception e)
-                    {
-                        _log.LogError(e, "Failed to handle message receipt for topic: {0}", Topic);
-                        _channel.BasicReject(ea.DeliveryTag, true);
+                        catch (Exception e)
+                        {
+                            _log.LogError(e, "Failed to handle message receipt for topic: {0}", Topic);
+                            _channel.BasicReject(ea.DeliveryTag, true);
+                        }
                     }
                 }
             };

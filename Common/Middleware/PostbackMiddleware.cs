@@ -70,52 +70,46 @@ namespace Lucent.Common.Middleware
 
                 _log.LogInformation("Bid : {0} ({1})", bidContext.BidId, bidContext.Operation);
 
-                var bid = await _bidCache.TryRetrieve<Bid>(bidContext.BidId.ToString());
-                if (bid != null)
+                switch (bidContext.Operation)
                 {
-                    switch (bidContext.Operation)
-                    {
-                        case BidOperation.Clicked:
-                            // Start the rest of the tracking async
-                            break;
-                        case BidOperation.Loss:
-                            context.Response.StatusCode = StatusCodes.Status200OK;
-                            break;
-                        case BidOperation.Win:
-                            var cpm = 0d;
-                            if (TryGetCPM(context, out cpm))
-                            {
-                                // Update the exchange and campaign amounts
-                                // TODO: handle errors
-                                var acpm = cpm / 1000d;
-                                _log.LogInformation("Updating budgets for win {0} ({1})", cpm, acpm);
-                                var entry = new BidEntry { Bid = bid, RequestId = bidContext.RequestId, Cost = acpm };
-                                //await _ledger.TryRecordEntry(bidContext.ExchangeId.ToString(), entry);
-                                //await _ledger.TryRecordEntry(bidContext.CampaignId.ToString(), entry);
-                                await _bidCache.TryUpdateBudget(bidContext.ExchangeId.ToString(), -acpm);
-                                await _bidCache.TryUpdateBudget(bidContext.CampaignId.ToString(), -acpm);
-                            }
-                            else
-                            {
-                                _log.LogWarning("No pricing on {0}", context.Request.QueryString);
-                            }
+                    case BidOperation.Clicked:
+                        // Start the rest of the tracking async
+                        break;
+                    case BidOperation.Loss:
+                        context.Response.StatusCode = StatusCodes.Status200OK;
+                        break;
+                    case BidOperation.Win:
+                        var cpm = 0d;
+                        if (TryGetCPM(context, out cpm))
+                        {
+                            // Update the exchange and campaign amounts
+                            // TODO: handle errors
+                            var acpm = cpm / 1000d;
+                            _log.LogInformation("Updating budgets for win {0} ({1})", cpm, acpm);
+                            var entry = new BidEntry { BidContext = bidContext.ToString(), RequestId = bidContext.RequestId, Cost = acpm };
+                            //await _ledger.TryRecordEntry(bidContext.ExchangeId.ToString(), entry);
+                            //await _ledger.TryRecordEntry(bidContext.CampaignId.ToString(), entry);
+                            await _bidCache.TryUpdateBudget(bidContext.ExchangeId.ToString(), -acpm);
+                            await _bidCache.TryUpdateBudget(bidContext.CampaignId.ToString(), -acpm);
+                        }
+                        else
+                        {
+                            _log.LogWarning("No pricing on {0}", context.Request.QueryString);
+                        }
 
-                            context.Response.StatusCode = StatusCodes.Status200OK;
-                            break;
-                        case BidOperation.Impression:
-                            await Task.Delay(10);
-                            context.Response.StatusCode = StatusCodes.Status200OK;
-                            break;
-                        case BidOperation.Action:
-                            context.Response.StatusCode = StatusCodes.Status200OK;
-                            break;
-                        default:
-                            context.Response.StatusCode = StatusCodes.Status404NotFound;
-                            break;
-                    }
+                        context.Response.StatusCode = StatusCodes.Status200OK;
+                        break;
+                    case BidOperation.Impression:
+                        await Task.Delay(10);
+                        context.Response.StatusCode = StatusCodes.Status200OK;
+                        break;
+                    case BidOperation.Action:
+                        context.Response.StatusCode = StatusCodes.Status200OK;
+                        break;
+                    default:
+                        context.Response.StatusCode = StatusCodes.Status404NotFound;
+                        break;
                 }
-                else
-                    context.Response.StatusCode = StatusCodes.Status404NotFound;
             }
             catch (Exception e)
             {

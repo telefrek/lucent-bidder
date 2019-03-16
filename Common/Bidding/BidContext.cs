@@ -186,7 +186,7 @@ namespace Lucent.Common.Bidding
                     protoWriter.Write(CPM);
                     protoWriter.Write(BidDate.ToFileTimeUtc());
                     protoWriter.Write((int)Operation);
-                    protoWriter.Write(Request.Id);
+                    protoWriter.Write(RequestId);
                     protoWriter.Flush();
                 }
 

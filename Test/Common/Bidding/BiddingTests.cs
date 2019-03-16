@@ -123,6 +123,8 @@ namespace Lucent.Common.Bidding
         //[TestMethod]
         public async Task TestMultipleBids()
         {
+            _orchestrationClient = new HttpClient { BaseAddress = new Uri("https://orchestration.lucentbid.com") };
+            _biddingClient = new HttpClient { BaseAddress = new Uri("https://west.lucentbid.com") };
             await SetupBidderFilters(_orchestrationClient, _orchestrationHost.Provider);
 
             campaign = await SetupCampaign(_orchestrationClient, _orchestrationHost.Provider);
@@ -147,7 +149,7 @@ namespace Lucent.Common.Bidding
                 tasks.Add(Task.Factory.StartNew(async () =>
                 {
                     var serializationContext = _biddingHost.Provider.GetRequiredService<ISerializationContext>();
-                    for (var n = 0; n < 5; ++n)
+                    for (var n = 0; n < 5000; ++n)
                     {
                         try
                         {
@@ -157,7 +159,7 @@ namespace Lucent.Common.Bidding
                             if (resp.StatusCode == HttpStatusCode.OK)
                             {
                                 Interlocked.Increment(ref bidCnt);
-                                if (rng.NextDouble() < .2)
+                                if (rng.NextDouble() < .01)
                                 {
                                     var br = await VerifyBidResponse(resp, serializationContext, campaign);
                                     if (br != null)

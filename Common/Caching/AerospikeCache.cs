@@ -40,7 +40,15 @@ namespace Lucent.Common.Caching
         /// </summary>
         public AerospikeCache()
         {
-            _client = new AsyncClient("aspk-cache.lucent.svc", 3000);
+            var policy = new AsyncClientPolicy
+            {
+                asyncMaxCommands = 256,
+            };
+
+            _client = new AsyncClient(policy, "aspk-cache.lucent.svc", 3000);
+            // swap
+            //_client.Operate(new WritePolicy {}, default(CancellationToken), new Key("", "", ""), Operation.Add(1), Operation.get());
+
             _readPolicy = new Policy
             {
             };

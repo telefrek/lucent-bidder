@@ -116,9 +116,9 @@ namespace Lucent.Common.Middleware
                         response.Bids = response.Bids ?? new SeatBid[0];
                         if (response.Bids.Length > 0)
                         {
-                            foreach (var seat in response.Bids)
-                                foreach (var bid in seat.Bids)
-                                    await _bidCache.TryStore(bid, bid.Id, TimeSpan.FromMinutes(5));
+                            // foreach (var seat in response.Bids)
+                            //     foreach (var bid in seat.Bids)
+                            //         await _bidCache.TryStore(bid, bid.Id, TimeSpan.FromMinutes(5));
 
                             httpContext.Response.StatusCode = StatusCodes.Status200OK;
                             await _serializationContext.WriteTo(httpContext, response);

@@ -89,6 +89,8 @@ namespace Lucent.Common.Bidding
                         ctx.Content = cc;
                         ctx.BidId = SequentialGuid.NextGuid();
                         ctx.ExchangeId = ctx.Exchange.ExchangeId;
+                        ctx.RequestId = request.Id;
+                        ctx.CampaignId = Guid.Parse(Campaign.Id);
 
                         return ctx;
                     })).ToList();

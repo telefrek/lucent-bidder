@@ -18,6 +18,7 @@ namespace Lucent.Common.Caching
         ISerializationContext _serializationContext;
         IDistributedCache _cache;
         object _budgetSync = new object();
+        MemoryCache _memcache = new MemoryCache(new MemoryCacheOptions { ExpirationScanFrequency = TimeSpan.FromSeconds(1), SizeLimit = 1024 * 1024 * 64 });
 
 
         /// <summary>
@@ -51,8 +52,17 @@ namespace Lucent.Common.Caching
         /// <inheritdoc/>
         public async Task<double> GetBudget(string key)
         {
-            var res = await _cache.GetAsync(key) ?? BitConverter.GetBytes(BitConverter.DoubleToInt64Bits(0d));
-            return BitConverter.Int64BitsToDouble(BitConverter.ToInt64(res, 0));
+            var res = (byte[])_memcache.Get(key);
+            if (res == null)
+            {
+                using (var context = _cacheLatency.CreateContext("get"))
+                {
+                    res = await _cache.GetAsync(key);
+                }
+                if (res != null)
+                    _memcache.Set(key, res, new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(1), Size = res.Length });
+            }
+            return BitConverter.Int64BitsToDouble(BitConverter.ToInt64(res ?? BitConverter.GetBytes(BitConverter.DoubleToInt64Bits(0d)), 0));
         }
 
         /// <inheritdoc/>
@@ -62,16 +72,22 @@ namespace Lucent.Common.Caching
             {
                 await _cache.RemoveAsync(key);
             }
+            _memcache.Remove(key);
             return true;
         }
 
         /// <inheritdoc/>
         public async Task<T> TryRetrieve<T>(string key) where T : class, new()
         {
-            var bytes = (byte[])null;
-            using (var context = _cacheLatency.CreateContext("get"))
+            var bytes = (byte[])_memcache.Get(key);
+            if (bytes == null)
             {
-                bytes = await _cache.GetAsync(key);
+                using (var context = _cacheLatency.CreateContext("get"))
+                {
+                    bytes = await _cache.GetAsync(key);
+                }
+                if (bytes != null)
+                    _memcache.Set(key, bytes, new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(1), Size = bytes.Length });
             }
             return bytes != null ? await _serializationContext.ReadFrom<T>(new MemoryStream((byte[])bytes), false, SerializationFormat.PROTOBUF) : default(T);
         }
@@ -110,7 +126,7 @@ namespace Lucent.Common.Caching
         /// <inheritdoc/>
         public async Task<bool> TryUpdateBudget(string key, double value)
         {
-            var current = BitConverter.Int64BitsToDouble(BitConverter.ToInt64(await _cache.GetAsync(key) ?? BitConverter.GetBytes(BitConverter.DoubleToInt64Bits(0d))));
+            var current = await GetBudget(key);
 
             current += value;
 

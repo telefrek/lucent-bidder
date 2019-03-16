@@ -12,8 +12,8 @@ namespace Lucent.Common.Budget
         /// The bid
         /// </summary>
         /// <value></value>
-        [SerializationProperty(1, "bid")]
-        public Bid Bid { get; set; }
+        [SerializationProperty(1, "bidContext")]
+        public string BidContext { get; set; }
 
         /// <summary>
         /// The request
