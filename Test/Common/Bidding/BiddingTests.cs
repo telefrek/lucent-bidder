@@ -123,8 +123,6 @@ namespace Lucent.Common.Bidding
         //[TestMethod]
         public async Task TestMultipleBids()
         {
-            _orchestrationClient = new HttpClient { BaseAddress = new Uri("https://orchestration.lucentbid.com") };
-            _biddingClient = new HttpClient { BaseAddress = new Uri("https://west.lucentbid.com") };
             await SetupBidderFilters(_orchestrationClient, _orchestrationHost.Provider);
 
             campaign = await SetupCampaign(_orchestrationClient, _orchestrationHost.Provider);
