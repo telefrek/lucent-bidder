@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Lucent.Common;
+using Lucent.Common.Bidding;
 using Lucent.Common.Budget;
 using Lucent.Common.Caching;
 using Lucent.Common.Entities;
@@ -78,6 +79,7 @@ namespace Lucent.Common.Middleware
                     case "post":
 
                         // Add a dollar if they've been good...
+                        BidCounters.BudgetRequests.WithLabels("recieved").Inc();
                         double? entry = (double?)_memcache.Get(request.EntityId);
                         _logger.LogInformation("Budget for {0} : {1}", request.EntityId, entry ?? 0d);
                         if (entry == null)
@@ -86,6 +88,7 @@ namespace Lucent.Common.Middleware
                             entry = await _budgetCache.TryUpdateBudget(request.EntityId, 1.0);
                             if (entry != double.NaN)
                             {
+                                BidCounters.BudgetRequests.WithLabels("create").Inc();
                                 _logger.LogInformation("Budget for {0} : {1}", request.EntityId, entry ?? 0d);
                                 msg.Body = new BudgetEvent { EntityId = request.EntityId, Exhausted = entry <= 0 };
                                 await _budgetPublisher.TryPublish(msg);
@@ -98,6 +101,7 @@ namespace Lucent.Common.Middleware
                         }
                         else if (entry < 5)
                         {
+                            BidCounters.BudgetRequests.WithLabels("update").Inc();
                             var msg = _messageFactory.CreateMessage<BudgetEventMessage>();
                             entry = await _budgetCache.TryUpdateBudget(request.EntityId, 1.0);
                             if (entry != double.NaN)
@@ -112,7 +116,13 @@ namespace Lucent.Common.Middleware
                                 _logger.LogWarning("Failed to update budget for {0}", request.EntityId);
                         }
                         else
+                        {
+                            BidCounters.BudgetRequests.WithLabels("reject").Inc();
                             _logger.LogInformation("Budget rate exceeded for {0}", request.EntityId);
+                            var msg = _messageFactory.CreateMessage<BudgetEventMessage>();
+                            msg.Body = new BudgetEvent { EntityId = request.EntityId, Exhausted = entry <= 0 };
+                            await _budgetPublisher.TryPublish(msg);
+                        }
 
                         httpContext.Response.StatusCode = 202;
                         break;
