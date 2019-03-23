@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Lucent.Common.Caching;
 using Lucent.Common.Messaging;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
 namespace Lucent.Common.Budget
@@ -13,10 +14,10 @@ namespace Lucent.Common.Budget
     /// </summary>
     public class SimpleBudgetManager : IBudgetManager
     {
+        static readonly MemoryCache _memcache = new MemoryCache(new MemoryCacheOptions { ExpirationScanFrequency = TimeSpan.FromSeconds(15) });
+
         HashSet<string> _entities = new HashSet<string>();
         HashSet<Guid> _ids = new HashSet<Guid>();
-
-        IBudgetCache _budgetCache;
         IMessageSubscriber<BudgetEventMessage> _budgetSubscriber;
         ILogger _log;
         IBudgetClient _budgetClient;
@@ -25,14 +26,12 @@ namespace Lucent.Common.Budget
         /// Default constructor
         /// </summary>
         /// <param name="messageFactory"></param>
-        /// <param name="budgetCache"></param>
         /// <param name="logger"></param>
         /// <param name="client"></param>
-        public SimpleBudgetManager(IMessageFactory messageFactory, IBudgetCache budgetCache, ILogger<SimpleBudgetManager> logger, IBudgetClient client)
+        public SimpleBudgetManager(IMessageFactory messageFactory, ILogger<SimpleBudgetManager> logger, IBudgetClient client)
         {
             _budgetSubscriber = messageFactory.CreateSubscriber<BudgetEventMessage>(Topics.BUDGET, 0, messageFactory.WildcardFilter);
             _budgetSubscriber.OnReceive += HandleBudgetRequests;
-            _budgetCache = budgetCache;
             _log = logger;
             _budgetClient = client;
         }
@@ -48,16 +47,7 @@ namespace Lucent.Common.Budget
             var evt = budgetEvent.Body;
             try
             {
-                // Only update our requests
-                if (_ids.Remove(evt.CorrelationId))
-                {
-                    if (await _budgetCache.TryUpdateBudget(budgetEvent.Body.EntityId, budgetEvent.Body.Amount))
-                        _log.LogInformation("Added {0} to {1}", budgetEvent.Body.Amount, budgetEvent.Body.EntityId);
-                    else
-                        _log.LogWarning("Failed to add {0} to {1}", budgetEvent.Body.Amount, budgetEvent.Body.EntityId);
-
-                    _entities.Remove(evt.EntityId);
-                }
+                await OnStatusChanged(evt);
             }
             catch (Exception e)
             {
@@ -66,38 +56,18 @@ namespace Lucent.Common.Budget
         }
 
         /// <inheritdoc/>
-        public async Task GetAdditional(string id) => await GetAdditional(1, id);
+        public Func<BudgetEvent, Task> OnStatusChanged { get; set; }
 
         /// <inheritdoc/>
-        public async Task GetAdditional(double amount, string id)
+        public async Task RequestAdditional(string entityId)
         {
-            var correlationId = SequentialGuid.NextGuid();
+            if (_memcache.Get(entityId) != null)
+                return;
 
-            if (_entities.Add(id))
-            {
-                // Double check available here
-                if (await GetRemaining(id) <= 0)
-                {
-                    _log.LogInformation("Requesting {0} for {1} ({2})", amount, id, correlationId);
-                    _ids.Add(correlationId);
-                    if (!await _budgetClient.RequestBudget(id, amount, correlationId))
-                    {
-                        _ids.Remove(correlationId);
-                        _entities.Remove(id);
-                    }
-                }
-                else
-                    _entities.Remove(id);
-            }
+            if (await _budgetClient.RequestBudget(entityId))
+                // only request additional every minute
+                _memcache.Set(entityId, new object(), new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60) });
+
         }
-
-        /// <inheritdoc/>
-        public async Task<double> GetRemaining(string id) => await _budgetCache.GetBudget(id);
-
-        /// <inheritdoc/>
-        public async Task<bool> IsExhausted(string id) => await GetRemaining(id) <= 0;
-
-        /// <inheritdoc/>
-        public async Task<bool> TrySpend(double amount, string id) => await _budgetCache.TryUpdateBudget(id, amount);
     }
 }

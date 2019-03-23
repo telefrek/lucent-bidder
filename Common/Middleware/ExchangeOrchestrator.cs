@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Lucent.Common;
+using Lucent.Common.Caching;
 using Lucent.Common.Entities;
 using Lucent.Common.Entities.Events;
 using Lucent.Common.Events;
@@ -23,7 +24,8 @@ namespace Lucent.Common.Middleware
     public class ExchangeOrchestrator : EntityRestApi<Exchange>
     {
         /// <inheritdoc/>
-        public ExchangeOrchestrator(RequestDelegate next, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<EntityRestApi<Exchange>> logger) : base(next, storageManager, messageFactory, serializationContext, logger)
+        public ExchangeOrchestrator(RequestDelegate next, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<EntityRestApi<Exchange>> logger, IBudgetCache budgetCache)
+            : base(next, storageManager, messageFactory, serializationContext, logger, budgetCache)
         {
         }
 

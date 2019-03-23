@@ -27,12 +27,11 @@ namespace Lucent.Samples.SimpleExchange
         MarkupGenerator _markup = new MarkupGenerator();
 
         /// <inheritdoc/>
-        public override Task Initialize(IServiceProvider provider)
+        public override async Task Initialize(IServiceProvider provider)
         {
             _log = provider.GetRequiredService<ILogger<SimpleExchange>>();
             _bidManager = provider.GetRequiredService<IBiddingManager>();
-
-            return Task.CompletedTask;
+            await _bidManager.Initialize(this);
         }
 
         public Bid ExtractBid(BidContext bidContext)
@@ -48,7 +47,7 @@ namespace Lucent.Samples.SimpleExchange
         public override async Task<BidResponse> Bid(BidRequest request, HttpContext httpContext)
         {
 
-            if (_bidManager.Bidders.Count > 0 && await _bidManager.CanBid(ExchangeId.ToString()))
+            if (_bidManager.Bidders.Count > 0 && await _bidManager.CanBid())
             {
                 var resp = new BidResponse
                 {

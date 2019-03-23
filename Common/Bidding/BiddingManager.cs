@@ -5,6 +5,7 @@ using Lucent.Common.Budget;
 using Lucent.Common.Entities;
 using Lucent.Common.Entities.Events;
 using Lucent.Common.Events;
+using Lucent.Common.Exchanges;
 using Lucent.Common.Messaging;
 using Lucent.Common.Serialization;
 using Lucent.Common.Storage;
@@ -24,6 +25,8 @@ namespace Lucent.Common.Bidding
         IBidFactory _bidFactory;
         IMessageSubscriber<EntityEventMessage> _entityEvents;
         IBudgetManager _budgetManager;
+        string _exchangeId;
+        bool _isBudgetExhausted = false;
 
         IStorageRepository<Campaign> _campaignRepo;
         IStorageRepository<Creative> _creativeRepo;
@@ -48,6 +51,15 @@ namespace Lucent.Common.Bidding
             _entityEvents.OnReceive = HandleMessage;
             _creativeRepo = storageManager.GetRepository<Creative>();
             _budgetManager = budgetManager;
+            _budgetManager.OnStatusChanged = (e) =>
+            {
+                if (e.EntityId == _exchangeId)
+                {
+                    _isBudgetExhausted = e.Exhausted;
+                }
+
+                return Task.CompletedTask;
+            };
 
             foreach (var campaign in _storageManager.GetRepository<Campaign>().GetAll().Result)
             {
@@ -115,11 +127,18 @@ namespace Lucent.Common.Bidding
         }
 
         /// <inheritdoc/>
-        public async Task<bool> CanBid(string id)
+        public Task Initialize(AdExchange exchange)
         {
-            if (await _budgetManager.IsExhausted(id))
+            _exchangeId = exchange.ExchangeId.ToString();
+            return Task.CompletedTask;
+        }
+
+        /// <inheritdoc/>
+        public async Task<bool> CanBid()
+        {
+            if (_isBudgetExhausted)
             {
-                await _budgetManager.GetAdditional(id);
+                await _budgetManager.RequestAdditional(_exchangeId);
                 return false;
             }
 

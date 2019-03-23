@@ -16,8 +16,9 @@ namespace Lucent.Common.Caching
     {
         ILogger _log;
         ISerializationContext _serializationContext;
-        IDistributedCache _cache;
+        IAerospikeCache _cache;
         object _budgetSync = new object();
+        bool localOnly;
         MemoryCache _memcache = new MemoryCache(new MemoryCacheOptions { ExpirationScanFrequency = TimeSpan.FromSeconds(1), SizeLimit = 1024 * 1024 * 64 });
 
 
@@ -42,105 +43,31 @@ namespace Lucent.Common.Caching
         /// <param name="logger"></param>
         /// <param name="serializationContext"></param>
         /// <param name="cache"></param>
-        public BudgetCache(ILogger<BudgetCache> logger, ISerializationContext serializationContext, IDistributedCache cache)
+        public BudgetCache(ILogger<BudgetCache> logger, ISerializationContext serializationContext, IAerospikeCache cache)
         {
             _log = logger;
             _serializationContext = serializationContext;
             _cache = cache;
+            localOnly = _cache == null;
         }
 
         /// <inheritdoc/>
-        public async Task<double> GetBudget(string key)
+        public async Task<double> TryUpdateBudget(string key, double value)
         {
-            var res = (byte[])_memcache.Get(key);
-            if (res == null)
-            {
-                using (var context = _cacheLatency.CreateContext("get"))
+            var res = 0d;
+
+            if (localOnly)
+                res = 1d;
+            else
+                using (var context = _cacheLatency.CreateContext("inc"))
                 {
-                    res = await _cache.GetAsync(key);
+                    res = await _cache.Inc(key, value, TimeSpan.FromHours(1));
                 }
-                if (res != null)
-                    _memcache.Set(key, res, new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(1), Size = res.Length });
-            }
-            return BitConverter.Int64BitsToDouble(BitConverter.ToInt64(res ?? BitConverter.GetBytes(BitConverter.DoubleToInt64Bits(0d)), 0));
-        }
 
-        /// <inheritdoc/>
-        public async Task<bool> TryRemove(string key)
-        {
-            using (var context = _cacheLatency.CreateContext("remove"))
-            {
-                await _cache.RemoveAsync(key);
-            }
-            _memcache.Remove(key);
-            return true;
-        }
+            if (res != double.NaN)
+                _budgetValue.WithLabels(key).Set(res);
 
-        /// <inheritdoc/>
-        public async Task<T> TryRetrieve<T>(string key) where T : class, new()
-        {
-            var bytes = (byte[])_memcache.Get(key);
-            if (bytes == null)
-            {
-                using (var context = _cacheLatency.CreateContext("get"))
-                {
-                    bytes = await _cache.GetAsync(key);
-                }
-                if (bytes != null)
-                    _memcache.Set(key, bytes, new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(1), Size = bytes.Length });
-            }
-            return bytes != null ? await _serializationContext.ReadFrom<T>(new MemoryStream((byte[])bytes), false, SerializationFormat.PROTOBUF) : default(T);
-        }
-
-        /// <inheritdoc/>
-        public async Task<bool> TryStore<T>(T instance, string key, TimeSpan expiration) where T : class, new()
-        {
-            var raw = await _serializationContext.AsBytes(instance, SerializationFormat.PROTOBUF);
-
-            using (var context = _cacheLatency.CreateContext("set"))
-            {
-                await _cache.SetAsync(key, raw, new DistributedCacheEntryOptions
-                {
-                    SlidingExpiration = expiration,
-                });
-            }
-
-            return true;
-        }
-
-        /// <inheritdoc/>
-        public async Task<bool> TryUpdate<T>(T instance, string key, TimeSpan expiration) where T : class, new()
-        {
-            var raw = await _serializationContext.AsBytes(instance, SerializationFormat.PROTOBUF);
-
-            using (var context = _cacheLatency.CreateContext("set"))
-            {
-                await _cache.SetAsync(key, raw, new DistributedCacheEntryOptions
-                {
-                    SlidingExpiration = expiration
-                });
-            }
-            return true;
-        }
-
-        /// <inheritdoc/>
-        public async Task<bool> TryUpdateBudget(string key, double value)
-        {
-            var current = await GetBudget(key);
-
-            current += value;
-
-            using (var context = _cacheLatency.CreateContext("set"))
-            {
-                await _cache.SetAsync(key, BitConverter.GetBytes(BitConverter.DoubleToInt64Bits(current)), new DistributedCacheEntryOptions
-                {
-                    SlidingExpiration = TimeSpan.FromDays(1),
-                });
-            }
-
-            _budgetValue.WithLabels(key).Set(current);
-
-            return true;
+            return res;
         }
     }
 }

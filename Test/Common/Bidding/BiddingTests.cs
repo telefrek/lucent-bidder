@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -120,77 +121,6 @@ namespace Lucent.Common.Bidding
             public HttpClient OrchestrationClient => _orchestrationClient;
         }
 
-        //[TestMethod]
-        public async Task TestMultipleBids()
-        {
-            await SetupBidderFilters(_orchestrationClient, _orchestrationHost.Provider);
-
-            campaign = await SetupCampaign(_orchestrationClient, _orchestrationHost.Provider);
-
-            // Add the exchange
-            exchangeId = SequentialGuid.NextGuid();
-            await SetupExchange(exchangeId, _orchestrationClient, _orchestrationHost.Provider);
-
-            await Task.Delay(5000);
-
-            var bidCnt = 0L;
-            var noBidCnt = 0L;
-            var bidWin = 0L;
-            var numThreads = 32;
-            var gate = new SemaphoreSlim(numThreads);
-            var rng = new Random();
-
-            var tasks = new List<Task>();
-
-            for (var i = 0; i < 64; ++i)
-            {
-                tasks.Add(Task.Factory.StartNew(async () =>
-                {
-                    var serializationContext = _biddingHost.Provider.GetRequiredService<ISerializationContext>();
-                    for (var n = 0; n < 5000; ++n)
-                    {
-                        try
-                        {
-
-                            var bid = BidGenerator.GenerateBid(0);
-                            var resp = await MakeBid(_biddingClient, bid, serializationContext, exchangeId);
-                            if (resp.StatusCode == HttpStatusCode.OK)
-                            {
-                                Interlocked.Increment(ref bidCnt);
-                                if (rng.NextDouble() < .01)
-                                {
-                                    var br = await VerifyBidResponse(resp, serializationContext, campaign);
-                                    if (br != null)
-                                    {
-                                        Interlocked.Increment(ref bidWin);
-                                        var b = br.Bids.First().Bids.First();
-                                        await AdvanceBid(_biddingClient, serializationContext, b, true, b.CPM * rng.NextDouble());
-                                    }
-                                }
-                            }
-                            else
-                                Interlocked.Increment(ref noBidCnt);
-                        }
-                        catch (Exception e)
-                        {
-                            TestContext.WriteLine("Error : {0}", e.ToString());
-                        }
-                    }
-                }).Unwrap());
-
-                // Delay adding new users
-                await Task.Delay(2000);
-            }
-
-            // Wait for the tasks to end
-            await Task.WhenAll(tasks);
-            TestContext.WriteLine("Bid   {0:#,##0} ({1:#,##0.00})", bidCnt, 1.0 * bidCnt / (bidCnt + noBidCnt));
-            TestContext.WriteLine("Wins  {0:#,##0} ({1:#,##0.00})", bidWin, 1.0 * bidWin / bidCnt);
-            TestContext.WriteLine("NoBid {0:#,##0} ({1:#,##0.00})", noBidCnt, 1.0 * noBidCnt / (bidCnt + noBidCnt));
-
-            Assert.IsTrue(bidCnt > 0, "Failed to make any bids");
-        }
-
         [TestMethod]
         public async Task TestSuccessfulBid()
         {
@@ -212,9 +142,6 @@ namespace Lucent.Common.Bidding
 
             // Add the exchange
             await SetupExchange(exchangeId, _orchestrationClient, _orchestrationHost.Provider);
-
-            resp = await MakeBid(_biddingClient, bid, serializationContext, exchangeId);
-            Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
 
             resp = await MakeBid(_biddingClient, bid, serializationContext, exchangeId);
             Assert.AreEqual(HttpStatusCode.OK, resp.StatusCode);
@@ -281,7 +208,7 @@ namespace Lucent.Common.Bidding
 
         async Task<HttpResponseMessage> AdvanceBid(HttpClient biddingClient, ISerializationContext serializationContext, Bid bid, bool win = true, double? amount = null)
         {
-            var uri = new Uri(win ? bid.WinUrl.UrlDecode().Replace("${AUCTION_PRICE}", (amount ?? (double)bid.CPM).ToString()) : bid.LossUrl);
+            var uri = new Uri(win ? bid.WinUrl.UrlDecode().Replace("${AUCTION_PRICE}", Math.Round(amount ?? (double)bid.CPM, 4).ToString()) : bid.LossUrl);
 
             return await biddingClient.PostAsync(uri.PathAndQuery, null);
         }

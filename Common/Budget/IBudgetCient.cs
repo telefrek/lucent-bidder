@@ -12,9 +12,7 @@ namespace Lucent.Common.Budget
         /// Register a budget request
         /// </summary>
         /// <param name="entityId"></param>
-        /// <param name="amount"></param>
-        /// <param name="correlationId"></param>
         /// <returns></returns>
-        Task<bool> RequestBudget(string entityId, double amount, Guid correlationId);
+        Task<bool> RequestBudget(string entityId);
     }
 }

@@ -61,7 +61,7 @@ namespace Lucent.Common
             // Setup storage, messaging options for local vs distributed cluster
             if (localOnly)
             {
-                services.AddDistributedMemoryCache().AddSingleton<IBudgetCache, BudgetCache>();
+                services.AddSingleton<IAerospikeCache>((ctx) => null).AddSingleton<IBudgetCache, BudgetCache>();
                 services.AddSingleton<IStorageManager, InMemoryStorage>();
                 services.AddSingleton<IMessageFactory, InMemoryMessageFactory>();
                 services.AddSingleton<IBidLedger, MemoryBudgetLedger>();
@@ -70,7 +70,7 @@ namespace Lucent.Common
             {
                 // TODO: Update this to use redis
                 services.Configure<AerospikeConfig>(configuration.GetSection("aerospike"))
-                    .AddSingleton<IDistributedCache, AerospikeCache>()
+                    .AddSingleton<IAerospikeCache, AerospikeCache>()
                     .AddSingleton<IBudgetCache, BudgetCache>();
 
                 // Setup storage

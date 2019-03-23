@@ -12,6 +12,7 @@ using Lucent.Common.Scoring;
 using Lucent.Common.Storage;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Prometheus;
 
 namespace Lucent.Common.Bidding
 {
@@ -21,9 +22,13 @@ namespace Lucent.Common.Bidding
     public class CampaignBidder : ICampaignBidder
     {
         Campaign _campaign;
+        string _campaignId;
+        bool _isBudgetExhausted;
+
         ILogger<CampaignBidder> _log;
         IScoringService _scoringService;
         IBudgetManager _budgetManager;
+
 
         /// <summary>
         /// Default constructor
@@ -40,6 +45,17 @@ namespace Lucent.Common.Bidding
             _log = logger;
             _scoringService = scoringService;
             _budgetManager = budgetManager;
+            _campaignId = c.Id;
+
+            _budgetManager.OnStatusChanged = (e) =>
+            {
+                _log.LogInformation("Budget change {0} ({1})", e.EntityId, e.Exhausted);
+
+                if (e.EntityId == _campaignId)
+                    _isBudgetExhausted = e.Exhausted;
+
+                return Task.CompletedTask;
+            };
         }
 
         /// <summary>
@@ -60,14 +76,14 @@ namespace Lucent.Common.Bidding
             // Apply campaign filters and check budget
             if (_campaign.IsFiltered(request))
             {
-                _log.LogWarning("Campaign {0} filtered bid", _campaign.Id);
+                BidCounters.NoBidReason.WithLabels("campaign_filtered").Inc();
                 return NO_MATCHES;
             }
 
-            if (await _budgetManager.IsExhausted(_campaign.Id))
+            if (_isBudgetExhausted)
             {
-                _log.LogWarning("Campaign {0} has no budget", _campaign.Id);
-                await _budgetManager.GetAdditional(_campaign.Id);
+                BidCounters.NoBidReason.WithLabels("no_campaign_budget").Inc();
+                await _budgetManager.RequestAdditional(_campaign.Id);
                 return NO_MATCHES;
             }
 
@@ -101,7 +117,10 @@ namespace Lucent.Common.Bidding
 
             // Ensure if sold as a bundle, we have all impressions, otherwise return matched or none
             if (request.AllImpressions && !allMatched)
+            {
+                BidCounters.NoBidReason.WithLabels("not_all_matched").Inc();
                 return NO_MATCHES;
+            }
 
             // Get a score for the campaign to the request
             var score = await _scoringService.Score(Campaign, request);
@@ -116,7 +135,7 @@ namespace Lucent.Common.Bidding
             var ret = impList.Select(bidContext =>
             {
                 // TODO: This is a terrible cpm calculation lol
-                var cpm = score * Campaign.ConversionPrice;
+                var cpm = Math.Round(Math.Max(0.5, score * Campaign.ConversionPrice), 4);
                 if (cpm >= bidContext.Impression.BidFloor)
                 {
                     bidContext.BaseUri = baseUri;
@@ -146,7 +165,7 @@ namespace Lucent.Common.Bidding
             }).Where(b => b != null).ToArray();
 
             if (ret.Length == 0)
-                _log.LogWarning("No matching creative for {0}", _campaign.Id);
+                BidCounters.NoBidReason.WithLabels("no_creative_match").Inc();
 
             return ret;
         }

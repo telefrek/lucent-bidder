@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Lucent.Common.Storage;
 
@@ -9,39 +10,16 @@ namespace Lucent.Common.Budget
     public interface IBudgetManager
     {
         /// <summary>
-        /// Get the remaining budget
+        /// Invocation for when budget events are recieved
         /// </summary>
-        /// <returns></returns>
-        Task<double> GetRemaining(string id);
+        /// <value></value>
+        Func<BudgetEvent, Task> OnStatusChanged { get; set; }
 
         /// <summary>
-        /// Get additional budget, unbounded
+        /// Request additional budget for the entity
         /// </summary>
-        /// <param name="id"></param>
+        /// <param name="entityId"></param>
         /// <returns></returns>
-        Task GetAdditional(string id);
-
-        /// <summary>
-        /// Get up to an additional amount
-        /// </summary>
-        /// <param name="amount"></param>
-        /// <param name="id"></param>
-        /// <returns></returns>
-        Task GetAdditional(double amount, string id);
-
-        /// <summary>
-        /// Check if the budget is exhausted
-        /// </summary>
-        /// <param name="id"></param>
-        /// <returns></returns>
-        Task<bool> IsExhausted(string id);
-
-        /// <summary>
-        /// Try to spend the amount
-        /// </summary>
-        /// <param name="amount"></param>
-        /// <param name="id"></param>
-        /// <returns></returns>
-        Task<bool> TrySpend(double amount, string id);
+        Task RequestAdditional(string entityId);
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using Lucent.Common.Entities;
 using Lucent.Common.Serialization;
 
 namespace Lucent.Common.Budget
@@ -9,24 +10,24 @@ namespace Lucent.Common.Budget
     public class BudgetEvent
     {
         /// <summary>
-        /// 
+        /// The id for the entity
         /// </summary>
         /// <value></value>
         [SerializationProperty(1, "id")]
         public string EntityId { get; set; }
 
         /// <summary>
-        /// 
+        /// The type of entity
         /// </summary>
         /// <value></value>
-        [SerializationProperty(2, "amt")]
-        public double Amount { get; set; }
+        [SerializationProperty(2, "eType")]
+        public EntityType EnttyType { get; set; }
 
         /// <summary>
-        /// Gets/Sets the correlationId
+        /// Flag to indicate if the entity budget is exhausted
         /// </summary>
         /// <value></value>
-        [SerializationProperty(3, "correlationId")]
-        public Guid CorrelationId { get; set; }
+        [SerializationProperty(3, "exhausted")]
+        public bool Exhausted { get; set; }
     }
 }

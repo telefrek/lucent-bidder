@@ -16,17 +16,10 @@ namespace Lucent.Common.Budget
         public string EntityId { get; set; }
 
         /// <summary>
-        /// 
-        /// </summary>
-        /// <value></value>
-        [SerializationProperty(2, "amt")]
-        public double Amount { get; set; } = 1;
-
-        /// <summary>
         /// Get/Set the correlation id
         /// </summary>
         /// <value></value>
-        [SerializationProperty(3, "correlationId")]
+        [SerializationProperty(2, "correlationId")]
         public Guid CorrelationId { get; set; }
     }
 }

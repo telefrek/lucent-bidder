@@ -13,6 +13,7 @@ using Lucent.Common.OpenRTB;
 using Lucent.Common.Serialization;
 using Lucent.Common.Storage;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 
@@ -24,10 +25,14 @@ namespace Lucent.Common.Middleware
     public class PostbackMiddleware
     {
         ILogger<PostbackMiddleware> _log;
+
+        static readonly MemoryCache _memcache = new MemoryCache(new MemoryCacheOptions { ExpirationScanFrequency = TimeSpan.FromSeconds(5) });
+
         ISerializationContext _serializationContext;
         IStorageManager _storageManager;
         IBudgetCache _bidCache;
         IBidLedger _ledger;
+        IMessageFactory _messageFactory;
 
         /// <summary>
         /// Default constructor
@@ -39,13 +44,15 @@ namespace Lucent.Common.Middleware
         /// <param name="storageManager"></param>
         /// <param name="bidderCache"></param>
         /// <param name="budgetLedger"></param>
-        public PostbackMiddleware(RequestDelegate next, ILogger<PostbackMiddleware> log, IMessageFactory factory, ISerializationContext serializationContext, IStorageManager storageManager, IBudgetCache bidderCache, IBidLedger budgetLedger)
+        /// <param name="messageFactory"></param>
+        public PostbackMiddleware(RequestDelegate next, ILogger<PostbackMiddleware> log, IMessageFactory factory, ISerializationContext serializationContext, IStorageManager storageManager, IBudgetCache bidderCache, IBidLedger budgetLedger, IMessageFactory messageFactory)
         {
             _log = log;
             _serializationContext = serializationContext;
             _storageManager = storageManager;
             _bidCache = bidderCache;
             _ledger = budgetLedger;
+            _messageFactory = messageFactory;
         }
 
         /// <summary>
@@ -89,8 +96,32 @@ namespace Lucent.Common.Middleware
                             var entry = new BidEntry { BidContext = bidContext.ToString(), RequestId = bidContext.RequestId, Cost = acpm };
                             //await _ledger.TryRecordEntry(bidContext.ExchangeId.ToString(), entry);
                             //await _ledger.TryRecordEntry(bidContext.CampaignId.ToString(), entry);
-                            await _bidCache.TryUpdateBudget(bidContext.ExchangeId.ToString(), -acpm);
-                            await _bidCache.TryUpdateBudget(bidContext.CampaignId.ToString(), -acpm);
+
+                            // Check for shutdown
+                            var exchangeId = bidContext.ExchangeId.ToString();
+                            var rem = await _bidCache.TryUpdateBudget(exchangeId, -acpm);
+
+                            if (rem <= 0 && _memcache.Get(exchangeId) == null)
+                            {
+                                var msg = _messageFactory.CreateMessage<BudgetEventMessage>();
+                                msg.Body = new BudgetEvent { EntityId = bidContext.CampaignId.ToString(), Exhausted = true };
+                                if (await _messageFactory.CreatePublisher(Topics.BUDGET).TryPublish(msg))
+                                    _memcache.Set(exchangeId, new object(), new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(15) });
+
+                            }
+
+                            var campaignId = bidContext.CampaignId.ToString();
+                            // Check for shutdown
+                            rem = await _bidCache.TryUpdateBudget(campaignId, -acpm);
+
+                            if (rem <= 0 && _memcache.Get(campaignId) == null)
+                            {
+                                var msg = _messageFactory.CreateMessage<BudgetEventMessage>();
+                                msg.Body = new BudgetEvent { EntityId = bidContext.CampaignId.ToString(), Exhausted = true };
+                                if (await _messageFactory.CreatePublisher(Topics.BUDGET).TryPublish(msg))
+                                    _memcache.Set(campaignId, new object(), new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(15) });
+
+                            }
                         }
                         else
                         {

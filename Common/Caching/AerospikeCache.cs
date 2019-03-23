@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Aerospike.Client;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Lucent.Common.Caching
@@ -26,36 +27,50 @@ namespace Lucent.Common.Caching
     }
 
     /// <summary>
+    /// Wrapper
+    /// </summary>
+    public interface IAerospikeCache
+    {
+        /// <summary>
+        /// Increment the key
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        /// <param name="expiration"></param>
+        /// <returns></returns>
+        Task<double> Inc(string key, double value, TimeSpan expiration);
+
+        /// <summary>
+        /// Get the value
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        Task<double> Get(string key);
+    }
+
+    /// <summary>
     /// Implementation of the distributed cache using Aerospike
     /// </summary>
-    public class AerospikeCache : IDistributedCache, IDisposable
+    public class AerospikeCache : IAerospikeCache
     {
         AerospikeConfig _config;
         AsyncClient _client;
         Policy _readPolicy;
         WritePolicy _writePolicy;
+        ILogger _log;
 
         /// <summary>
         /// Default Dependency Injection construcctor
         /// </summary>
-        public AerospikeCache()
+        public AerospikeCache(ILogger<AerospikeCache> logger)
         {
+            _log = logger;
             var policy = new AsyncClientPolicy
             {
-                asyncMaxCommands = 256,
+                asyncMaxCommands = 1024,
             };
 
             _client = new AsyncClient(policy, "aspk-cache.lucent.svc", 3000);
-            // swap
-            //_client.Operate(new WritePolicy {}, default(CancellationToken), new Key("", "", ""), Operation.Add(1), Operation.get());
-
-            _readPolicy = new Policy
-            {
-            };
-
-            _writePolicy = new WritePolicy
-            {
-            };
         }
 
         /// <inheritdoc/>
@@ -64,53 +79,39 @@ namespace Lucent.Common.Caching
         }
 
         /// <inheritdoc/>
-        public byte[] Get(string key)
+        public async Task<double> Inc(string key, double value, TimeSpan expiration)
         {
-            return GetAsync(key).Result;
+            try
+            {
+                var res = await _client.Operate(new WritePolicy { expiration = (int)expiration.TotalSeconds },
+                default(CancellationToken), new Key("lucent", "lucent", key),
+                    Operation.Add(new Bin("budget", (int)(value * 10000))), Operation.Get("budget"));
+                if (res != null)
+                    return res.GetInt("budget") / 10000d;
+            }
+            catch (Exception e)
+            {
+                _log.LogError(e, "Error during increment");
+            }
+
+            return double.NaN;
         }
 
         /// <inheritdoc/>
-        public async Task<byte[]> GetAsync(string key, CancellationToken token = default(CancellationToken))
+        public async Task<double> Get(string key)
         {
-            var record = await _client.Get(_readPolicy, token, new Key("lucent", "lucent", key));
-            return record == null ? null : record.GetValue("cache") as byte[];
-        }
+            try
+            {
+                var res = await _client.Get(new Policy { }, default(CancellationToken), new Key("lucent", "lucent", key));
+                if (res != null)
+                    return res.GetInt("budget") / 10000d;
+            }
+            catch (Exception e)
+            {
+                _log.LogError(e, "Error during increment");
+            }
 
-        /// <inheritdoc/>
-        public void Refresh(string key)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <inheritdoc/>
-        public Task RefreshAsync(string key, CancellationToken token = default(CancellationToken))
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <inheritdoc/>
-        public void Remove(string key)
-        {
-            RemoveAsync(key).Wait();
-        }
-
-        /// <inheritdoc/>
-        public async Task RemoveAsync(string key, CancellationToken token = default(CancellationToken))
-        {
-            await _client.Delete(_writePolicy, token, new Key("lucent", "lucent", key));
-        }
-
-        /// <inheritdoc/>
-        public void Set(string key, byte[] value, DistributedCacheEntryOptions options)
-        {
-            SetAsync(key, value, options).Wait();
-        }
-
-        /// <inheritdoc/>
-        public async Task SetAsync(string key, byte[] value, DistributedCacheEntryOptions options, CancellationToken token = default(CancellationToken))
-        {
-            var ttl = Math.Max(1, options.SlidingExpiration != null ? (int)options.SlidingExpiration.Value.TotalSeconds : 10);
-            await _client.Put(new WritePolicy { expiration = ttl, recordExistsAction = RecordExistsAction.REPLACE }, token, new Key("lucent", "lucent", key), new Bin("cache", value));
+            return double.NaN;
         }
     }
 }

@@ -23,7 +23,7 @@ namespace Lucent.Common.Middleware
         IMediaScanner _mediaScanner;
 
         /// <inheritdoc/>
-        public CreativeApi(RequestDelegate next, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<EntityRestApi<Creative>> logger, IMediaScanner mediaScanner) : base(next, storageManager, messageFactory, serializationContext, logger)
+        public CreativeApi(RequestDelegate next, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<EntityRestApi<Creative>> logger, IMediaScanner mediaScanner) : base(next, storageManager, messageFactory, serializationContext, logger, null)
         {
             _mediaScanner = mediaScanner;
         }

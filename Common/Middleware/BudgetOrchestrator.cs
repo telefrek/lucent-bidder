@@ -1,8 +1,11 @@
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Lucent.Common;
 using Lucent.Common.Budget;
+using Lucent.Common.Caching;
 using Lucent.Common.Entities;
 using Lucent.Common.Entities.Events;
 using Lucent.Common.Events;
@@ -10,6 +13,7 @@ using Lucent.Common.Messaging;
 using Lucent.Common.Serialization;
 using Lucent.Common.Storage;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
 namespace Lucent.Common.Middleware
@@ -24,6 +28,9 @@ namespace Lucent.Common.Middleware
         readonly ILogger<BudgetOrchestrator> _logger;
         readonly IStorageRepository<Campaign> _campaignRepository;
         readonly IMessageFactory _messageFactory;
+        static readonly MemoryCache _memcache = new MemoryCache(new MemoryCacheOptions { ExpirationScanFrequency = TimeSpan.FromSeconds(15) });
+        IBudgetCache _budgetCache;
+        readonly IMessagePublisher _budgetPublisher;
 
         /// <summary>
         /// Default constructor
@@ -33,13 +40,16 @@ namespace Lucent.Common.Middleware
         /// <param name="messageFactory"></param>
         /// <param name="serializationContext"></param>
         /// <param name="logger"></param>
-        public BudgetOrchestrator(RequestDelegate next, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<BudgetOrchestrator> logger)
+        /// <param name="budgetCache"></param>
+        public BudgetOrchestrator(RequestDelegate next, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<BudgetOrchestrator> logger, IBudgetCache budgetCache)
         {
             _storageManager = storageManager;
             _campaignRepository = storageManager.GetRepository<Campaign>();
             _serializationContext = serializationContext;
             _messageFactory = messageFactory;
             _logger = logger;
+            _budgetCache = budgetCache;
+            _budgetPublisher = _messageFactory.CreatePublisher(Topics.BUDGET);
         }
 
         /// <summary>
@@ -55,7 +65,7 @@ namespace Lucent.Common.Middleware
             if (request != null)
             {
                 _logger.LogInformation("Request : {0}", request.CorrelationId);
-                
+
                 // Validate
                 var evt = new EntityEvent
                 {
@@ -66,14 +76,45 @@ namespace Lucent.Common.Middleware
                 switch (httpContext.Request.Method.ToLowerInvariant())
                 {
                     case "post":
-                        // Add budget
-                        var bmsg = _messageFactory.CreateMessage<BudgetEventMessage>();
-                        bmsg.Body = new BudgetEvent { EntityId = request.EntityId, Amount = request.Amount, CorrelationId = request.CorrelationId };
-                        bmsg.Route = "event_test";
-                        if (await _messageFactory.CreatePublisher(Topics.BUDGET).TryPublish(bmsg))
-                            httpContext.Response.StatusCode = 202;
+
+                        // Add a dollar if they've been good...
+                        double? entry = (double?)_memcache.Get(request.EntityId);
+                        _logger.LogInformation("Budget for {0} : {1}", request.EntityId, entry ?? 0d);
+                        if (entry == null)
+                        {
+                            var msg = _messageFactory.CreateMessage<BudgetEventMessage>();
+                            entry = await _budgetCache.TryUpdateBudget(request.EntityId, 1.0);
+                            if (entry != double.NaN)
+                            {
+                                _logger.LogInformation("Budget for {0} : {1}", request.EntityId, entry ?? 0d);
+                                msg.Body = new BudgetEvent { EntityId = request.EntityId, Exhausted = entry <= 0 };
+                                await _budgetPublisher.TryPublish(msg);
+                                entry = 1d;
+                                _memcache.Set(request.EntityId, entry,
+                                    new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(300) });
+                            }
+                            else
+                                _logger.LogWarning("Failed to update budget for {0}", request.EntityId);
+                        }
+                        else if (entry < 5)
+                        {
+                            var msg = _messageFactory.CreateMessage<BudgetEventMessage>();
+                            entry = await _budgetCache.TryUpdateBudget(request.EntityId, 1.0);
+                            if (entry != double.NaN)
+                            {
+                                _logger.LogInformation("Budget for {0} : {1}", request.EntityId, entry ?? 0d);
+                                msg.Body = new BudgetEvent { EntityId = request.EntityId, Exhausted = entry <= 0 };
+                                await _budgetPublisher.TryPublish(msg);
+                                entry += 1;
+                                _memcache.Set(request.EntityId, entry);
+                            }
+                            else
+                                _logger.LogWarning("Failed to update budget for {0}", request.EntityId);
+                        }
                         else
-                            httpContext.Response.StatusCode = 500;
+                            _logger.LogInformation("Budget rate exceeded for {0}", request.EntityId);
+
+                        httpContext.Response.StatusCode = 202;
                         break;
                     case "get":
                     case "put":

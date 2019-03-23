@@ -40,12 +40,10 @@ namespace Lucent.Common.Budget
         /// 
         /// </summary>
         /// <param name="entityId"></param>
-        /// <param name="amount"></param>
-        /// <param name="correlationId"></param>
         /// <returns></returns>
-        public async Task<bool> RequestBudget(string entityId, double amount, Guid correlationId)
+        public async Task<bool> RequestBudget(string entityId)
         {            
-            var req = new BudgetRequest { EntityId = entityId, Amount = amount, CorrelationId = correlationId };
+            var req = new BudgetRequest { EntityId = entityId, CorrelationId = SequentialGuid.NextGuid() };
             using (var ms = new MemoryStream())
             {
                 await _serializationContext.WriteTo(req, ms, true, SerializationFormat.JSON);

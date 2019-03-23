@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Lucent.Common.Bidding;
 using Lucent.Common.Budget;
 using Lucent.Common.Caching;
 using Lucent.Common.Entities;
@@ -43,10 +44,6 @@ namespace Lucent.Common.Middleware
             Buckets = new double[] { 0.001, 0.002, 0.005, 0.007, 0.01, 0.015 },
         });
 
-        Counter _noBidReason = Metrics.CreateCounter("no_bid_reasons", "Reasons the bidder didn't bid", new CounterConfiguration
-        {
-            LabelNames = new string[] { "reason" }
-        });
 
         /// <summary>
         /// Default constructor
@@ -94,7 +91,7 @@ namespace Lucent.Common.Middleware
 
                 if (request == null)
                 {
-                    _noBidReason.WithLabels("deserialization_failure").Inc();
+                    BidCounters.NoBidReason.WithLabels("deserialization_failure").Inc();
                     httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
                 }
                 else if (!_bidFilters.Any(f => f.Invoke(request)))
@@ -103,7 +100,7 @@ namespace Lucent.Common.Middleware
                     var exchange = _exchangeRegistry.GetExchange(httpContext);
                     if (exchange == null)
                     {
-                        _noBidReason.WithLabels("no_exchange").Inc();
+                        BidCounters.NoBidReason.WithLabels("no_exchange").Inc();
                         httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
                         return;
                     }
@@ -126,25 +123,25 @@ namespace Lucent.Common.Middleware
                         else
                         {
                             httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
-                            _noBidReason.WithLabels("no_campaign_bids").Inc();
+                            BidCounters.NoBidReason.WithLabels("no_campaign_bids").Inc();
                         }
                     }
                     else
                     {
-                        _noBidReason.WithLabels("no_response").Inc();
+                        BidCounters.NoBidReason.WithLabels("no_response").Inc();
                         httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
                     }
                 }
                 else
                 {
-                    _noBidReason.WithLabels("bid_filtered").Inc();
+                    BidCounters.NoBidReason.WithLabels("bid_filtered").Inc();
                     httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
                 }
             }
             catch (Exception e)
             {
                 _log.LogError(e, "Failed to bid");
-                _noBidReason.WithLabels("exception").Inc();
+                BidCounters.NoBidReason.WithLabels("exception").Inc();
                 httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
             }
         }

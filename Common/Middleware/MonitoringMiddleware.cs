@@ -40,12 +40,16 @@ namespace Lucent.Common.Middleware
         /// <returns>A completed pipeline step</returns>
         public async Task InvokeAsync(HttpContext httpContext)
         {
-            var instance = _apiLatency.WithLabels(httpContext.Request.Method, string.Join('/', httpContext.Request.Path.Value.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries).Take(2).ToArray()));
-            var sw = Stopwatch.StartNew();
-            await _nextHandler(httpContext).ContinueWith(t =>
-            {
-                instance.Observe(sw.ElapsedTicks * 1d / Stopwatch.Frequency);
-            });
+            using (_apiLatency.CreateContext(httpContext.Request.Method, string.Join('/', httpContext.Request.Path.Value.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries).Take(2).ToArray())))
+                try
+                {
+                    await _nextHandler(httpContext);
+                }
+                catch (Exception ex)
+                {
+                    _log.LogError(ex, "Exception bled into monitoring!");
+                    httpContext.Response.StatusCode = httpContext.Request.Path.Value.Contains("/bidder") ? 204 : 503; // safe failure mode
+                }
         }
     }
 }

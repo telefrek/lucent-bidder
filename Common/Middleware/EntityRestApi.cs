@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Lucent.Common;
+using Lucent.Common.Caching;
 using Lucent.Common.Entities;
 using Lucent.Common.Entities.Events;
 using Lucent.Common.Events;
@@ -46,6 +47,8 @@ namespace Lucent.Common.Middleware
         /// </summary>
         protected readonly IMessageFactory _messageFactory;
 
+        IBudgetCache _budgetCache;
+
         /// <summary>
         /// Default constructor
         /// </summary>
@@ -54,13 +57,15 @@ namespace Lucent.Common.Middleware
         /// <param name="messageFactory"></param>
         /// <param name="serializationContext"></param>
         /// <param name="logger"></param>
-        public EntityRestApi(RequestDelegate next, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<EntityRestApi<T>> logger)
+        /// <param name="budgetCache"></param>
+        public EntityRestApi(RequestDelegate next, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<EntityRestApi<T>> logger, IBudgetCache budgetCache)
         {
             _storageManager = storageManager;
             _entityRepository = storageManager.GetRepository<T>();
             _serializationContext = serializationContext;
             _messageFactory = messageFactory;
             _log = logger;
+            _budgetCache = budgetCache;
 
             _messageFactory.CreateSubscriber<LucentMessage<T>>(Topics.ENTITIES, 0, _messageFactory.WildcardFilter).OnReceive += UpdateEntity;
         }
