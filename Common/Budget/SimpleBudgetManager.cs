@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Lucent.Common.Bidding;
 using Lucent.Common.Caching;
 using Lucent.Common.Messaging;
 using Microsoft.Extensions.Caching.Memory;
@@ -44,6 +45,7 @@ namespace Lucent.Common.Budget
         async Task HandleBudgetRequests(BudgetEventMessage budgetEvent)
         {
             _log.LogInformation("Recieved budget event");
+            BidCounters.BudgetRequests.WithLabels("response").Inc();
             var evt = budgetEvent.Body;
             try
             {
@@ -51,6 +53,7 @@ namespace Lucent.Common.Budget
             }
             catch (Exception e)
             {
+                BidCounters.BudgetRequests.WithLabels("error").Inc();
                 _log.LogError(e, "Failed to process message");
             }
         }
@@ -64,6 +67,8 @@ namespace Lucent.Common.Budget
             if (_memcache.Get(entityId) != null)
                 return;
 
+            _log.LogInformation("Requesting budget for {0}", entityId);
+            BidCounters.BudgetRequests.WithLabels("request").Inc();
             if (await _budgetClient.RequestBudget(entityId))
                 // only request additional every minute
                 _memcache.Set(entityId, new object(), new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60) });

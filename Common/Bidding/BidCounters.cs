@@ -16,5 +16,13 @@ namespace Lucent.Common.Bidding
             LabelNames = new string[] { "reason" }
         });
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
+        public static Counter BudgetRequests = Metrics.CreateCounter("budget_requests", "Request information for budgets", new CounterConfiguration
+        {
+            LabelNames = new string[] { "state" }
+        });
     }
 }
