@@ -1,6 +1,6 @@
 replicaCount: 1
 
-fullnameOverride: orchestration
+fullnameOverride: orchestrator
 
 image:
   repository: telefrek/lucent-orchestrator

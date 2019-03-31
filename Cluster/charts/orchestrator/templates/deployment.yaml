@@ -1,5 +1,5 @@
 apiVersion: apps/v1beta2
-kind: StatefulSet
+kind: Deployment
 metadata:
   name: {{ template "orchestrator.fullname" . }}
   labels:
