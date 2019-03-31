@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Lucent.Common.Bidding;
 using Lucent.Common.Caching;
@@ -22,6 +23,7 @@ namespace Lucent.Common.Budget
         IMessageSubscriber<BudgetEventMessage> _budgetSubscriber;
         ILogger _log;
         IBudgetClient _budgetClient;
+        readonly SemaphoreSlim _budgetSem = new SemaphoreSlim(1);
 
         /// <summary>
         /// Default constructor
@@ -31,7 +33,7 @@ namespace Lucent.Common.Budget
         /// <param name="client"></param>
         public SimpleBudgetManager(IMessageFactory messageFactory, ILogger<SimpleBudgetManager> logger, IBudgetClient client)
         {
-            _budgetSubscriber = messageFactory.CreateSubscriber<BudgetEventMessage>(Topics.BUDGET, 0, messageFactory.WildcardFilter);
+            _budgetSubscriber = messageFactory.CreateSubscriber<BudgetEventMessage>(Topics.BUDGET, messageFactory.WildcardFilter);
             _budgetSubscriber.OnReceive += HandleBudgetRequests;
             _log = logger;
             _budgetClient = client;
@@ -67,11 +69,24 @@ namespace Lucent.Common.Budget
             if (_memcache.Get(entityId) != null)
                 return;
 
-            _log.LogInformation("Requesting budget for {0}", entityId);
-            BidCounters.BudgetRequests.WithLabels("request").Inc();
-            if (await _budgetClient.RequestBudget(entityId))
-                // only request additional every minute
-                _memcache.Set(entityId, new object(), new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60) });
+            await _budgetSem.WaitAsync();
+            try
+            {
+                if (_memcache.Get(entityId) != null)
+                    return;
+                    
+                _log.LogInformation("Requesting budget for {0}", entityId);
+
+                _memcache.Set(entityId, new object(), new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(15) });
+
+                BidCounters.BudgetRequests.WithLabels("request").Inc();
+                if (!await _budgetClient.RequestBudget(entityId))
+                    _memcache.Remove(entityId);
+            }
+            finally
+            {
+                _budgetSem.Release();
+            }
 
         }
     }

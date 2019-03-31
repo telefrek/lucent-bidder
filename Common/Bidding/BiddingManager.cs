@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Lucent.Common.Budget;
+using Lucent.Common.Caching;
 using Lucent.Common.Entities;
 using Lucent.Common.Entities.Events;
 using Lucent.Common.Events;
@@ -30,6 +31,7 @@ namespace Lucent.Common.Bidding
 
         IStorageRepository<Campaign> _campaignRepo;
         IStorageRepository<Creative> _creativeRepo;
+        IBudgetCache _budgetCache;
 
         /// <summary>
         /// Default constructor
@@ -40,24 +42,27 @@ namespace Lucent.Common.Bidding
         /// <param name="messageFactory"></param>
         /// <param name="bidFactory"></param>
         /// <param name="budgetManager"></param>
-        public BiddingManager(ILogger<BiddingManager> logger, ISerializationContext serializationContext, IStorageManager storageManager, IMessageFactory messageFactory, IBidFactory bidFactory, IBudgetManager budgetManager)
+        /// <param name="budgetCache"></param>
+        public BiddingManager(ILogger<BiddingManager> logger, ISerializationContext serializationContext, IStorageManager storageManager, IMessageFactory messageFactory, IBidFactory bidFactory, IBudgetManager budgetManager, IBudgetCache budgetCache)
         {
             _log = logger;
             _serializationContext = serializationContext;
             _storageManager = storageManager;
             _messageFactory = messageFactory;
             _bidFactory = bidFactory;
-            _entityEvents = _messageFactory.CreateSubscriber<EntityEventMessage>(Topics.BIDDING, 0, _messageFactory.WildcardFilter);
+            _entityEvents = _messageFactory.CreateSubscriber<EntityEventMessage>(Topics.BIDDING, _messageFactory.WildcardFilter);
             _entityEvents.OnReceive = HandleMessage;
             _creativeRepo = storageManager.GetRepository<Creative>();
             _budgetManager = budgetManager;
+            _budgetCache = budgetCache;
+
             _budgetManager.OnStatusChanged = (e) =>
             {
-                if (e.EntityId == _exchangeId)
+                if (_exchangeId == e.EntityId)
                 {
-                    _isBudgetExhausted = e.Exhausted;
+                    _isBudgetExhausted = _budgetCache.TryGetBudget(_exchangeId).Result <= 0d;
+                    _log.LogInformation("Budget change for exchange : {0} ({1})", _exchangeId, _isBudgetExhausted);
                 }
-
                 return Task.CompletedTask;
             };
 

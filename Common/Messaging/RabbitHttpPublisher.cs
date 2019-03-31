@@ -54,52 +54,74 @@ namespace Lucent.Common.Messaging
         /// <inheritdoc/>
         public async Task<bool> TryBroadcast(IMessage message)
         {
-            var res = true;
-            foreach (var cluster in _factory.GetClusters())
-                res &= await _factory.CreatePublisher(cluster, Topic).TryPublish(message);
-            return res;
+            using (var ctx = MessageCounters.LatencyHistogram.CreateContext(Topic, "broadcast"))
+                try
+                {
+                    var res = true;
+                    foreach (var cluster in _factory.GetClusters())
+                        res &= await _factory.CreatePublisher(cluster, Topic).TryPublish(message);
+                    return res;
+                }
+                catch (Exception e)
+                {
+                    _log.LogWarning(e, "Failed to broadcast message on {0}", Topic);
+                    MessageCounters.ErrorCounter.WithLabels(Topic, e.GetType().Name).Inc();
+                }
+
+            return false;
         }
 
         /// <inheritdoc/>
         public async Task<bool> TryPublish(IMessage message)
         {
-            using (var ms = new MemoryStream())
-            {
-                if (message.ContentType != null)
-                    message.Headers.Add("Content-Type", message.ContentType);
-
-                var httpMessage = new RabbitHttpMessage
+            using (var ctx = MessageCounters.LatencyHistogram.CreateContext(Topic, "http_publish"))
+                try
                 {
-                    VHost = _cluster.VHost,
-                    Properties = new RabbitHttpMessageProperties
+                    using (var ms = new MemoryStream())
                     {
-                        ContentType = message.ContentType,
-                        Headers = new RabbitHttpHeaders
+                        if (message.ContentType != null)
+                            message.Headers.Add("Content-Type", message.ContentType);
+
+                        var httpMessage = new RabbitHttpMessage
                         {
-                            ContentType = message.ContentType,
-                        },
-                    },
-                    RoutingKey = message.Route,
-                    Payload = Convert.ToBase64String(await message.ToBytes()),
-                    Headers = new RabbitHttpHeaders
-                    {
-                        ContentType = message.ContentType,
-                    },
-                };
+                            VHost = _cluster.VHost,
+                            Properties = new RabbitHttpMessageProperties
+                            {
+                                ContentType = message.ContentType,
+                                Headers = new RabbitHttpHeaders
+                                {
+                                    ContentType = message.ContentType,
+                                },
+                            },
+                            RoutingKey = message.Route,
+                            Payload = Convert.ToBase64String(await message.ToBytes()),
+                            Headers = new RabbitHttpHeaders
+                            {
+                                ContentType = message.ContentType,
+                            },
+                        };
 
-                await _serializationContext.WriteTo(httpMessage, ms, true, SerializationFormat.JSON);
+                        await _serializationContext.WriteTo(httpMessage, ms, true, SerializationFormat.JSON);
 
-                var msg = Encoding.UTF8.GetString(ms.ToArray());
+                        var msg = Encoding.UTF8.GetString(ms.ToArray());
 
-                using (var req = new HttpRequestMessage(HttpMethod.Post, _publishEndpoint.ToString()))
-                {
-                    req.Content = new StringContent(msg, Encoding.UTF8, "application/json");
-                    req.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes("{0}:{1}".FormatWith(_cluster.User, _cluster.Credentials))));
-                    var response = await _client.SendAsync(req);
+                        using (var req = new HttpRequestMessage(HttpMethod.Post, _publishEndpoint.ToString()))
+                        {
+                            req.Content = new StringContent(msg, Encoding.UTF8, "application/json");
+                            req.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes("{0}:{1}".FormatWith(_cluster.User, _cluster.Credentials))));
+                            var response = await _client.SendAsync(req);
 
-                    return response.IsSuccessStatusCode;
+                            return response.IsSuccessStatusCode;
+                        }
+                    }
                 }
-            }
+                catch (Exception e)
+                {
+                    _log.LogWarning(e, "Failed to publish message on {0}", Topic);
+                    MessageCounters.ErrorCounter.WithLabels(Topic, e.GetType().Name).Inc();
+                }
+
+            return false;
         }
     }
 

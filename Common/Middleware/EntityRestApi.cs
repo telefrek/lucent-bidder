@@ -67,7 +67,7 @@ namespace Lucent.Common.Middleware
             _log = logger;
             _budgetCache = budgetCache;
 
-            _messageFactory.CreateSubscriber<LucentMessage<T>>(Topics.ENTITIES, 0, _messageFactory.WildcardFilter).OnReceive += UpdateEntity;
+            _messageFactory.CreateSubscriber<LucentMessage<T>>(Topics.ENTITIES, _messageFactory.WildcardFilter).OnReceive += UpdateEntity;
         }
 
         /// <summary>

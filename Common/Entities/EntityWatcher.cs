@@ -27,7 +27,7 @@ namespace Lucent.Common.Entities
             _log = logger;
             _messageFactory = messageFactory;
 
-            _messageSubscriber = messageFactory.CreateSubscriber<EntityEventMessage>(Topics.ENTITIES, 0, messageFactory.WildcardFilter);
+            _messageSubscriber = messageFactory.CreateSubscriber<EntityEventMessage>(Topics.ENTITIES, messageFactory.WildcardFilter);
             _messageSubscriber.OnReceive += OnMessageReceived;
         }
 

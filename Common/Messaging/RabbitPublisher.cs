@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using RabbitMQ.Client;
 using System.Threading.Tasks;
 using Prometheus;
+using Microsoft.Extensions.Logging;
+using System;
 
 namespace Lucent.Common.Messaging
 {
@@ -13,16 +15,7 @@ namespace Lucent.Common.Messaging
         readonly IConnection _conn;
         readonly IModel _channel;
         readonly IMessageFactory _factory;
-
-        /// <summary>
-        /// Metric for tracking publish latencies
-        /// </summary>
-        /// <value></value>
-        static Histogram _publishLatency = Metrics.CreateHistogram("message_publish_latency", "Latency for message publishing", new HistogramConfiguration
-        {
-            LabelNames = new string[] { "topic" },
-            Buckets = new double[] { 0.001, 0.005, 0.010, 0.015, 0.020, 0.025, 0.050, 0.075, 0.100 },
-        });
+        readonly ILogger _log;
 
         /// <inheritdoc/>
         public string Topic { get; set; }
@@ -31,12 +24,14 @@ namespace Lucent.Common.Messaging
         /// 
         /// </summary>
         /// <param name="factory"></param>
+        /// <param name="log"></param>
         /// <param name="conn"></param>
         /// <param name="topic"></param>
-        public RabbitPublisher(IMessageFactory factory, IConnection conn, string topic)
+        public RabbitPublisher(IMessageFactory factory, ILogger log, IConnection conn, string topic)
         {
             _conn = conn;
             _factory = factory;
+            _log = log;
             _channel = conn.CreateModel();
             _channel.ExchangeDeclare(topic, "topic");
             Topic = topic;
@@ -45,34 +40,53 @@ namespace Lucent.Common.Messaging
         /// <inheritdoc/>
         public async Task<bool> TryPublish(IMessage message)
         {
-            using (var latency = _publishLatency.CreateContext(Topic))
-            {
-                var props = _channel.CreateBasicProperties();
+            using (var ctx = MessageCounters.LatencyHistogram.CreateContext(Topic, "publish"))
+                try
+                {
+                    var props = _channel.CreateBasicProperties();
 
-                if (!string.IsNullOrEmpty(message.CorrelationId))
-                    props.CorrelationId = message.CorrelationId;
+                    if (!string.IsNullOrEmpty(message.CorrelationId))
+                        props.CorrelationId = message.CorrelationId;
 
-                props.ContentType = message.ContentType;
+                    props.ContentType = message.ContentType;
 
-                foreach (var header in message.Headers ?? new Dictionary<string, object>())
-                    props.Headers.Add(header);
+                    foreach (var header in message.Headers ?? new Dictionary<string, object>())
+                        props.Headers.Add(header);
 
-                _channel.BasicPublish(exchange: Topic,
-                         routingKey: message.Route ?? "undefined",
-                         basicProperties: props,
-                         body: await message.ToBytes());
+                    _channel.BasicPublish(exchange: Topic,
+                             routingKey: message.Route ?? "undefined",
+                             basicProperties: props,
+                             body: await message.ToBytes());
 
-                return true;
-            }
+                    return true;
+                }
+                catch (Exception e)
+                {
+                    _log.LogWarning(e, "Failed to publish message on {0}", Topic);
+                    MessageCounters.ErrorCounter.WithLabels(Topic, e.GetType().Name).Inc();
+                }
+
+            return false;
         }
 
         /// <inheritdoc/>
         public async Task<bool> TryBroadcast(IMessage message)
         {
-            var res = true;
-            foreach (var cluster in _factory.GetClusters())
-                res &= await _factory.CreatePublisher(cluster, Topic).TryPublish(message);
-            return res;
+            using (var ctx = MessageCounters.LatencyHistogram.CreateContext(Topic, "broadcast"))
+                try
+                {
+                    var res = true;
+                    foreach (var cluster in _factory.GetClusters())
+                        res &= await _factory.CreatePublisher(cluster, Topic).TryPublish(message);
+                    return res;
+                }
+                catch (Exception e)
+                {
+                    _log.LogWarning(e, "Failed to publish message on {0}", Topic);
+                    MessageCounters.ErrorCounter.WithLabels(Topic, e.GetType().Name).Inc();
+                }
+
+            return false;
         }
 
         /// <inheritdoc/>

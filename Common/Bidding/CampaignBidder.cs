@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Lucent.Common.Budget;
+using Lucent.Common.Caching;
 using Lucent.Common.Entities;
 using Lucent.Common.Events;
 using Lucent.Common.Exchanges;
@@ -28,7 +29,7 @@ namespace Lucent.Common.Bidding
         ILogger<CampaignBidder> _log;
         IScoringService _scoringService;
         IBudgetManager _budgetManager;
-
+        IBudgetCache _budgetCache;
 
         /// <summary>
         /// Default constructor
@@ -39,21 +40,23 @@ namespace Lucent.Common.Bidding
         /// <param name="budgetManager"></param>
         /// <param name="watcher"></param>
         /// <param name="storageManager"></param>
-        public CampaignBidder(Campaign c, ILogger<CampaignBidder> logger, IScoringService scoringService, IBudgetManager budgetManager, IEntityWatcher watcher, IStorageManager storageManager)
+        /// <param name="budgetCache"></param>
+        public CampaignBidder(Campaign c, ILogger<CampaignBidder> logger, IScoringService scoringService, IBudgetManager budgetManager, IEntityWatcher watcher, IStorageManager storageManager, IBudgetCache budgetCache)
         {
             _campaign = c;
             _log = logger;
             _scoringService = scoringService;
             _budgetManager = budgetManager;
             _campaignId = c.Id;
+            _budgetCache = budgetCache;
 
             _budgetManager.OnStatusChanged = (e) =>
             {
-                _log.LogInformation("Budget change {0} ({1})", e.EntityId, e.Exhausted);
-
                 if (e.EntityId == _campaignId)
-                    _isBudgetExhausted = e.Exhausted;
-
+                {
+                    _isBudgetExhausted = _budgetCache.TryGetBudget(_campaignId).Result <= 0d;
+                    _log.LogInformation("Budget change {0} ({1})", e.EntityId, _isBudgetExhausted);
+                }
                 return Task.CompletedTask;
             };
         }

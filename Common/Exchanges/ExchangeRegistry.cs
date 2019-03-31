@@ -38,7 +38,7 @@ namespace Lucent.Common.Exchanges
             _log = logger;
             _messageFactory = messageFactory;
             _storageRepository = storageManager.GetRepository<Exchange>();
-            _subscriber = messageFactory.CreateSubscriber<EntityEventMessage>(Topics.BIDDING, 0, messageFactory.WildcardFilter);
+            _subscriber = messageFactory.CreateSubscriber<EntityEventMessage>(Topics.BIDDING, messageFactory.WildcardFilter);
             _subscriber.OnReceive += WatchExchanges;
             _serviceProvider = provider;
             Task.Run(Initialize);
@@ -58,6 +58,7 @@ namespace Lucent.Common.Exchanges
                     Guid id;
                     if (!Guid.TryParse(evt.EntityId, out id)) return;
                     var entity = await _storageRepository.Get(new GuidStorageKey(id));
+                    if(entity == null) return;
 
                     if (entity.Code != null)
                         await entity.LoadExchange(_serviceProvider);

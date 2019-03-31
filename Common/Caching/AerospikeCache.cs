@@ -46,6 +46,40 @@ namespace Lucent.Common.Caching
         /// <param name="key"></param>
         /// <returns></returns>
         Task<double> Get(string key);
+
+        /// <summary>
+        /// Try to update the budget
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="inc"></param>
+        /// <param name="max"></param>
+        /// <param name="expiration"></param>
+        /// <returns></returns>
+        Task<bool> TryUpdateBudget(string key, double inc, double max, TimeSpan expiration);
+    }
+
+    /// <summary>
+    /// This is a dumb class that I need to refactor away into nothingness...
+    /// </summary>
+    public class MockAspkCache : IAerospikeCache
+    {
+        /// <inheritdoc/>
+        public Task<double> Get(string key)
+        {
+            return Task.FromResult(0.1);
+        }
+
+        /// <inheritdoc/>
+        public Task<double> Inc(string key, double value, TimeSpan expiration)
+        {
+            return Task.FromResult(value);
+        }
+
+        /// <inheritdoc/>
+        public Task<bool> TryUpdateBudget(string key, double inc, double max, TimeSpan expiration)
+        {
+            return Task.FromResult(true);
+        }
     }
 
     /// <summary>
@@ -95,6 +129,36 @@ namespace Lucent.Common.Caching
             }
 
             return double.NaN;
+        }
+
+        /// <inheritdoc/>
+        public async Task<bool> TryUpdateBudget(string key, double inc, double max, TimeSpan expiration)
+        {
+            try
+            {
+                var res = await _client.Get(new Policy { }, default(CancellationToken), new Key("lucent", "budget", key));
+                if (res == null)
+                {
+                    res = await _client.Operate(new WritePolicy { expiration = (int)expiration.TotalSeconds },
+                    default(CancellationToken), new Key("lucent", "budget", key),
+                        Operation.Add(new Bin("budget", (int)(inc * 10000))), Operation.Get("budget"));
+                    return res != null;
+                }
+
+                if (res.GetInt("budget") / 10000d + inc <= max)
+                {
+                    res = await _client.Operate(new WritePolicy { expiration = res.TimeToLive },
+                    default(CancellationToken), new Key("lucent", "budget", key),
+                        Operation.Add(new Bin("budget", (int)(inc * 10000))), Operation.Get("budget"));
+                    return res != null;
+                }
+            }
+            catch (Exception e)
+            {
+                _log.LogError(e, "Error during budget update");
+            }
+
+            return false;
         }
 
         /// <inheritdoc/>

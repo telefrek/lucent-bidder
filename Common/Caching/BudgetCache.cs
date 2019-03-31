@@ -69,5 +69,24 @@ namespace Lucent.Common.Caching
 
             return res;
         }
+
+        /// <inheritdoc/>
+        public async Task<double> TryGetBudget(string key)
+        {
+            var res = 0d;
+
+            if (localOnly)
+                res = 1d;
+            else
+                using (var context = _cacheLatency.CreateContext("get"))
+                {
+                    res = await _cache.Get(key);
+                }
+
+            if (res != double.NaN)
+                _budgetValue.WithLabels(key).Set(res);
+
+            return res;
+        }
     }
 }

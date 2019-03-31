@@ -65,7 +65,7 @@ namespace Lucent.Common.Messaging
         }
 
         /// <inheritdoc />
-        public IMessageSubscriber<T> CreateSubscriber<T>(string topic, ushort maxConcurrency) where T : IMessage
+        public IMessageSubscriber<T> CreateSubscriber<T>(string topic) where T : IMessage
         {
             if (!_queues.ContainsKey(topic))
             {
@@ -80,7 +80,7 @@ namespace Lucent.Common.Messaging
         }
 
         /// <inheritdoc />
-        public IMessageSubscriber<T> CreateSubscriber<T>(string topic, ushort maxConcurrency, string filter) where T : IMessage
+        public IMessageSubscriber<T> CreateSubscriber<T>(string topic, string filter) where T : IMessage
         {
             if (!_queues.ContainsKey(topic))
             {

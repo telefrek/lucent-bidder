@@ -121,6 +121,7 @@ namespace Lucent.Common.Bidding
             public HttpClient OrchestrationClient => _orchestrationClient;
         }
 
+
         [TestMethod]
         public async Task TestSuccessfulBid()
         {

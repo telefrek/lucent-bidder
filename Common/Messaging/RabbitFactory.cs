@@ -67,7 +67,7 @@ namespace Lucent.Common.Messaging
         /// <inheritdoc />
         public IMessagePublisher CreatePublisher(string topic)
         {
-            return new RabbitPublisher(this, _factory.CreateConnection(), topic);
+            return new RabbitPublisher(this, _log, _factory.CreateConnection(), topic);
         }
 
         /// <inheritdoc />
@@ -80,19 +80,19 @@ namespace Lucent.Common.Messaging
         public IEnumerable<string> GetClusters() => _clusters.Keys.ToArray();
 
         /// <inheritdoc />
-        public IMessageSubscriber<T> CreateSubscriber<T>(string topic, ushort maxConcurrency)
+        public IMessageSubscriber<T> CreateSubscriber<T>(string topic)
             where T : IMessage
         {
             _log.LogInformation("Creating subscriber for {0} ({1})", topic, "null");
-            return new RabbitSubscriber<T>(this, _factory.CreateConnection(), _log, topic, maxConcurrency, null);
+            return new RabbitSubscriber<T>(this, _factory.CreateConnection(), _log, topic, null);
         }
 
         /// <inheritdoc />
-        public IMessageSubscriber<T> CreateSubscriber<T>(string topic, ushort maxConcurrency, string filter)
+        public IMessageSubscriber<T> CreateSubscriber<T>(string topic, string filter)
             where T : IMessage
         {
             _log.LogInformation("Creating subscriber for {0} ({1})", topic, filter ?? "null");
-            return new RabbitSubscriber<T>(this, _factory.CreateConnection(), _log, topic, maxConcurrency, filter);
+            return new RabbitSubscriber<T>(this, _factory.CreateConnection(), _log, topic, filter);
         }
     }
 }

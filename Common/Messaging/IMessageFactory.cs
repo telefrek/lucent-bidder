@@ -46,17 +46,15 @@ namespace Lucent.Common.Messaging
         /// Creates a new subscriber for the given topic
         /// </summary>
         /// <param name="topic"></param>
-        /// <param name="maxConcurrency"></param>
         /// <returns></returns>
-        IMessageSubscriber<T> CreateSubscriber<T>(string topic, ushort maxConcurrency) where T : IMessage;
+        IMessageSubscriber<T> CreateSubscriber<T>(string topic) where T : IMessage;
 
         /// <summary>
         /// Creates a new subscriber for the given topic
         /// </summary>
         /// <param name="topic"></param>
-        /// <param name="maxConcurrency"></param>
         /// <param name="filter"></param>
         /// <returns></returns>
-        IMessageSubscriber<T> CreateSubscriber<T>(string topic, ushort maxConcurrency, string filter) where T : IMessage;
+        IMessageSubscriber<T> CreateSubscriber<T>(string topic, string filter) where T : IMessage;
     }
 }

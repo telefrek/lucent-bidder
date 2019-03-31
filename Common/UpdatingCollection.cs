@@ -33,7 +33,7 @@ namespace Lucent.Common
             try
             {
                 logger.LogInformation("getting subscriber");
-                _entitySubscriber = messageFactory.CreateSubscriber<EntityEventMessage>(Topics.BIDDING, 0, messageFactory.WildcardFilter);
+                _entitySubscriber = messageFactory.CreateSubscriber<EntityEventMessage>(Topics.BIDDING, messageFactory.WildcardFilter);
                 _entitySubscriber.OnReceive = HandleMessageAsync;
 
                 logger.LogInformation("getting repo");

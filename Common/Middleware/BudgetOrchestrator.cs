@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Lucent.Common;
 using Lucent.Common.Bidding;
@@ -29,9 +30,10 @@ namespace Lucent.Common.Middleware
         readonly ILogger<BudgetOrchestrator> _logger;
         readonly IStorageRepository<Campaign> _campaignRepository;
         readonly IMessageFactory _messageFactory;
-        static readonly MemoryCache _memcache = new MemoryCache(new MemoryCacheOptions { ExpirationScanFrequency = TimeSpan.FromSeconds(15) });
+        readonly IAerospikeCache _aerospikeCache;
         IBudgetCache _budgetCache;
         readonly IMessagePublisher _budgetPublisher;
+        readonly SemaphoreSlim _budgetLock = new SemaphoreSlim(1);
 
         /// <summary>
         /// Default constructor
@@ -42,7 +44,8 @@ namespace Lucent.Common.Middleware
         /// <param name="serializationContext"></param>
         /// <param name="logger"></param>
         /// <param name="budgetCache"></param>
-        public BudgetOrchestrator(RequestDelegate next, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<BudgetOrchestrator> logger, IBudgetCache budgetCache)
+        /// <param name="aerospikeCache"></param>
+        public BudgetOrchestrator(RequestDelegate next, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<BudgetOrchestrator> logger, IBudgetCache budgetCache, IAerospikeCache aerospikeCache)
         {
             _storageManager = storageManager;
             _campaignRepository = storageManager.GetRepository<Campaign>();
@@ -51,6 +54,7 @@ namespace Lucent.Common.Middleware
             _logger = logger;
             _budgetCache = budgetCache;
             _budgetPublisher = _messageFactory.CreatePublisher(Topics.BUDGET);
+            _aerospikeCache = aerospikeCache;
         }
 
         /// <summary>
@@ -78,51 +82,20 @@ namespace Lucent.Common.Middleware
                 {
                     case "post":
 
+                        await _budgetLock.WaitAsync();
+
                         // Add a dollar if they've been good...
                         BidCounters.BudgetRequests.WithLabels("recieved").Inc();
-                        double? entry = (double?)_memcache.Get(request.EntityId);
-                        _logger.LogInformation("Budget for {0} : {1}", request.EntityId, entry ?? 0d);
-                        if (entry == null)
-                        {
-                            var msg = _messageFactory.CreateMessage<BudgetEventMessage>();
-                            entry = await _budgetCache.TryUpdateBudget(request.EntityId, 1.0);
-                            if (entry != double.NaN)
-                            {
-                                BidCounters.BudgetRequests.WithLabels("create").Inc();
-                                _logger.LogInformation("Budget for {0} : {1}", request.EntityId, entry ?? 0d);
-                                msg.Body = new BudgetEvent { EntityId = request.EntityId, Exhausted = entry <= 0 };
-                                await _budgetPublisher.TryPublish(msg);
-                                entry = 1d;
-                                _memcache.Set(request.EntityId, entry,
-                                    new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(300) });
-                            }
-                            else
-                                _logger.LogWarning("Failed to update budget for {0}", request.EntityId);
-                        }
-                        else if (entry < 5)
-                        {
-                            BidCounters.BudgetRequests.WithLabels("update").Inc();
-                            var msg = _messageFactory.CreateMessage<BudgetEventMessage>();
-                            entry = await _budgetCache.TryUpdateBudget(request.EntityId, 1.0);
-                            if (entry != double.NaN)
-                            {
-                                _logger.LogInformation("Budget for {0} : {1}", request.EntityId, entry ?? 0d);
-                                msg.Body = new BudgetEvent { EntityId = request.EntityId, Exhausted = entry <= 0 };
-                                await _budgetPublisher.TryPublish(msg);
-                                entry += 1;
-                                _memcache.Set(request.EntityId, entry);
-                            }
-                            else
-                                _logger.LogWarning("Failed to update budget for {0}", request.EntityId);
-                        }
-                        else
-                        {
-                            BidCounters.BudgetRequests.WithLabels("reject").Inc();
-                            _logger.LogInformation("Budget rate exceeded for {0}", request.EntityId);
-                            var msg = _messageFactory.CreateMessage<BudgetEventMessage>();
-                            msg.Body = new BudgetEvent { EntityId = request.EntityId, Exhausted = entry <= 0 };
-                            await _budgetPublisher.TryPublish(msg);
-                        }
+
+                        if (await _aerospikeCache.TryUpdateBudget(request.EntityId, 1d, 5d, TimeSpan.FromMinutes(5)))
+                            if (await _budgetCache.TryUpdateBudget(request.EntityId, 1.0) == double.NaN)
+                                await _aerospikeCache.TryUpdateBudget(request.EntityId, -1d, 5d, TimeSpan.FromMinutes(5));
+
+                        _budgetLock.Release();
+                        
+                        var msg = _messageFactory.CreateMessage<BudgetEventMessage>();
+                        msg.Body = new BudgetEvent { EntityId = request.EntityId };
+                        await _budgetPublisher.TryPublish(msg);
 
                         httpContext.Response.StatusCode = 202;
                         break;

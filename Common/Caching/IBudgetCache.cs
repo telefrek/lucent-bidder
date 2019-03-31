@@ -15,5 +15,11 @@ namespace Lucent.Common.Caching
         /// <param name="value"></param>
         /// <returns></returns>
         Task<double> TryUpdateBudget(string key, double value);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="key"></param>        /// <returns></returns>
+        Task<double> TryGetBudget(string key);
     }
 }

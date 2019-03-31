@@ -61,7 +61,8 @@ namespace Lucent.Common
             // Setup storage, messaging options for local vs distributed cluster
             if (localOnly)
             {
-                services.AddSingleton<IAerospikeCache>((ctx) => null).AddSingleton<IBudgetCache, BudgetCache>();
+                services.AddSingleton<IAerospikeCache, MockAspkCache>()
+                .AddSingleton<IBudgetCache, BudgetCache>();
                 services.AddSingleton<IStorageManager, InMemoryStorage>();
                 services.AddSingleton<IMessageFactory, InMemoryMessageFactory>();
                 services.AddSingleton<IBidLedger, MemoryBudgetLedger>();
