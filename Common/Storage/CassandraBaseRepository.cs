@@ -38,16 +38,6 @@ namespace Lucent.Common.Storage
         ISession _session;
 
         /// <summary>
-        /// Metric for tracking query latencies
-        /// </summary>
-        /// <value></value>
-        static Histogram _queryLatency = Metrics.CreateHistogram("query_latency", "Latency for Cassandra queries", new HistogramConfiguration
-        {
-            LabelNames = new string[] { "query" },
-            Buckets = new double[] { 0.001, 0.005, 0.010, 0.015, 0.020, 0.025, 0.050, 0.075, 0.100 },
-        });
-
-        /// <summary>
         /// Default constructor
         /// </summary>
         /// <param name="session">The current session</param>
@@ -121,14 +111,14 @@ namespace Lucent.Common.Storage
         {
             try
             {
-                using (var context = _queryLatency.CreateContext(queryName))
+                using (var context = StorageCounters.LatencyHistogram.CreateContext("cassandra", _session.Keyspace, queryName))
                 {
                     return await _session.ExecuteAsync(statement);
                 }
             }
             catch (InvalidQueryException queryError)
             {
-                _log.LogError(queryError, "Checking for table missing error ({0})", queryName);
+                _log.LogWarning(queryError, "Checking for table missing error ({0})", queryName);
 
                 if ((queryError.Message ?? "").ToLowerInvariant().Contains("columnfamily") ||
                 (queryError.Message ?? "").ToLowerInvariant().Contains("table"))
@@ -139,6 +129,13 @@ namespace Lucent.Common.Storage
                 }
                 throw;
             }
+            catch (DriverException e)
+            {
+                _log.LogError(e, "Failed to execute query {0}", queryName);
+                StorageCounters.ErrorCounter.WithLabels("cassandra", _session.Keyspace, e.GetType().Name).Inc();
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -157,13 +154,26 @@ namespace Lucent.Common.Storage
         {
             try
             {
-                return await _session.PrepareAsync(statement);
+                using (var context = StorageCounters.LatencyHistogram.CreateContext("cassandra", _session.Keyspace, "prepare"))
+                    return await _session.PrepareAsync(statement);
             }
-            catch (InvalidQueryException)
+            catch (InvalidQueryException iqe)
             {
-                await CreateTableAsync();
-                return await _session.PrepareAsync(statement);
+                if ((iqe.Message ?? "").ToLowerInvariant().Contains("columnfamily") ||
+                (iqe.Message ?? "").ToLowerInvariant().Contains("table"))
+                {
+                    await CreateTableAsync();
+                    return await _session.PrepareAsync(statement);
+                }
+                throw;
             }
+            catch (DriverException e)
+            {
+                _log.LogError(e, "Failed to prepare statement : {0}", statement);
+                StorageCounters.ErrorCounter.WithLabels("cassandra", _session.Keyspace, e.GetType().Name).Inc();
+            }
+
+            return null;
         }
 
         /// <summary>
