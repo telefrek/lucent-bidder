@@ -19,7 +19,7 @@ namespace Lucent.Common.Middleware
         Histogram _apiLatency = Metrics.CreateHistogram("api_latency", "Latency for each api call", new HistogramConfiguration
         {
             LabelNames = new string[] { "method", "path" },
-            Buckets = new double[] { 0.005, 0.010, 0.015, 0.025, 0.050, 0.075, 0.100, 0.125, 0.150, 0.200, 0.25, 0.5, 0.75, 1.0 },
+            Buckets = MetricBuckets.API_LATENCY,
         });
 
         /// <summary>

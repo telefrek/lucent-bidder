@@ -102,7 +102,7 @@ namespace Lucent.Common.Caching
             _log = logger;
             var policy = new AsyncClientPolicy
             {
-                asyncMaxCommands = 1024,
+                asyncMaxCommands = 2048,
             };
 
             _client = new AsyncClient(policy, "aspk-cache.lucent.svc", 3000);

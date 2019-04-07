@@ -1,4 +1,5 @@
-﻿using Lucent.Common;
+﻿using System.Threading;
+using Lucent.Common;
 using Lucent.Common.Bootstrap;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
@@ -11,6 +12,7 @@ namespace Bidder
     {
         public static void Main(string[] args)
         {
+            ThreadPool.SetMinThreads(64, 256);
             CreateWebHostBuilder(args).Build().Run();
         }
 

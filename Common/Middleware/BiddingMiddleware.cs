@@ -35,7 +35,7 @@ namespace Lucent.Common.Middleware
         IMessageFactory _messageFactory;
         IExchangeRegistry _exchangeRegistry;
         IStorageManager _storageManager;
-        IBudgetCache _bidCache;
+        IBidCache _bidCache;
         UpdatingCollection<BidderFilter> _bidFiltersCollection;
         List<Func<BidRequest, bool>> _bidFilters;
         Histogram _serializerTiming = Metrics.CreateHistogram("serializer_latency", "Latency for each bidder call", new HistogramConfiguration
@@ -54,8 +54,8 @@ namespace Lucent.Common.Middleware
         /// <param name="serializationContext"></param>
         /// <param name="exchangeRegistry"></param>
         /// <param name="storageManager"></param>
-        /// <param name="bidderCache"></param>
-        public BiddingMiddleware(RequestDelegate next, ILogger<BiddingMiddleware> logger, IMessageFactory messageFactory, ISerializationContext serializationContext, IExchangeRegistry exchangeRegistry, IStorageManager storageManager, IBudgetCache bidderCache)
+        /// <param name="bidCache"></param>
+        public BiddingMiddleware(RequestDelegate next, ILogger<BiddingMiddleware> logger, IMessageFactory messageFactory, ISerializationContext serializationContext, IExchangeRegistry exchangeRegistry, IStorageManager storageManager, IBidCache bidCache)
         {
             _log = logger;
             _serializationContext = serializationContext;
@@ -65,7 +65,7 @@ namespace Lucent.Common.Middleware
             _bidFiltersCollection.OnUpdate = UpdateBidFilters;
             _bidFilters = _bidFiltersCollection.Entities.Where(f => f.BidFilter != null).Select(f => f.BidFilter.GenerateCode()).ToList();
             _messageFactory = messageFactory;
-            _bidCache = bidderCache;
+            _bidCache = bidCache;
         }
 
         /// <summary>
@@ -113,9 +113,7 @@ namespace Lucent.Common.Middleware
                         response.Bids = response.Bids ?? new SeatBid[0];
                         if (response.Bids.Length > 0)
                         {
-                            // foreach (var seat in response.Bids)
-                            //     foreach (var bid in seat.Bids)
-                            //         await _bidCache.TryStore(bid, bid.Id, TimeSpan.FromMinutes(5));
+                            await _bidCache.saveEntries(response);
 
                             httpContext.Response.StatusCode = StatusCodes.Status200OK;
                             await _serializationContext.WriteTo(httpContext, response);

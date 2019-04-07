@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Cassandra;
 using Lucent.Common.Entities;
+
 using Lucent.Common.OpenRTB;
 using Lucent.Common.Serialization;
 using Lucent.Common.Serialization.Json;

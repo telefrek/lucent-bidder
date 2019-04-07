@@ -20,6 +20,8 @@ using System.Linq;
 using Microsoft.AspNetCore.Http;
 using System.Collections.Generic;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Hosting;
+using Lucent.Common.Background;
 
 namespace Lucent.Common
 {
@@ -65,14 +67,16 @@ namespace Lucent.Common
                 .AddSingleton<IBudgetCache, BudgetCache>();
                 services.AddSingleton<IStorageManager, InMemoryStorage>();
                 services.AddSingleton<IMessageFactory, InMemoryMessageFactory>();
-                services.AddSingleton<IBidLedger, MemoryBudgetLedger>();
+                services.AddSingleton<IBidLedger, MemoryBudgetLedger>()
+                .AddSingleton<IBidCache, MemoryBidCache>();
             }
             else
             {
                 // TODO: Update this to use redis
                 services.Configure<AerospikeConfig>(configuration.GetSection("aerospike"))
                     .AddSingleton<IAerospikeCache, AerospikeCache>()
-                    .AddSingleton<IBudgetCache, BudgetCache>();
+                    .AddSingleton<IBudgetCache, BudgetCache>()
+                    .AddSingleton<IBidCache, BidCache>();
 
                 // Setup storage
                 services.Configure<CassandraConfiguration>(configuration.GetSection("cassandra"))
@@ -112,10 +116,11 @@ namespace Lucent.Common
                     .AddSingleton<IScoringService, RandomScoring>()
                     .Configure<BudgetConfig>(configuration.GetSection(Topics.BUDGET))
                     .AddSingleton<IBudgetClient, SimpleBudgetClient>()
-                    .AddSingleton<IBudgetManager, SimpleBudgetManager>()
+                    .AddTransient<IBudgetManager, SimpleBudgetManager>()
                     .AddTransient<IBiddingManager, BiddingManager>()
                     .AddSingleton<IBidFactory, BidFactory>()
-                    .AddSingleton<IExchangeRegistry, ExchangeRegistry>();
+                    .AddSingleton<IExchangeRegistry, ExchangeRegistry>()
+                    .AddSingleton<IHostedService, BudgetSyncService>();
             }
 
             if (includeOrchestration)

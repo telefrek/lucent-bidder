@@ -28,5 +28,12 @@ namespace Lucent.Common.Budget
         /// <value></value>
         [SerializationProperty(3, "cost")]
         public double Cost { get; set; }
+
+        /// <summary>
+        /// The original bid
+        /// </summary>
+        /// <value></value>
+        [SerializationProperty(4, "bid")]
+        public Bid Bid { get; set; }
     }
 }

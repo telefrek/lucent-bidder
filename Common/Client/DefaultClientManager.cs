@@ -8,7 +8,7 @@ namespace Lucent.Common.Client
     /// </summary>
     public class DefaultClientManager : IClientManager
     {
-        static readonly HttpClient _orchestrationClient = new HttpClient() { BaseAddress = new Uri("http://orchestration.lucent.svc") };
+        static readonly HttpClient _orchestrationClient = new HttpClient() { BaseAddress = new Uri("http://orchestrator.lucent.svc") };
 
         /// <inheritdoc/>
         public HttpClient OrchestrationClient => _orchestrationClient;

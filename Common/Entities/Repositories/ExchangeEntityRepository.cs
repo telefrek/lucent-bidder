@@ -15,7 +15,7 @@ namespace Lucent.Common.Entities.Repositories
     /// <summary>
     /// 
     /// </summary>
-    public class ExchangeEntityRespositry : CassandraBaseRepository, IStorageRepository<Exchange>
+    public class ExchangeEntityRespositry : CassandraRepository, IStorageRepository<Exchange>
     {
         string _tableName;
 

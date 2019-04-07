@@ -9,7 +9,7 @@ data:
         "LogLevel": {
           "Default": "Information",
           "System": "Information",
-          "Microsoft": "Information"
+          "Microsoft": "Warning"
         }
       },
       "runtimeOptions": {

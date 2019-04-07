@@ -15,7 +15,7 @@ namespace Lucent.Common.Storage
     /// <summary>
     /// Default repository required for accessing Cassandra resources
     /// </summary>
-    public abstract class CassandraBaseRepository
+    public class CassandraRepository
     {
         /// <summary>
         /// The default logger
@@ -44,7 +44,7 @@ namespace Lucent.Common.Storage
         /// <param name="serializationFormat">The serialization format to use</param>
         /// <param name="serializationContext">The current serialization context</param>
         /// <param name="logger">A logger to use for queries</param>
-        public CassandraBaseRepository(ISession session, SerializationFormat serializationFormat, ISerializationContext serializationContext, ILogger logger)
+        public CassandraRepository(ISession session, SerializationFormat serializationFormat, ISerializationContext serializationContext, ILogger logger)
         {
             _log = logger;
             _session = session;
@@ -74,23 +74,7 @@ namespace Lucent.Common.Storage
         /// Initialize the repository
         /// </summary>
         /// <returns></returns>
-        public abstract Task Initialize(IServiceProvider provider);
-
-        /// <summary>
-        /// Sync method
-        /// </summary>
-        /// <param name="statement"></param>
-        /// <param name="queryName"></param>
-        /// <returns></returns>
-        protected RowSet Execute(string statement, string queryName) => ExecuteAsync(statement, queryName).Result;
-
-        /// <summary>
-        /// Sync method
-        /// </summary>
-        /// <param name="statement"></param>
-        /// <param name="queryName"></param>
-        /// <returns></returns>
-        protected RowSet Execute(IStatement statement, string queryName) => ExecuteAsync(statement, queryName).Result;
+        public virtual Task Initialize(IServiceProvider provider) => Task.CompletedTask;
 
         /// <summary>
         /// Execute the query asynchronously
@@ -98,7 +82,7 @@ namespace Lucent.Common.Storage
         /// <param name="statement"></param>
         /// <param name="queryName"></param>
         /// <returns></returns>
-        protected async Task<RowSet> ExecuteAsync(string statement, string queryName)
+        protected async Task<AsyncRowSet> ExecuteAsync(string statement, string queryName)
             => await ExecuteAsync(new SimpleStatement(statement), queryName);
 
         /// <summary>
@@ -107,13 +91,13 @@ namespace Lucent.Common.Storage
         /// <param name="statement"></param>
         /// <param name="queryName"></param>
         /// <returns></returns>
-        protected async Task<RowSet> ExecuteAsync(IStatement statement, string queryName)
+        protected async Task<AsyncRowSet> ExecuteAsync(IStatement statement, string queryName)
         {
             try
             {
                 using (var context = StorageCounters.LatencyHistogram.CreateContext("cassandra", _session.Keyspace, queryName))
                 {
-                    return await _session.ExecuteAsync(statement);
+                    return new AsyncRowSet(await _session.ExecuteAsync(statement), 128);
                 }
             }
             catch (InvalidQueryException queryError)
@@ -125,7 +109,7 @@ namespace Lucent.Common.Storage
                 {
                     // Recreate
                     await CreateTableAsync();
-                    return await _session.ExecuteAsync(statement);
+                    return new AsyncRowSet(await _session.ExecuteAsync(statement), 128);
                 }
                 throw;
             }
@@ -135,7 +119,8 @@ namespace Lucent.Common.Storage
                 StorageCounters.ErrorCounter.WithLabels("cassandra", _session.Keyspace, e.GetType().Name).Inc();
             }
 
-            return null;
+            // No Results
+            return new AsyncRowSet(new RowSet(), 128);
         }
 
         /// <summary>
@@ -191,53 +176,27 @@ namespace Lucent.Common.Storage
         /// <param name="rowSet"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        protected async Task<ICollection<T>> ReadAsAsync<T>(RowSet rowSet) where T : IStorageEntity, new()
+        protected async Task<ICollection<T>> ReadAsAsync<T>(AsyncRowSet rowSet) where T : IStorageEntity, new()
         {
             var instances = new List<T>();
 
-            var numRows = 0;
-            using (var rowEnum = rowSet.GetEnumerator())
+            foreach(var row in rowSet)
             {
-                while (!rowSet.IsFullyFetched)
+
+                var contents = row.GetValue<byte[]>("contents");
+                var format = Enum.Parse<SerializationFormat>(row.GetValue<string>("format"));
+                var etag = row.GetValue<string>("etag");
+
+                using (var ms = new MemoryStream(contents))
                 {
-                    if ((numRows = rowSet.GetAvailableWithoutFetching()) > 0)
-                    {
-                        for (var i = 0; i < numRows && rowEnum.MoveNext(); ++i)
-                        {
-                            var contents = rowEnum.Current.GetValue<byte[]>("contents");
-                            var format = Enum.Parse<SerializationFormat>(rowEnum.Current.GetValue<string>("format"));
-                            var etag = rowEnum.Current.GetValue<string>("etag");
-
-                            using (var ms = new MemoryStream(contents))
-                            {
-                                var obj = await _serializationContext.ReadFrom<T>(ms, false, format);
-                                await ReadExtraAsync<T>(rowEnum.Current, obj);
-                                obj.ETag = etag;
-                                instances.Add(obj);
-                            }
-                        }
-                    }
-                    else
-                        await rowSet.FetchMoreResultsAsync();
+                    var obj = await _serializationContext.ReadFrom<T>(ms, false, format);
+                    await ReadExtraAsync<T>(row, obj);
+                    obj.ETag = etag;
+                    instances.Add(obj);
                 }
-
-                while (rowEnum.MoveNext())
-                {
-                    var contents = rowEnum.Current.GetValue<byte[]>("contents");
-                    var format = Enum.Parse<SerializationFormat>(rowEnum.Current.GetValue<string>("format"));
-                    var etag = rowEnum.Current.GetValue<string>("etag");
-
-                    using (var ms = new MemoryStream(contents))
-                    {
-                        var obj = await _serializationContext.ReadFrom<T>(ms, false, format);
-                        await ReadExtraAsync<T>(rowEnum.Current, obj);
-                        obj.ETag = etag;
-                        instances.Add(obj);
-                    }
-                }
-
-                return instances;
             }
+            
+            return instances;
         }
     }
 }

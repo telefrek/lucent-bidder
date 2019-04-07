@@ -56,9 +56,9 @@ namespace Lucent.Common.Storage
             if (repo == null)
             {
                 _log.LogInformation("Creating repo for {0}", typeof(T).Name);
-                CassandraBaseRepository baseRepo = typeof(CassandraBaseRepository).GetMethods().First(m => m.Name == "CreateRepo" && m.IsStatic).MakeGenericMethod(typeof(BasicCassandraRepository<>).MakeGenericType(typeof(T))).Invoke(null, new object[] { _session, _config.Format, _serializationContext, _log }) as CassandraBaseRepository;
+                CassandraRepository baseRepo = typeof(CassandraRepository).GetMethods().First(m => m.Name == "CreateRepo" && m.IsStatic).MakeGenericMethod(typeof(BasicCassandraRepository<>).MakeGenericType(typeof(T))).Invoke(null, new object[] { _session, _config.Format, _serializationContext, _log }) as CassandraRepository;
                 if (baseRepo != null)
-                    baseRepo.Initialize(_provider);
+                    baseRepo.Initialize(_provider).Wait();
 
                 _registry.TryAdd(typeof(T), baseRepo);
                 return baseRepo as IStorageRepository<T>;
@@ -83,8 +83,8 @@ namespace Lucent.Common.Storage
                 _log.LogError("No repo created, failure!");
             else
             {
-                if (repository is CassandraBaseRepository)
-                    (repository as CassandraBaseRepository).Initialize(_provider);
+                if (repository is CassandraRepository)
+                    (repository as CassandraRepository).Initialize(_provider);
 
                 _registry.AddOrUpdate(typeof(T), repository, (t, oldRepo) => repository);
             }

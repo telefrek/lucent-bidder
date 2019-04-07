@@ -30,6 +30,7 @@ namespace Lucent.Common.Bidding
         IScoringService _scoringService;
         IBudgetManager _budgetManager;
         IBudgetCache _budgetCache;
+        LocalBudget _campaignBudget;
 
         /// <summary>
         /// Default constructor
@@ -49,12 +50,16 @@ namespace Lucent.Common.Bidding
             _budgetManager = budgetManager;
             _campaignId = c.Id;
             _budgetCache = budgetCache;
+            _campaignBudget = LocalBudget.Get(_campaignId);
 
             _budgetManager.OnStatusChanged = (e) =>
             {
                 if (e.EntityId == _campaignId)
                 {
-                    _isBudgetExhausted = _budgetCache.TryGetBudget(_campaignId).Result <= 0d;
+                    var rem = _budgetCache.TryGetBudget(_campaignId).Result;
+                    LocalBudget.Get(_campaignId).Last = rem;
+
+                    _isBudgetExhausted = rem <= 0d;
                     _log.LogInformation("Budget change {0} ({1})", e.EntityId, _isBudgetExhausted);
                 }
                 return Task.CompletedTask;
@@ -83,7 +88,7 @@ namespace Lucent.Common.Bidding
                 return NO_MATCHES;
             }
 
-            if (_isBudgetExhausted)
+            if (_isBudgetExhausted |= _campaignBudget.IsExhausted())
             {
                 BidCounters.NoBidReason.WithLabels("no_campaign_budget").Inc();
                 await _budgetManager.RequestAdditional(_campaign.Id);

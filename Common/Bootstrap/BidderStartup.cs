@@ -22,9 +22,8 @@ namespace Lucent.Common.Bootstrap
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
             System.Runtime.GCSettings.LatencyMode = System.Runtime.GCLatencyMode.SustainedLowLatency;
-            ThreadPool.SetMinThreads(64, 64);
 
-            // Add metrics ftw
+            // Add metrics ftw  
             app.UseMetricServer();
             app.UseResponseCompression();
             app.UseMiddleware<MonitoringMiddleware>();

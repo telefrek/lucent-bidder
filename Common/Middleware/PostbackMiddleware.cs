@@ -30,9 +30,10 @@ namespace Lucent.Common.Middleware
 
         ISerializationContext _serializationContext;
         IStorageManager _storageManager;
-        IBudgetCache _bidCache;
+        IBidCache _bidCache;
         IBidLedger _ledger;
         IMessageFactory _messageFactory;
+        IMessagePublisher _budgetPublisher;
 
         /// <summary>
         /// Default constructor
@@ -45,7 +46,7 @@ namespace Lucent.Common.Middleware
         /// <param name="bidderCache"></param>
         /// <param name="budgetLedger"></param>
         /// <param name="messageFactory"></param>
-        public PostbackMiddleware(RequestDelegate next, ILogger<PostbackMiddleware> log, IMessageFactory factory, ISerializationContext serializationContext, IStorageManager storageManager, IBudgetCache bidderCache, IBidLedger budgetLedger, IMessageFactory messageFactory)
+        public PostbackMiddleware(RequestDelegate next, ILogger<PostbackMiddleware> log, IMessageFactory factory, ISerializationContext serializationContext, IStorageManager storageManager, IBidCache bidderCache, IBidLedger budgetLedger, IMessageFactory messageFactory)
         {
             _log = log;
             _serializationContext = serializationContext;
@@ -53,6 +54,7 @@ namespace Lucent.Common.Middleware
             _bidCache = bidderCache;
             _ledger = budgetLedger;
             _messageFactory = messageFactory;
+            _budgetPublisher = _messageFactory.CreatePublisher(Topics.BUDGET);
         }
 
         /// <summary>
@@ -75,8 +77,6 @@ namespace Lucent.Common.Middleware
                 if (query.ContainsKey(QueryParameters.LUCENT_BID_CONTEXT_PARAMETER))
                     bidContext = BidContext.Parse(query[QueryParameters.LUCENT_BID_CONTEXT_PARAMETER]);
 
-                _log.LogInformation("Bid : {0} ({1})", bidContext.BidId, bidContext.Operation);
-
                 switch (bidContext.Operation)
                 {
                     case BidOperation.Clicked:
@@ -92,35 +92,47 @@ namespace Lucent.Common.Middleware
                             // Update the exchange and campaign amounts
                             // TODO: handle errors
                             var acpm = cpm / 1000d;
-                            _log.LogInformation("Updating budgets for win {0} ({1})", cpm, acpm);
                             var entry = new BidEntry { BidContext = bidContext.ToString(), RequestId = bidContext.RequestId, Cost = acpm };
-                            //await _ledger.TryRecordEntry(bidContext.ExchangeId.ToString(), entry);
-                            //await _ledger.TryRecordEntry(bidContext.CampaignId.ToString(), entry);
+                            var response = await _bidCache.getEntryAsync(bidContext.RequestId);
+                            if (response == null)
+                            {
+                                _log.LogWarning("No bid response found for context : {0}", bidContext.ToString());
+                                context.Response.StatusCode = StatusCodes.Status404NotFound;
+                                return;
+                            }
+
+                            entry.Bid = response.Bids.SelectMany(sb => sb.Bids).First(b => b.Id == bidContext.BidId.ToString());
+                            if (entry.Bid == null)
+                            {
+                                _log.LogWarning("No bid found for id : {0}", bidContext.BidId);
+                                context.Response.StatusCode = StatusCodes.Status404NotFound;
+                                return;
+                            }
+
+                            await _ledger.TryRecordEntry(bidContext.ExchangeId.ToString(), entry);
+                            await _ledger.TryRecordEntry(bidContext.CampaignId.ToString(), entry);
 
                             // Check for shutdown
                             var exchangeId = bidContext.ExchangeId.ToString();
-                            var rem = await _bidCache.TryUpdateBudget(exchangeId, -acpm);
-
-                            if (rem <= 0 && _memcache.Get(exchangeId) == null)
+                            var exchgBudget = LocalBudget.Get(exchangeId);
+                            if (exchgBudget.Update(-acpm) <= 0 && _memcache.Get(exchangeId) == null)
                             {
                                 var msg = _messageFactory.CreateMessage<BudgetEventMessage>();
                                 msg.Body = new BudgetEvent { EntityId = bidContext.CampaignId.ToString(), Exhausted = true };
-                                if (await _messageFactory.CreatePublisher(Topics.BUDGET).TryPublish(msg))
+                                if (await _budgetPublisher.TryPublish(msg))
                                     _memcache.Set(exchangeId, new object(), new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(15) });
 
                             }
 
                             var campaignId = bidContext.CampaignId.ToString();
-                            // Check for shutdown
-                            rem = await _bidCache.TryUpdateBudget(campaignId, -acpm);
+                            var campaignBudget = LocalBudget.Get(campaignId);
 
-                            if (rem <= 0 && _memcache.Get(campaignId) == null)
+                            if (campaignBudget.Update(-acpm) <= 0 && _memcache.Get(campaignId) == null)
                             {
                                 var msg = _messageFactory.CreateMessage<BudgetEventMessage>();
                                 msg.Body = new BudgetEvent { EntityId = bidContext.CampaignId.ToString(), Exhausted = true };
-                                if (await _messageFactory.CreatePublisher(Topics.BUDGET).TryPublish(msg))
+                                if (await _budgetPublisher.TryPublish(msg))
                                     _memcache.Set(campaignId, new object(), new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(15) });
-
                             }
                         }
                         else

@@ -41,6 +41,11 @@ namespace Lucent.Common.Bootstrap
             {
                 a.UseMiddleware<EntityRestApi<BidderFilter>>();
             });
+            
+            app.Map("/api/ledger", (a) =>
+            {
+                a.UseMiddleware<LedgerMiddleware>();
+            });
 
             app.Map("/api/budget/request", (a) =>
             {

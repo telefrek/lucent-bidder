@@ -3,7 +3,7 @@ using System.Threading;
 
 namespace Lucent.Common
 {
-        /// <summary>
+    /// <summary>
     /// Generates Guids according to the RFC4122 specification.
     /// </summary>
     /// <remarks>
@@ -61,7 +61,7 @@ namespace Lucent.Common
             return new Guid(
                 (uint)(timestamp & 0xFFFFFFFF), // low bits (most volatile)
                 (ushort)((timestamp >> 32) & 0xFFFF), // middle bits
-                (ushort)(((timestamp >> 40) & 0xFFF) | 0x1000), // high bits with timestamp version flag
+                (ushort)(((timestamp >> 48) & 0xFFF) | 0x1000), // high bits with timestamp version flag
                 (byte)((segment >> 8) | 0x80), // counter high bits and variant flag
                 (byte)(segment & 0xFF), // counter low bits
                 _node[0],

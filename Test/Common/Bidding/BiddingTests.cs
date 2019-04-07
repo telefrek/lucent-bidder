@@ -21,6 +21,7 @@ using Lucent.Common.Entities.Events;
 using Lucent.Common.Events;
 using Lucent.Common.Exchanges;
 using Lucent.Common.Filters;
+
 using Lucent.Common.Messaging;
 using Lucent.Common.Middleware;
 using Lucent.Common.OpenRTB;
@@ -121,7 +122,6 @@ namespace Lucent.Common.Bidding
             public HttpClient OrchestrationClient => _orchestrationClient;
         }
 
-
         [TestMethod]
         public async Task TestSuccessfulBid()
         {
@@ -173,7 +173,6 @@ namespace Lucent.Common.Bidding
             {
                 using (var gz = new GZipStream(ms, CompressionMode.Compress, true))
                 {
-
                     await serializationContext.WriteTo(bid, gz, true, SerializationFormat.JSON);
                     await gz.FlushAsync();
                 }
