@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using Lucent.Common.Budget;
 using Lucent.Common.OpenRTB;
 using Lucent.Common.Serialization;
 using Lucent.Common.Storage;
@@ -125,9 +126,9 @@ namespace Lucent.Common.Entities
         /// 
         /// </summary>
         /// <value></value>
-        [Display(Name = "Caps")]
-        [SerializationProperty(12, "spendcap")]
-        public SpendCap SpendCaps { get; set; } = new SpendCap { };
+        [Display(Name = "Budget Schedule")]
+        [SerializationProperty(12, "budgetSchedule")]
+        public BudgetSchedule SpendCaps { get; set; } = new BudgetSchedule { };
 
         /// <summary>
         /// 
@@ -190,36 +191,6 @@ namespace Lucent.Common.Entities
         /// <value></value>
         [Display(Name = "Budget Exhausted")]
         BudgedExhausted = 3,
-    }
-
-    /// <summary>
-    /// 
-    /// </summary>
-    public class SpendCap
-    {
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <value></value>
-        [Display(Name = "Hourly Cap")]
-        [SerializationProperty(1, "hourly")]
-        public double HourlySpendCap { get; set; } = 100d;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <value></value>
-        [Display(Name = "Daily Cap")]
-        [SerializationProperty(2, "daily")]
-        public double DailySpendCap { get; set; } = 100d;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <value></value>
-        [Display(Name = "Weekly Cap")]
-        [SerializationProperty(3, "weekly")]
-        public double WeeklySpendCap { get; set; } = 100d;
     }
 
     /// <summary>

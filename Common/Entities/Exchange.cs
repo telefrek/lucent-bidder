@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Lucent.Common.Budget;
 using Lucent.Common.Exchanges;
 using Lucent.Common.Serialization;
 using Lucent.Common.Storage;
@@ -47,6 +48,13 @@ namespace Lucent.Common.Entities
         /// <value></value>
         [SerializationProperty(3, "codeUpdated")]
         public DateTime LastCodeUpdate { get; set; }
+
+        /// <summary>
+        /// Budget scheduling for the exchange
+        /// </summary>
+        /// <value></value>
+        [SerializationProperty(4, "budgetSchdule")]
+        public BudgetSchedule BudgetSchedule { get; set; }
 
         /// <summary>
         /// Instance code if loaded
