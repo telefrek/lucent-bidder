@@ -12,7 +12,7 @@ namespace Bidder
     {
         public static void Main(string[] args)
         {
-            ThreadPool.SetMinThreads(64, 256);
+            ThreadPool.SetMinThreads(16, 2048);
             CreateWebHostBuilder(args).Build().Run();
         }
 

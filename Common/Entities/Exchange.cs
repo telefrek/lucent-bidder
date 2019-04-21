@@ -55,7 +55,7 @@ namespace Lucent.Common.Entities
         public AdExchange Instance { get; set; }
 
         /// <summary>
-        /// 
+        /// Code if loading from db
         /// </summary>
         /// <value></value>
         public MemoryStream Code { get; set; }

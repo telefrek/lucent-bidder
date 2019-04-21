@@ -19,7 +19,6 @@ namespace Lucent.Common.Caching
     public class BidCache : IBidCache
     {
         ILogger<BidCache> _log;
-        AsyncClient _client;
         ISerializationContext _serializationContext;
 
         /// <summary>
@@ -30,24 +29,17 @@ namespace Lucent.Common.Caching
         public BidCache(ILogger<BidCache> log, ISerializationContext serializationContext)
         {
             _log = log;
-            var policy = new AsyncClientPolicy
-            {
-                asyncMaxCommands = 2048,
-            };
-
-            _client = new AsyncClient(policy, "aspk-cache.lucent.svc", 3000);
             _serializationContext = serializationContext;
         }
 
         /// <inheritdoc/>
         public async Task<BidResponse> getEntryAsync(string id)
         {
+            var res = (Record)null;
             using (var ctx = StorageCounters.LatencyHistogram.CreateContext("aerospike", "bids", "get"))
                 try
                 {
-                    var res = await _client.Get(new Policy { consistencyLevel = ConsistencyLevel.CONSISTENCY_ONE }, default(CancellationToken), new Key("lucent", "bids", id));
-                    if (res != null)
-                        return await _serializationContext.ReadFrom<BidResponse>(new MemoryStream((byte[])res.GetValue("entry")), false, SerializationFormat.PROTOBUF);
+                    res = await Aerospike.INSTANCE.Get(null, default(CancellationToken), new Key("lucent", "bids", id));
                 }
                 catch (Exception e)
                 {
@@ -55,17 +47,21 @@ namespace Lucent.Common.Caching
                     _log.LogError(e, "Error during get");
                 }
 
+            if (res != null)
+                return await _serializationContext.ReadFrom<BidResponse>(new MemoryStream((byte[])res.GetValue("entry")), false, SerializationFormat.PROTOBUF);
+
             return null;
         }
 
         /// <inheritdoc/>
         public async Task saveEntries(BidResponse response)
         {
+            var contents = await _serializationContext.AsBytes(response, SerializationFormat.PROTOBUF);
             using (var ctx = StorageCounters.LatencyHistogram.CreateContext("aerospike", "bids", "save"))
                 try
                 {
-                    var bin = new Bin("entry", await _serializationContext.AsBytes(response, SerializationFormat.PROTOBUF));
-                    await _client.Add(new WritePolicy { expiration = 300, }, default(CancellationToken), new Key("lucent", "bids", response.Id), bin);
+                    var bin = new Bin("entry", contents);
+                    await Aerospike.INSTANCE.Add(new WritePolicy(Aerospike.INSTANCE.writePolicyDefault) { expiration = 300, }, default(CancellationToken), new Key("lucent", "bids", response.Id), bin);
                 }
                 catch (Exception e)
                 {

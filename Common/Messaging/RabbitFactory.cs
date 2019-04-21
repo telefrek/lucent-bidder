@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Security.Authentication;
+using System.Threading;
 using Lucent.Common.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -67,13 +68,37 @@ namespace Lucent.Common.Messaging
         /// <inheritdoc />
         public IMessagePublisher CreatePublisher(string topic)
         {
-            return new RabbitPublisher(this, _log, _factory.CreateConnection(), topic);
+            for (var i = 0; i < 5; ++i)
+            {
+                try
+                {
+                    return new RabbitPublisher(this, _log, _factory.CreateConnection(), topic);
+                }
+                catch (Exception ex)
+                {
+                    _log.LogWarning(ex, "Failed to create publisher, retrying...");
+                    Thread.Sleep(100);
+                }
+            }
+            throw new LucentException("Failed to create publisher");
         }
 
         /// <inheritdoc />
         public IMessagePublisher CreatePublisher(string cluster, string topic)
         {
-            return new RabbitHttpPublisher(this, _log, _clusters[cluster], _serializationContext, topic);
+            for (var i = 0; i < 5; ++i)
+            {
+                try
+                {
+                    return new RabbitHttpPublisher(this, _log, _clusters[cluster], _serializationContext, topic);
+                }
+                catch (Exception ex)
+                {
+                    _log.LogWarning(ex, "Failed to create publisher, retrying...");
+                    Thread.Sleep(100);
+                }
+            }
+            throw new LucentException("Failed to create publisher");
         }
 
         /// <inheritdoc />
@@ -83,16 +108,41 @@ namespace Lucent.Common.Messaging
         public IMessageSubscriber<T> CreateSubscriber<T>(string topic)
             where T : IMessage
         {
-            _log.LogInformation("Creating subscriber for {0} ({1})", topic, "null");
-            return new RabbitSubscriber<T>(this, _factory.CreateConnection(), _log, topic, null);
+            for (var i = 0; i < 5; ++i)
+            {
+                try
+                {
+                    _log.LogInformation("Creating subscriber for {0} ({1})", topic, "null");
+                    return new RabbitSubscriber<T>(this, _factory.CreateConnection(), _log, topic, null);
+                }
+                catch (Exception ex)
+                {
+                    _log.LogWarning(ex, "Failed to create subscriber, retrying...");
+                    Thread.Sleep(100);
+                }
+            }
+            throw new LucentException("Failed to create subscriber");
         }
 
         /// <inheritdoc />
         public IMessageSubscriber<T> CreateSubscriber<T>(string topic, string filter)
             where T : IMessage
         {
-            _log.LogInformation("Creating subscriber for {0} ({1})", topic, filter ?? "null");
-            return new RabbitSubscriber<T>(this, _factory.CreateConnection(), _log, topic, filter);
+            for (var i = 0; i < 5; ++i)
+            {
+                try
+                {
+                    _log.LogInformation("Creating subscriber for {0} ({1})", topic, filter ?? "null");
+                    return new RabbitSubscriber<T>(this, _factory.CreateConnection(), _log, topic, filter);
+                }
+                catch (Exception ex)
+                {
+                    _log.LogWarning(ex, "Failed to create subscriber, retrying...");
+                    Thread.Sleep(100);
+                }
+            }
+
+            throw new LucentException("Failed to create subscriber");
         }
     }
 }

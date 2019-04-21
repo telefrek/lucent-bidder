@@ -14,10 +14,16 @@ namespace Lucent.Common.Test
             {
                 Id = SequentialGuid.NextGuid().ToString(),
                 Name = "Test Campaign",
-                LandingPage = "https://www.lucentbid.com",
+                LandingPage = "https://localhost/landing?lctx={CONTEXT}",
                 AdDomains = new string[] { "lucentbid.com", "lucentbid.co" },
                 BuyerId = "buyerid",
                 BundleId = "bundle_1",
+                Actions = new PostbackAction[]{
+                    new PostbackAction {
+                        Name = "install",
+                        Payout = 3d
+                    }
+                },
                 BidFilter = new BidFilter
                 {
                     GeoFilters = new Filters.Filter[]

@@ -14,5 +14,15 @@ namespace Lucent.Common.Middleware
         /// Bidding context parameter
         /// </summary>
         public const string LUCENT_BID_CONTEXT_PARAMETER = "lbctx";
+
+        /// <summary>
+        /// Bidding cpm paramater
+        /// </summary>
+        public const string LUCENT_CPM_PARAMETER = "cpm";
+
+        /// <summary>
+        /// Bidding action parameter
+        /// </summary>
+        public const string LUCENT_BID_ACTION_PARAMETER = "action";
     }
 }

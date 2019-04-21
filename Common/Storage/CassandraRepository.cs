@@ -97,7 +97,7 @@ namespace Lucent.Common.Storage
             {
                 using (var context = StorageCounters.LatencyHistogram.CreateContext("cassandra", _session.Keyspace, queryName))
                 {
-                    return new AsyncRowSet(await _session.ExecuteAsync(statement), 128);
+                    return new AsyncRowSet(await _session.ExecuteAsync(statement));
                 }
             }
             catch (InvalidQueryException queryError)
@@ -109,7 +109,7 @@ namespace Lucent.Common.Storage
                 {
                     // Recreate
                     await CreateTableAsync();
-                    return new AsyncRowSet(await _session.ExecuteAsync(statement), 128);
+                    return new AsyncRowSet(await _session.ExecuteAsync(statement));
                 }
                 throw;
             }
@@ -120,7 +120,7 @@ namespace Lucent.Common.Storage
             }
 
             // No Results
-            return new AsyncRowSet(new RowSet(), 128);
+            return null;
         }
 
         /// <summary>

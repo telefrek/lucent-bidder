@@ -113,10 +113,16 @@ namespace Lucent.Common.Middleware
                         response.Bids = response.Bids ?? new SeatBid[0];
                         if (response.Bids.Length > 0)
                         {
-                            await _bidCache.saveEntries(response);
+                            // Incremenb bid counters
+                            foreach (var c in response.Bids.SelectMany(b => b.Bids).Select(b => b.CampaignId).Distinct())
+                                BidCounters.CampaignBids.WithLabels(c).Inc();
 
                             httpContext.Response.StatusCode = StatusCodes.Status200OK;
                             await _serializationContext.WriteTo(httpContext, response);
+
+#pragma warning disable
+                            _bidCache.saveEntries(response);
+#pragma warning restore
                         }
                         else
                         {

@@ -57,18 +57,18 @@ namespace Lucent.Common.Bidding
             _budgetManager = budgetManager;
             _budgetCache = budgetCache;
 
-            _budgetManager.OnStatusChanged = (e) =>
+            _budgetManager.RegisterHandler(new BudgetEventHandler
             {
-                if (_exchangeId == e.EntityId)
+                IsMatch = (e)=>{return e.EntityId == _exchangeId;},
+                HandleAsync = async (e)=>
                 {
-                    var rem = _budgetCache.TryGetBudget(_exchangeId).Result;
+                    var rem = await _budgetCache.TryGetBudget(_exchangeId);
                     LocalBudget.Get(_exchangeId).Last = rem;
 
                     _isBudgetExhausted = rem <= 0d;
                     _log.LogInformation("Budget change for exchange : {0} ({1})", _exchangeId, _isBudgetExhausted);
                 }
-                return Task.CompletedTask;
-            };
+            });
 
             foreach (var campaign in _storageManager.GetRepository<Campaign>().GetAll().Result)
             {
@@ -144,15 +144,18 @@ namespace Lucent.Common.Bidding
         }
 
         /// <inheritdoc/>
-        public async Task<bool> CanBid()
+        public Task<bool> CanBid()
         {
             if (_isBudgetExhausted |= _exchangeBudget.IsExhausted())
             {
-                await _budgetManager.RequestAdditional(_exchangeId);
-                return false;
+                BidCounters.NoBidReason.WithLabels("no_exchange_budget").Inc();
+                #pragma warning disable
+                _budgetManager.RequestAdditional(_exchangeId);
+                #pragma warning restore
+                return Task.FromResult(false);
             }
 
-            return !_isBudgetExhausted;
+            return Task.FromResult(!_isBudgetExhausted);
         }
 
         /// <summary>

@@ -10,10 +10,10 @@ namespace Lucent.Common.Budget
     public interface IBudgetManager
     {
         /// <summary>
-        /// Invocation for when budget events are recieved
+        /// Register a handler
         /// </summary>
-        /// <value></value>
-        Func<BudgetEvent, Task> OnStatusChanged { get; set; }
+        /// <param name="handler"></param>
+        void RegisterHandler(BudgetEventHandler handler);
 
         /// <summary>
         /// Request additional budget for the entity

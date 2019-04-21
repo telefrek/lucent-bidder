@@ -1,8 +1,8 @@
-replicaCount: 1
+replicaCount: 2
 
 image:
   repository: telefrek/lucent-bidder
-  tag: latest
+  tag: 0.1.alpha
   pullPolicy: IfNotPresent
 
 service:

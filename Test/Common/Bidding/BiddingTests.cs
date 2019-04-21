@@ -43,18 +43,18 @@ namespace Lucent.Common.Bidding
         LucentTestWebHost<BidderStartup> _biddingHost;
         static HttpClient _orchestrationClient;
         static HttpClient _biddingClient;
-
-        Campaign campaign;
+        List<Campaign> campaigns = new List<Campaign>();
         Creative creative;
         Guid exchangeId;
         BidderFilter bidderFilter;
+        Random _rng = new Random();
 
         public TestContext TestContext { get; set; }
 
         [TestCleanup]
         public async Task TestCleanup()
         {
-            if (campaign != null)
+            foreach (var campaign in campaigns)
             {
                 var resp = await _orchestrationClient.GetAsync("/api/campaigns/{0}".FormatWith(campaign.Id));
                 if (resp.StatusCode != HttpStatusCode.NotFound)
@@ -123,6 +123,119 @@ namespace Lucent.Common.Bidding
         }
 
         [TestMethod]
+        public async Task TestMultipleBids()
+        {
+            var sp = ServicePointManager.FindServicePoint(new Uri("https://west.lucentbid.com"));
+            TestContext.WriteLine("bidder supports pipelining: {0}", sp.SupportsPipelining);
+
+            sp.UseNagleAlgorithm = false;
+            sp.ConnectionLimit = 128;
+
+            _orchestrationClient = new HttpClient { BaseAddress = new Uri("https://orchestration.lucentbid.com") };
+            _biddingClient = new HttpClient { BaseAddress = new Uri("https://west.lucentbid.com") };
+
+            await SetupBidderFilters(_orchestrationClient, _orchestrationHost.Provider);
+
+            for (var i = 0; i < 10; ++i)
+                await SetupCampaign(_orchestrationClient, _orchestrationHost.Provider);
+
+            // Add the exchange
+            exchangeId = SequentialGuid.NextGuid();
+            await SetupExchange(exchangeId, _orchestrationClient, _orchestrationHost.Provider);
+
+            await Task.Delay(5000);
+
+            var bidCnt = 0L;
+            var noBidCnt = 0L;
+            var bidWin = 0L;
+            var start = DateTime.Now.AddMinutes(-1);
+            var total = 0d;
+            var tlock = new object();
+
+            var tasks = new List<Task>();
+            var numCalls = 10000;
+
+            for (var i = 0; i < 48; ++i)
+            {
+                tasks.Add(Task.Factory.StartNew(async () =>
+                {
+                    var myTotal = 0d;
+                    var serializationContext = _biddingHost.Provider.GetRequiredService<ISerializationContext>();
+                    var sw = new Stopwatch();
+                    var rng = new Random();
+                    for (var n = 0; n < numCalls; ++n)
+                    {
+                        try
+                        {
+                            var bid = BidGenerator.GenerateBid(0);
+                            sw.Start();
+                            var resp = await MakeBid(_biddingClient, bid, serializationContext, exchangeId);
+                            sw.Stop();
+                            if (resp.StatusCode == HttpStatusCode.OK)
+                            {
+                                Interlocked.Increment(ref bidCnt);
+                                if (rng.NextDouble() < .05)
+                                {
+                                    var br = await VerifyBidResponse(resp, serializationContext);
+                                    if (br != null)
+                                    {
+                                        var b = br.Bids[_rng.Next(br.Bids.Length)].Bids.First();
+                                        if ((await AdvanceBid(_biddingClient, serializationContext, b, true, b.CPM)).StatusCode == HttpStatusCode.OK)
+                                        {
+                                            myTotal += b.CPM;
+                                            Interlocked.Increment(ref bidWin);
+                                            if (rng.NextDouble() < .02)
+                                            {
+                                                await PostbackAction(_biddingClient, bid, b, "install");
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                                Interlocked.Increment(ref noBidCnt);
+                        }
+                        catch (Exception e)
+                        {
+                            TestContext.WriteLine("Error : {0}", e.ToString());
+                        }
+                    }
+
+                    lock (tlock)
+                    {
+                        total += myTotal;
+                    }
+
+                    TestContext.WriteLine("Avg Time : {0:0.000} ms", (sw.ElapsedTicks * 1000d / Stopwatch.Frequency) / numCalls);
+                }).Unwrap());
+
+                // Delay adding new users
+                await Task.Delay(2000);
+            }
+
+            // Wait for the tasks to end
+            await Task.WhenAll(tasks);
+            TestContext.WriteLine("Bid   {0:#,##0} ({1:#,##0.00})", bidCnt, 1.0 * bidCnt / (bidCnt + noBidCnt));
+            TestContext.WriteLine("Wins  {0:#,##0} ({1:#,##0.00})", bidWin, 1.0 * bidWin / bidCnt);
+            TestContext.WriteLine("NoBid {0:#,##0} ({1:#,##0.00})", noBidCnt, 1.0 * noBidCnt / (bidCnt + noBidCnt));
+
+            var end = DateTime.Now.AddSeconds(1);
+
+            Assert.IsTrue(bidCnt > 0, "Failed to make any bids");
+
+            var summary = await GetTestSummary(_orchestrationClient, _biddingHost.Provider, exchangeId.ToString(), start, end);
+            Assert.IsNotNull(summary);
+            TestContext.WriteLine("Total spend : {0}", total / 1000d);
+            TestContext.WriteLine("Exchange: {0}", Encoding.UTF8.GetString(await _biddingHost.Provider.GetRequiredService<ISerializationContext>().AsBytes(summary, SerializationFormat.JSON)));
+
+            foreach (var campaign in campaigns)
+            {
+                summary = await GetTestSummary(_orchestrationClient, _biddingHost.Provider, campaign.Id, start, end);
+                TestContext.WriteLine("Campaign ({1}): {0}", Encoding.UTF8.GetString(await _biddingHost.Provider.GetRequiredService<ISerializationContext>().AsBytes(summary, SerializationFormat.JSON)), campaign.Id);
+            }
+        }
+
+        [TestMethod]
         public async Task TestSuccessfulBid()
         {
             await SetupBidderFilters(_orchestrationClient, _orchestrationHost.Provider);
@@ -135,7 +248,7 @@ namespace Lucent.Common.Bidding
             var resp = await MakeBid(_biddingClient, bid, serializationContext, exchangeId);
             Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
 
-            campaign = await SetupCampaign(_orchestrationClient, _orchestrationHost.Provider);
+            var campaign = await SetupCampaign(_orchestrationClient, _orchestrationHost.Provider);
 
             // Bid again, should be failed
             resp = await MakeBid(_biddingClient, bid, serializationContext, exchangeId);
@@ -148,7 +261,7 @@ namespace Lucent.Common.Bidding
             Assert.AreEqual(HttpStatusCode.OK, resp.StatusCode);
 
             // Verify the response
-            var bidResponse = await VerifyBidResponse(resp, serializationContext, campaign);
+            var bidResponse = await VerifyBidResponse(resp, serializationContext);
             Assert.IsNotNull(bidResponse);
 
             // Ensure we filter out an invalid bid
@@ -163,7 +276,7 @@ namespace Lucent.Common.Bidding
             Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
 
             // send a loss notification
-            resp = await AdvanceBid(_biddingClient, serializationContext, bidResponse.Bids.First().Bids.First(), true);
+            resp = await AdvanceBid(_biddingClient, serializationContext, bidResponse.Bids[_rng.Next(bidResponse.Bids.Length)].Bids.First(), true);
             Assert.AreEqual(HttpStatusCode.OK, resp.StatusCode);
         }
 
@@ -190,18 +303,14 @@ namespace Lucent.Common.Bidding
             }
         }
 
-        async Task<BidResponse> VerifyBidResponse(HttpResponseMessage responseMessage, ISerializationContext serializationContext, Campaign campaign)
+        async Task<BidResponse> VerifyBidResponse(HttpResponseMessage responseMessage, ISerializationContext serializationContext)
         {
-
             var response = await serializationContext.ReadFrom<BidResponse>(await responseMessage.Content.ReadAsStreamAsync(), false, SerializationFormat.JSON | SerializationFormat.COMPRESSED);
             Assert.IsNotNull(response, "Bid response should not be null");
             Assert.IsNotNull(response.Bids, "Bids should be present");
             var seatBid = response.Bids.First();
             Assert.IsNotNull(seatBid.Bids, "Bids must be part of seatbid");
-            var campaignBid = seatBid.Bids.First();
-            Assert.IsNotNull(campaignBid);
-            Assert.AreEqual(campaign.Id, campaignBid.CampaignId, "Only one campaign should exist");
-            Assert.IsTrue(campaignBid.CPM > 0, "No bid information");
+            Assert.IsTrue(seatBid.Bids.All(b => campaigns.Any(c => c.Id == b.CampaignId) && b.CPM > 0d), "Campaign should exist in test set only and have a valid CPM");
 
             return response;
         }
@@ -211,6 +320,41 @@ namespace Lucent.Common.Bidding
             var uri = new Uri(win ? bid.WinUrl.UrlDecode().Replace("${AUCTION_PRICE}", Math.Round(amount ?? (double)bid.CPM, 4).ToString()) : bid.LossUrl);
 
             return await biddingClient.PostAsync(uri.PathAndQuery, null);
+        }
+
+        async Task PostbackAction(HttpClient biddingClient, BidRequest request, Bid bid,
+            string action)
+        {
+            var campaign = campaigns.First(c => c.Id == bid.CampaignId);
+            var context = new BidContext
+            {
+                Campaign = campaign,
+                CampaignId = Guid.Parse(campaign.Id),
+                BidId = Guid.Parse(bid.Id),
+                ExchangeId = exchangeId,
+                BaseUri = new UriBuilder(biddingClient.BaseAddress),
+                Request = request,
+                RequestId = request.Id,
+                BidDate = DateTime.Now
+            };
+
+            var lctx = context.GetOperationString(BidOperation.Action);
+
+            await biddingClient.PostAsync("/v1/postback?{2}={0}&action={1}".FormatWith(lctx, action, QueryParameters.LUCENT_BID_CONTEXT_PARAMETER), null);
+        }
+
+        async Task ClickAd(HttpClient biddingClient, ISerializationContext serializationContext, Bid bid)
+        {
+            await Task.CompletedTask;
+        }
+
+        async Task<LedgerSummary> GetTestSummary(HttpClient orchestrationClient, IServiceProvider serviceProvider, string entity, DateTime start, DateTime end)
+        {
+            var serializationContext = serviceProvider.GetRequiredService<ISerializationContext>();
+            var resp = await orchestrationClient.GetAsync("/api/ledger/{0}?start={1}&end={2}".FormatWith(entity, start.ToString("o"), end.ToString("o")));
+            Assert.AreEqual(HttpStatusCode.OK, resp.StatusCode);
+            var contents = await serializationContext.ReadArrayFrom<LedgerSummary>(await resp.Content.ReadAsStreamAsync(), false, SerializationFormat.JSON);
+            return contents.FirstOrDefault();
         }
 
         async Task SetupBidderFilters(HttpClient orchestrationClient, IServiceProvider serviceProvider)
@@ -290,7 +434,7 @@ namespace Lucent.Common.Bidding
 
         async Task<Campaign> SetupCampaign(HttpClient orchestrationClient, IServiceProvider serviceProvider)
         {
-            campaign = CampaignGenerator.GenerateCampaign();
+            var campaign = CampaignGenerator.GenerateCampaign();
             var context = serviceProvider.GetRequiredService<ISerializationContext>();
             var resp = await orchestrationClient.PostJsonAsync(context, campaign, "/api/campaigns");
             Assert.AreEqual(HttpStatusCode.Created, resp.StatusCode);
@@ -299,13 +443,16 @@ namespace Lucent.Common.Bidding
             if (resp.Headers.TryGetValues("X-LUCENT-ETAG", out tags))
                 etag = tags.FirstOrDefault() ?? "";
 
-            creative = await SetupCreative(orchestrationClient, serviceProvider);
-            await SetupContents(creative, orchestrationClient, serviceProvider);
+            if (creative == null)
+            {
+                creative = await SetupCreative(orchestrationClient, serviceProvider);
+                await SetupContents(creative, orchestrationClient, serviceProvider);
+            }
             campaign.CreativeIds = new String[] { creative.Id };
 
             resp = await orchestrationClient.PutJsonAsync(context, campaign, "/api/campaigns/{0}".FormatWith(campaign.Id), etag);
             Assert.AreEqual(HttpStatusCode.Accepted, resp.StatusCode);
-
+            campaigns.Add(campaign);
             return campaign;
         }
 

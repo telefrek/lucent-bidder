@@ -138,6 +138,20 @@ namespace Lucent.Common.Entities
         public double ConversionPrice { get; set; }
 
         /// <summary>
+        /// The set of actions associated with this campaigns
+        /// </summary>
+        /// <value></value>
+        [SerializationProperty(14, "actions")]
+        public PostbackAction[] Actions { get; set; }
+
+        /// <summary>
+        /// The maximum CPM to spend on this campaign
+        /// </summary>
+        /// <value></value>
+        [SerializationProperty(15, "maxcpm")]
+        public double MaxCPM { get; set; }
+
+        /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>

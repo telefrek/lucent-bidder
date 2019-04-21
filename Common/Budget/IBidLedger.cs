@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Lucent.Common.Entities;
 using Lucent.Common.OpenRTB;
+using Lucent.Common.Serialization;
 
 namespace Lucent.Common.Budget
 {
@@ -36,24 +37,28 @@ namespace Lucent.Common.Budget
         /// The start for this block
         /// </summary>
         /// <value></value>
+        [SerializationProperty(1, "start")]
         public DateTime Start { get; set; }
 
         /// <summary>
         /// The end of the block
         /// </summary>
         /// <value></value>
+        [SerializationProperty(2, "end")]
         public DateTime End { get; set; }
 
         /// <summary>
         /// The total spent during this block
         /// </summary>
         /// <value></value>
+        [SerializationProperty(3, "amount")]
         public double Amount { get; set; }
 
         /// <summary>
         /// The number of bids won
         /// </summary>
         /// <value></value>
+        [SerializationProperty(4, "bids")]
         public int Bids { get; set; }
     }
 }

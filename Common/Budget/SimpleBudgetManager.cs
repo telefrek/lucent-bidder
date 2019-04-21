@@ -24,6 +24,7 @@ namespace Lucent.Common.Budget
         ILogger _log;
         IBudgetClient _budgetClient;
         readonly SemaphoreSlim _budgetSem = new SemaphoreSlim(1);
+        static readonly List<BudgetEventHandler> _handlers = new List<BudgetEventHandler>();
 
         /// <summary>
         /// Default constructor
@@ -51,7 +52,9 @@ namespace Lucent.Common.Budget
             var evt = budgetEvent.Body;
             try
             {
-                await OnStatusChanged(evt);
+                foreach (var handler in _handlers)
+                    if (handler.IsMatch(evt))
+                        await handler.HandleAsync(evt);
             }
             catch (Exception e)
             {
@@ -59,9 +62,6 @@ namespace Lucent.Common.Budget
                 _log.LogError(e, "Failed to process message");
             }
         }
-
-        /// <inheritdoc/>
-        public Func<BudgetEvent, Task> OnStatusChanged { get; set; }
 
         /// <inheritdoc/>
         public async Task RequestAdditional(string entityId)
@@ -94,5 +94,8 @@ namespace Lucent.Common.Budget
             }
 
         }
+
+        /// <inheritdoc/>
+        public void RegisterHandler(BudgetEventHandler handler) => _handlers.Add(handler);
     }
 }

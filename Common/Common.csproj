@@ -17,7 +17,7 @@
     <PackageReference Include="MediaToolkit.NetCore" Version="0.1.0-preview" />
     <PackageReference Include="prometheus-net" Version="3.0.3" />
     <PackageReference Include="prometheus-net.AspNetCore" version="3.0.3" />
-    <PackageReference Include="Aerospike.Client" version="3.7.0" />
+    <PackageReference Include="Aerospike.Client" version="3.8.0" />
   </ItemGroup>
 
 </Project>

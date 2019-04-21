@@ -31,6 +31,10 @@ namespace Lucent.Common.Bidding
         IBudgetManager _budgetManager;
         IBudgetCache _budgetCache;
         LocalBudget _campaignBudget;
+        Histogram _bidderLatency = Metrics.CreateHistogram("campaign_bidder_latency", "Campaign bidder latency", new HistogramConfiguration
+        {
+            Buckets = MetricBuckets.LOW_LATENCY_10_MS
+        });
 
         /// <summary>
         /// Default constructor
@@ -45,6 +49,11 @@ namespace Lucent.Common.Bidding
         public CampaignBidder(Campaign c, ILogger<CampaignBidder> logger, IScoringService scoringService, IBudgetManager budgetManager, IEntityWatcher watcher, IStorageManager storageManager, IBudgetCache budgetCache)
         {
             _campaign = c;
+
+            // Ensure filter is hydrated
+            if (_campaign.BidFilter != null)
+                _campaign.IsFiltered = _campaign.BidFilter.GenerateCode();
+
             _log = logger;
             _scoringService = scoringService;
             _budgetManager = budgetManager;
@@ -52,18 +61,18 @@ namespace Lucent.Common.Bidding
             _budgetCache = budgetCache;
             _campaignBudget = LocalBudget.Get(_campaignId);
 
-            _budgetManager.OnStatusChanged = (e) =>
+            _budgetManager.RegisterHandler(new BudgetEventHandler
             {
-                if (e.EntityId == _campaignId)
+                IsMatch = (e)=>{return e.EntityId == _campaignId;},
+                HandleAsync = async (e)=>
                 {
-                    var rem = _budgetCache.TryGetBudget(_campaignId).Result;
+                    var rem = await _budgetCache.TryGetBudget(_campaignId);
                     LocalBudget.Get(_campaignId).Last = rem;
 
                     _isBudgetExhausted = rem <= 0d;
                     _log.LogInformation("Budget change {0} ({1})", e.EntityId, _isBudgetExhausted);
                 }
-                return Task.CompletedTask;
-            };
+            });
         }
 
         /// <summary>
@@ -81,101 +90,106 @@ namespace Lucent.Common.Bidding
         /// <returns>The set of impressions that weren't filtered</returns>
         public async Task<BidContext[]> BidAsync(BidRequest request, HttpContext httpContext)
         {
-            // Apply campaign filters and check budget
-            if (_campaign.IsFiltered(request))
+            using (var histogram = _bidderLatency.CreateContext())
             {
-                BidCounters.NoBidReason.WithLabels("campaign_filtered").Inc();
-                return NO_MATCHES;
-            }
+                // Apply campaign filters and check budget
+                if (_campaign.IsFiltered(request))
+                {
+                    BidCounters.NoBidReason.WithLabels("campaign_filtered").Inc();
+                    return NO_MATCHES;
+                }
 
-            if (_isBudgetExhausted |= _campaignBudget.IsExhausted())
-            {
-                BidCounters.NoBidReason.WithLabels("no_campaign_budget").Inc();
-                await _budgetManager.RequestAdditional(_campaign.Id);
-                return NO_MATCHES;
-            }
+                if (_isBudgetExhausted |= _campaignBudget.IsExhausted())
+                {
+                    BidCounters.NoBidReason.WithLabels("no_campaign_budget").Inc();
+#pragma warning disable
+                    _budgetManager.RequestAdditional(_campaign.Id);
+#pragma warning restore
+                    return NO_MATCHES;
+                }
 
-            var impList = new List<BidContext>();
-            var allMatched = true;
+                var impList = new List<BidContext>();
+                var allMatched = true;
 
-            // Make sure there is at least one content per impression
-            foreach (var imp in request.Impressions)
-            {
-                // Get the potential matches
-                var matches = _campaign.Creatives.SelectMany(c => c.Contents.Where(cc => !cc.Filter(imp))
-                    .Select(cc =>
-                    {
-                        var ctx = BidContext.Create(httpContext);
-                        ctx.Request = request;
-                        ctx.Impression = imp;
-                        ctx.Campaign = _campaign;
-                        ctx.Creative = c;
-                        ctx.Content = cc;
-                        ctx.BidId = SequentialGuid.NextGuid();
-                        ctx.ExchangeId = ctx.Exchange.ExchangeId;
-                        ctx.RequestId = request.Id;
-                        ctx.CampaignId = Guid.Parse(Campaign.Id);
+                // Make sure there is at least one content per impression
+                foreach (var imp in request.Impressions)
+                {
+                    // Get the potential matches
+                    var matches = _campaign.Creatives.SelectMany(c => c.Contents.Where(cc => !cc.Filter(imp))
+                        .Select(cc =>
+                        {
+                            var ctx = BidContext.Create(httpContext);
+                            ctx.Request = request;
+                            ctx.Impression = imp;
+                            ctx.Campaign = _campaign;
+                            ctx.Creative = c;
+                            ctx.Content = cc;
+                            ctx.BidId = SequentialGuid.NextGuid();
+                            ctx.ExchangeId = ctx.Exchange.ExchangeId;
+                            ctx.RequestId = request.Id;
+                            ctx.CampaignId = Guid.Parse(Campaign.Id);
 
-                        return ctx;
-                    })).ToList();
+                            return ctx;
+                        })).ToList();
 
-                allMatched &= matches.Count > 0;
-                impList.AddRange(matches);
-            }
+                    allMatched &= matches.Count > 0;
+                    impList.AddRange(matches);
+                }
 
-            // Ensure if sold as a bundle, we have all impressions, otherwise return matched or none
-            if (request.AllImpressions && !allMatched)
-            {
-                BidCounters.NoBidReason.WithLabels("not_all_matched").Inc();
-                return NO_MATCHES;
-            }
+                // Ensure if sold as a bundle, we have all impressions, otherwise return matched or none
+                if (request.AllImpressions && !allMatched)
+                {
+                    BidCounters.NoBidReason.WithLabels("not_all_matched").Inc();
+                    return NO_MATCHES;
+                }
 
-            // Get a score for the campaign to the request
-            var score = await _scoringService.Score(Campaign, request);
+                // Get a score for the campaign to the request
+                var score = await _scoringService.Score(Campaign, request);
 
-            // Need some uri building
-            var baseUri = new UriBuilder
-            {
-                Scheme = httpContext.Request.Scheme,
-                Host = httpContext.Request.Host.Value,
-            };
+                // Need some uri building
+                var baseUri = new UriBuilder
+                {
+                    Scheme = httpContext.Request.Scheme,
+                    Host = httpContext.Request.Host.Value,
+                };
 
-            var ret = impList.Select(bidContext =>
-            {
+                var ret = impList.Select(bidContext =>
+                {
                 // TODO: This is a terrible cpm calculation lol
                 var cpm = Math.Round(Math.Max(0.5, score * Campaign.ConversionPrice), 4);
-                if (cpm >= bidContext.Impression.BidFloor)
-                {
-                    bidContext.BaseUri = baseUri;
-                    bidContext.Bid = new Bid
+                    if (cpm >= bidContext.Impression.BidFloor)
                     {
-                        ImpressionId = bidContext.Impression.ImpressionId,
-                        Id = bidContext.BidId.ToString(),
-                        CPM = cpm,
-                        WinUrl = new Uri(baseUri.Uri, "/v1/postback?" + QueryParameters.LUCENT_BID_CONTEXT_PARAMETER + "=" + bidContext.GetOperationString(BidOperation.Win) + "&cpm=${AUCTION_PRICE}").AbsoluteUri,
-                        LossUrl = new Uri(baseUri.Uri, "/v1/postback?" + QueryParameters.LUCENT_BID_CONTEXT_PARAMETER + "=" + bidContext.GetOperationString(BidOperation.Loss)).AbsoluteUri,
-                        BillingUrl = new Uri(baseUri.Uri, "/v1/postback?" + QueryParameters.LUCENT_BID_CONTEXT_PARAMETER + "=" + bidContext.GetOperationString(BidOperation.Impression)).AbsoluteUri,
-                        H = bidContext.Content.H,
-                        W = bidContext.Content.W,
-                        AdDomain = bidContext.Campaign.AdDomains.ToArray(),
-                        BidExpiresSeconds = 300,
-                        Bundle = bidContext.Campaign.BundleId,
-                        ContentCategories = bidContext.Content.Categories,
-                        ImageUrl = bidContext.Content.RawUri,
-                        AdId = bidContext.Creative.Id,
-                        CreativeId = bidContext.Creative.Id,
-                        CampaignId = bidContext.Campaign.Id,
-                    };
+                        bidContext.BaseUri = baseUri;
+                        bidContext.Bid = new Bid
+                        {
+                            ImpressionId = bidContext.Impression.ImpressionId,
+                            Id = bidContext.BidId.ToString(),
+                            CPM = cpm,
+                            WinUrl = new Uri(baseUri.Uri, "/v1/postback?" + QueryParameters.LUCENT_BID_CONTEXT_PARAMETER + "=" + bidContext.GetOperationString(BidOperation.Win) + "&cpm=${AUCTION_PRICE}").AbsoluteUri,
+                            LossUrl = new Uri(baseUri.Uri, "/v1/postback?" + QueryParameters.LUCENT_BID_CONTEXT_PARAMETER + "=" + bidContext.GetOperationString(BidOperation.Loss)).AbsoluteUri,
+                            BillingUrl = new Uri(baseUri.Uri, "/v1/postback?" + QueryParameters.LUCENT_BID_CONTEXT_PARAMETER + "=" + bidContext.GetOperationString(BidOperation.Impression)).AbsoluteUri,
+                            H = bidContext.Content.H,
+                            W = bidContext.Content.W,
+                            AdDomain = bidContext.Campaign.AdDomains.ToArray(),
+                            BidExpiresSeconds = 300,
+                            Bundle = bidContext.Campaign.BundleId,
+                            ContentCategories = bidContext.Content.Categories,
+                            ImageUrl = bidContext.Content.RawUri,
+                            AdId = bidContext.Creative.Id,
+                            CreativeId = bidContext.Creative.Id,
+                            CampaignId = bidContext.Campaign.Id,
+                        };
 
-                    return bidContext;
-                }
-                return null;
-            }).Where(b => b != null).ToArray();
+                        return bidContext;
+                    }
+                    return null;
+                }).Where(b => b != null).ToArray();
 
-            if (ret.Length == 0)
-                BidCounters.NoBidReason.WithLabels("no_creative_match").Inc();
+                if (ret.Length == 0)
+                    BidCounters.NoBidReason.WithLabels("no_creative_match").Inc();
 
-            return ret;
+                return ret;
+            }
         }
     }
 }

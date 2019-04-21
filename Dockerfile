@@ -30,7 +30,9 @@ FROM telefrek/aspnet-core-ffmpeg:2.2
 WORKDIR /opt/lucent
 LABEL component=bidder
 COPY --from=build-env /opt/lucent/Bidder/bin/Release/netcoreapp2.2/publish .
-RUN rm -rf appsettings*.json
+RUN rm -rf appsettings*.json 
+ENV COMPlus_PerfMapEnabled=1
+ENV COMPlus_EnableEventLog=1
 ENTRYPOINT ["dotnet", "Bidder.dll"]
 
 FROM telefrek/aspnet-core-ffmpeg:2.2

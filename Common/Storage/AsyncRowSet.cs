@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Cassandra;
 using Lucent.Common.Collections;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Lucent.Common.Storage
 {
@@ -18,18 +19,17 @@ namespace Lucent.Common.Storage
         /// Asynchronous rowset enumerator
         /// </summary>
         /// <param name="original"></param>
-        /// <param name="pageSize"></param>
-        public AsyncRowSet(RowSet original, int pageSize)
+        public AsyncRowSet(RowSet original)
         {
             // Create and open the buffer, assign the enum for wrapping
-            _rows = new RingBuffer<Row>(pageSize);
+            _rows = new RingBuffer<Row>();
             _rows.Open();
             _enum = _rows.GetEnumerator();
 
             // Appreciate the warning, but this is done on purpose...
-            #pragma warning disable
+#pragma warning disable
             fillBuffer(original);
-            #pragma warning restore
+#pragma warning restore
         }
 
         /// <summary>
@@ -47,14 +47,13 @@ namespace Lucent.Common.Storage
                     if ((numRows = rowSet.GetAvailableWithoutFetching()) > 0)
                         for (var i = 0; i < numRows && rowEnum.MoveNext(); ++i)
                             while (!_rows.TryAdd(rowEnum.Current))
-                                await Task.Delay(10);
+                                await Task.Delay(100);
                     else
                         await rowSet.FetchMoreResultsAsync();
 
                 while (rowEnum.MoveNext())
                     while (!_rows.TryAdd(rowEnum.Current))
-                        await Task.Delay(10);
-
+                        await Task.Delay(100);
             }
 
             _rows.Close();

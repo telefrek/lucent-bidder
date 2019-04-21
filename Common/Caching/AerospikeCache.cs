@@ -89,9 +89,6 @@ namespace Lucent.Common.Caching
     public class AerospikeCache : IAerospikeCache
     {
         AerospikeConfig _config;
-        AsyncClient _client;
-        Policy _readPolicy;
-        WritePolicy _writePolicy;
         ILogger _log;
 
         /// <summary>
@@ -100,16 +97,10 @@ namespace Lucent.Common.Caching
         public AerospikeCache(ILogger<AerospikeCache> logger)
         {
             _log = logger;
-            var policy = new AsyncClientPolicy
-            {
-                asyncMaxCommands = 2048,
-            };
-
-            _client = new AsyncClient(policy, "aspk-cache.lucent.svc", 3000);
         }
 
         /// <inheritdoc/>
-        public void Dispose() => _client.Dispose();
+        public void Dispose() {}
 
         /// <inheritdoc/>
         public async Task<double> Inc(string key, double value, TimeSpan expiration)
@@ -117,7 +108,7 @@ namespace Lucent.Common.Caching
             using (var ctx = StorageCounters.LatencyHistogram.CreateContext("aerospike", "lucent", "inc"))
                 try
                 {
-                    var res = await _client.Operate(new WritePolicy { expiration = (int)expiration.TotalSeconds },
+                    var res = await Aerospike.INSTANCE.Operate(new WritePolicy(Aerospike.INSTANCE.writePolicyDefault) { expiration = (int)expiration.TotalSeconds },
                     default(CancellationToken), new Key("lucent", "lucent", key),
                         Operation.Add(new Bin("budget", (int)(value * 10000))), Operation.Get("budget"));
                     if (res != null)
@@ -139,12 +130,12 @@ namespace Lucent.Common.Caching
             {
                 Record res = null;
                 using (var ctx = StorageCounters.LatencyHistogram.CreateContext("aerospike", "budget", "get"))
-                    res = await _client.Get(new Policy { }, default(CancellationToken), new Key("lucent", "budget", key));
+                    res = await Aerospike.INSTANCE.Get(null, default(CancellationToken), new Key("lucent", "budget", key));
 
                 if (res == null)
                 {
                     using (var ctx = StorageCounters.LatencyHistogram.CreateContext("aerospike", "budget", "update"))
-                        res = await _client.Operate(new WritePolicy { expiration = (int)expiration.TotalSeconds },
+                        res = await Aerospike.INSTANCE.Operate(new WritePolicy(Aerospike.INSTANCE.writePolicyDefault) { expiration = (int)expiration.TotalSeconds },
                         default(CancellationToken), new Key("lucent", "budget", key),
                             Operation.Add(new Bin("budget", (int)(inc * 10000))), Operation.Get("budget"));
 
@@ -154,7 +145,7 @@ namespace Lucent.Common.Caching
                 if (res.GetInt("budget") / 10000d + inc <= max)
                 {
                     using (var ctx = StorageCounters.LatencyHistogram.CreateContext("aerospike", "budget", "update"))
-                        res = await _client.Operate(new WritePolicy { expiration = res.TimeToLive },
+                        res = await Aerospike.INSTANCE.Operate(new WritePolicy(Aerospike.INSTANCE.writePolicyDefault) { expiration = res.TimeToLive },
                         default(CancellationToken), new Key("lucent", "budget", key),
                             Operation.Add(new Bin("budget", (int)(inc * 10000))), Operation.Get("budget"));
 
@@ -177,7 +168,7 @@ namespace Lucent.Common.Caching
             {
                 using (var ctx = StorageCounters.LatencyHistogram.CreateContext("aerospike", "lucent", "get"))
                 {
-                    var res = await _client.Get(new Policy { }, default(CancellationToken), new Key("lucent", "lucent", key));
+                    var res = await Aerospike.INSTANCE.Get(null, default(CancellationToken), new Key("lucent", "lucent", key));
                     if (res != null)
                         return res.GetInt("budget") / 10000d;
                 }

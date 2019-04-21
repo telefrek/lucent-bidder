@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
+using Prometheus;
 
 namespace Lucent.Common.Middleware
 {
@@ -34,6 +35,7 @@ namespace Lucent.Common.Middleware
         IBidLedger _ledger;
         IMessageFactory _messageFactory;
         IMessagePublisher _budgetPublisher;
+        IStorageRepository<Campaign> _campaignRepo;
 
         /// <summary>
         /// Default constructor
@@ -55,6 +57,7 @@ namespace Lucent.Common.Middleware
             _ledger = budgetLedger;
             _messageFactory = messageFactory;
             _budgetPublisher = _messageFactory.CreatePublisher(Topics.BUDGET);
+            _campaignRepo = storageManager.GetRepository<Campaign>();
         }
 
         /// <summary>
@@ -91,7 +94,7 @@ namespace Lucent.Common.Middleware
                         {
                             // Update the exchange and campaign amounts
                             // TODO: handle errors
-                            var acpm = cpm / 1000d;
+                            var acpm = Math.Round(cpm / 1000d, 4);
                             var entry = new BidEntry { BidContext = bidContext.ToString(), RequestId = bidContext.RequestId, Cost = acpm };
                             var response = await _bidCache.getEntryAsync(bidContext.RequestId);
                             if (response == null)
@@ -108,6 +111,10 @@ namespace Lucent.Common.Middleware
                                 context.Response.StatusCode = StatusCodes.Status404NotFound;
                                 return;
                             }
+
+                            BidCounters.CampaignSpend.WithLabels(bidContext.CampaignId.ToString()).Inc(acpm);
+
+                            BidCounters.CampaignWins.WithLabels(bidContext.CampaignId.ToString()).Inc();
 
                             await _ledger.TryRecordEntry(bidContext.ExchangeId.ToString(), entry);
                             await _ledger.TryRecordEntry(bidContext.CampaignId.ToString(), entry);
@@ -143,10 +150,32 @@ namespace Lucent.Common.Middleware
                         context.Response.StatusCode = StatusCodes.Status200OK;
                         break;
                     case BidOperation.Impression:
-                        await Task.Delay(10);
+                        BidCounters.CampaignClicks.WithLabels(bidContext.CampaignId.ToString()).Inc();
                         context.Response.StatusCode = StatusCodes.Status200OK;
                         break;
                     case BidOperation.Action:
+                        var campaign = await _campaignRepo.Get(new StringStorageKey(bidContext.CampaignId.ToString()));
+                        var action = "";
+                        if (campaign != null && TryGetAction(context, out action))
+                        {
+                            if (campaign.Actions != null)
+                            {
+                                var postbackAction = campaign.Actions.FirstOrDefault(pb => pb.Name.Equals(action, StringComparison.InvariantCultureIgnoreCase));
+                                if (postbackAction != null)
+                                {
+                                    BidCounters.CampaignConversions.WithLabels(campaign.Id).Inc();
+                                    BidCounters.CampaignRevenue.WithLabels(campaign.Id).Inc(postbackAction.Payout);
+                                }
+                                else
+                                    _log.LogWarning("Action {0} is not on campaign", action);
+                            }
+                            else
+                            {
+                                _log.LogWarning("No actions defined for campaign");
+                            }
+                        }
+                        else
+                            _log.LogWarning("Campaign not found for action processing");
                         context.Response.StatusCode = StatusCodes.Status200OK;
                         break;
                     default:
@@ -166,7 +195,7 @@ namespace Lucent.Common.Middleware
         /// </summary>
         /// <param name="context"></param>
         /// <param name="cpm"></param>
-        /// <returns></returns>
+        /// <returns>True if it exists</returns>
         bool TryGetCPM(HttpContext context, out double cpm)
         {
             cpm = 0;
@@ -174,6 +203,25 @@ namespace Lucent.Common.Middleware
             StringValues sv;
             if (context.Request.Query.TryGetValue("cpm", out sv))
                 return double.TryParse(sv, out cpm);
+
+            return false;
+        }
+
+        /// <summary>
+        /// Try to get the action from the request 
+        /// </summary>
+        /// <param name="context">The current http context</param>
+        /// <param name="action">The action output</param>
+        /// <returns>True if it exists</returns>
+        bool TryGetAction(HttpContext context, out string action)
+        {
+            action = null;
+            StringValues sv;
+            if (context.Request.Query.TryGetValue(QueryParameters.LUCENT_BID_ACTION_PARAMETER, out sv))
+            {
+                action = sv;
+                return true;
+            }
 
             return false;
         }

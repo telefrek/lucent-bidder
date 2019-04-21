@@ -1,6 +1,8 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Lucent.Common.Budget;
+using Lucent.Common.Serialization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
@@ -14,17 +16,20 @@ namespace Lucent.Common.Middleware
     {
         ILogger<LedgerMiddleware> _log;
         IBidLedger _ledger;
+        ISerializationContext _serializationContext;
 
         /// <summary>
         /// Injection constructor
         /// </summary>
         /// <param name="next">Ignored</param>
         /// <param name="logger">Logger for output</param>
-        /// <param name="ledger"The ledger for the environment></param>
-        public LedgerMiddleware(RequestDelegate next, ILogger<LedgerMiddleware> logger, IBidLedger ledger)
+        /// <param name="ledger">The ledger for the environment></param>
+        /// <param name="serializationContext">Serializatoin context to use</param>
+        public LedgerMiddleware(RequestDelegate next, ILogger<LedgerMiddleware> logger, IBidLedger ledger, ISerializationContext serializationContext)
         {
             _log = logger;
             _ledger = ledger;
+            _serializationContext = serializationContext;
         }
 
         /// <summary>
@@ -36,16 +41,18 @@ namespace Lucent.Common.Middleware
         {
             try
             {
+                _log.LogInformation("Leger call:  {0}", httpContext.Request.Path.Value);
                 var segments = httpContext.Request.Path.Value.Split(new char[] { '/' },
                     StringSplitOptions.RemoveEmptyEntries);
 
-                if(segments.Length < 3)
+                if (segments.Length == 0)
                 {
                     httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
                     return;
                 }
 
-                var ledgerId = segments[2];
+                var ledgerId = segments.First();
+                _log.LogInformation("Getting ledger for {0}", ledgerId);
 
                 switch (httpContext.Request.Method.ToLowerInvariant())
                 {
@@ -64,7 +71,14 @@ namespace Lucent.Common.Middleware
                         if (query.ContainsKey("end") && query.TryGetValue("end", out qp))
                             end = DateTime.Parse(qp).ToUniversalTime();
 
-                        await _ledger.TryGetSummary(ledgerId, start, end, null);
+                        var summaries = await _ledger.TryGetSummary(ledgerId, start, end, null);
+                        if (summaries.Count > 0)
+                        {
+                            httpContext.Response.StatusCode = StatusCodes.Status200OK;
+                            await _serializationContext.WriteTo(summaries, httpContext.Response.Body, false, SerializationFormat.JSON);
+                        }
+                        else
+                            httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
 
                         break;
                     default:

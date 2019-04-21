@@ -21,6 +21,7 @@ public static partial class LucentExtensions
     static MD5 _md5 = System.Security.Cryptography.MD5.Create();
     static double _t2ms = 1000d / Stopwatch.Frequency;
     static double _t2s = 1d / Stopwatch.Frequency;
+    static Random _rng = new Random();
 
     /// <summary>
     /// Get the timer milliseconds
@@ -42,6 +43,25 @@ public static partial class LucentExtensions
     /// <param name="buffer"></param>
     /// <returns></returns>
     public static string CalculateETag(this byte[] buffer) => _md5.ComputeHash(buffer).ToHex();
+
+    /// <summary>
+    /// Fisher Yates shuffle
+    /// </summary>
+    /// <param name="source">The enumeration to shuffle</param>
+    /// <typeparam name="T">Object Type</typeparam>
+    /// <returns>Random order</returns>
+    public static IEnumerable<T> Shuffle<T>(
+        this IEnumerable<T> source)
+    {
+        var buffer = source.ToList();
+        for (int i = 0; i < buffer.Count; i++)
+        {
+            int j = _rng.Next(i, buffer.Count);
+            yield return buffer[j];
+
+            buffer[j] = buffer[i];
+        }
+    }
 
     /// <summary>
     /// Create a filter for the type

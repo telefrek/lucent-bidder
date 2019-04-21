@@ -52,12 +52,11 @@ namespace Lucent.Common.Budget
         /// <inheritdoc/>
         public async Task<bool> TryRecordEntry(string ledgerId, BidEntry source)
         {
-            _log.LogInformation("Recording {0} for {1}", source.Cost, ledgerId);
             try
             {
                 var contents = await _serializationContext.AsBytes(source, _serializationFormat);
 
-                var rowSet = await ExecuteAsync(_insertStatement.Bind(ledgerId, TimeUuid.NewId(), _serializationFormat.ToString(), DateTime.UtcNow, source.Cost, contents), "insert_" + _tableName);
+                var rowSet = await ExecuteAsync(_insertStatement.Bind(ledgerId, TimeUuid.NewId(DateTime.UtcNow), _serializationFormat.ToString(), DateTime.UtcNow, source.Cost, contents), "insert_" + _tableName);
 
                 return rowSet != null;
             }
@@ -97,7 +96,7 @@ namespace Lucent.Common.Budget
                     Bids = 0,
                 };
 
-                foreach (var row in await ExecuteAsync(_getRangeStatement.Bind(entityId, begin, next), "get_ledger_range"))
+                foreach (var row in await ExecuteAsync(_getRangeStatement.Bind(entityId, TimeUuid.Min(begin), TimeUuid.Max(next)), "get_ledger_range"))
                 {
                     summary.Amount += row.GetValue<double>("amount");
                     summary.Bids++;

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Loader;
 using System.Threading.Tasks;
 using Lucent.Common.Entities;
 using Lucent.Common.Entities.Events;
@@ -70,8 +71,12 @@ namespace Lucent.Common.Exchanges
                     }
                     break;
                 case EventType.EntityDelete:
-                    if (_exchangeMap.Remove(evt.EntityId))
+                    var exchg = (AdExchange)null;
+                    if(_exchangeMap.TryGetValue(evt.EntityId, out exchg))
+                    {
+                        _exchangeMap.Remove(evt.EntityId);
                         _log.LogInformation("Unloaded : {0}", evt.EntityId);
+                    }
                     break;
             }
         }
