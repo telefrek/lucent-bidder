@@ -17,35 +17,45 @@ namespace Lucent.Common.Messaging
     public class RabbitSubscriber<T> : IMessageSubscriber<T>
         where T : IMessage
     {
-        readonly IConnection _conn;
-        readonly IModel _channel;
-        readonly AsyncEventingBasicConsumer _consumer;
-        readonly string _queueName;
+        IConnection _conn;
+        IModel _channel;
+        AsyncEventingBasicConsumer _consumer;
+        string _queueName;
         readonly IMessageFactory _factory;
+        readonly IConnectionFactory _connectionFactory;
         readonly ILogger _log;
+        readonly string _filter;
 
         /// <summary>
         /// 
         /// </summary>
         /// <param name="factory"></param>
-        /// <param name="conn"></param>
+        /// <param name="connectionFactory"></param>
         /// <param name="log"></param>
         /// <param name="topic"></param>
         /// <param name="filter"></param>
-        public RabbitSubscriber(IMessageFactory factory, IConnection conn, ILogger log, string topic, string filter)
+        public RabbitSubscriber(IMessageFactory factory, IConnectionFactory connectionFactory, ILogger log, string topic, string filter)
         {
-            _conn = conn;
-            _channel = conn.CreateModel();
+            _filter = filter;
+            _connectionFactory = connectionFactory;
+            Topic = topic;
             _log = log;
             _factory = factory;
-            Topic = topic;
 
-            _channel.ExchangeDeclare(exchange: topic, type: "topic");
-            _queueName = _channel.QueueDeclare().QueueName;
+            SetupChannel();
+        }
+
+        void SetupChannel()
+        {
+            _conn = _connectionFactory.CreateConnection();
+            _channel = _conn.CreateModel();
+
+            _channel.ExchangeDeclare(exchange: Topic, type: "topic");
+            _queueName = _channel.QueueDeclare(queue: _queueName ?? "").QueueName;
 
             _channel.QueueBind(queue: _queueName,
-                  exchange: topic,
-                  routingKey: filter ?? _factory.WildcardFilter);
+                  exchange: Topic,
+                  routingKey: _filter ?? _factory.WildcardFilter);
 
             _consumer = new AsyncEventingBasicConsumer(_channel);
             _consumer.Received += ProcessMessage;
@@ -53,6 +63,7 @@ namespace Lucent.Common.Messaging
             _channel.BasicConsume(queue: _queueName,
                                  autoAck: false,
                                  consumer: _consumer);
+
         }
 
         private async Task ProcessMessage(object model, BasicDeliverEventArgs ea)

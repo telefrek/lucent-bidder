@@ -72,7 +72,7 @@ namespace Lucent.Common.Messaging
             {
                 try
                 {
-                    return new RabbitPublisher(this, _log, _factory.CreateConnection(), topic);
+                    return new RabbitPublisher(this, _log, _factory, topic);
                 }
                 catch (Exception ex)
                 {
@@ -113,7 +113,7 @@ namespace Lucent.Common.Messaging
                 try
                 {
                     _log.LogInformation("Creating subscriber for {0} ({1})", topic, "null");
-                    return new RabbitSubscriber<T>(this, _factory.CreateConnection(), _log, topic, null);
+                    return new RabbitSubscriber<T>(this, _factory, _log, topic, null);
                 }
                 catch (Exception ex)
                 {
@@ -133,7 +133,7 @@ namespace Lucent.Common.Messaging
                 try
                 {
                     _log.LogInformation("Creating subscriber for {0} ({1})", topic, filter ?? "null");
-                    return new RabbitSubscriber<T>(this, _factory.CreateConnection(), _log, topic, filter);
+                    return new RabbitSubscriber<T>(this, _factory, _log, topic, filter);
                 }
                 catch (Exception ex)
                 {

@@ -12,9 +12,10 @@ namespace Lucent.Common.Messaging
     /// </summary>
     public class RabbitPublisher : IMessagePublisher
     {
-        readonly IConnection _conn;
-        readonly IModel _channel;
+        IConnection _conn;
+        IModel _channel;
         readonly IMessageFactory _factory;
+        readonly IConnectionFactory _connectionFactory;
         readonly ILogger _log;
 
         /// <inheritdoc/>
@@ -25,21 +26,58 @@ namespace Lucent.Common.Messaging
         /// </summary>
         /// <param name="factory"></param>
         /// <param name="log"></param>
-        /// <param name="conn"></param>
+        /// <param name="connectionFactory"></param>
         /// <param name="topic"></param>
-        public RabbitPublisher(IMessageFactory factory, ILogger log, IConnection conn, string topic)
+        public RabbitPublisher(IMessageFactory factory, ILogger log, IConnectionFactory connectionFactory, string topic)
         {
-            _conn = conn;
+            _connectionFactory = connectionFactory;
             _factory = factory;
             _log = log;
-            _channel = conn.CreateModel();
-            _channel.ExchangeDeclare(topic, "topic");
             Topic = topic;
+            Setup();
+        }
+
+        bool Setup()
+        {
+            try
+            {
+                _conn = _connectionFactory.CreateConnection();
+                _channel = _conn.CreateModel();
+                _channel.ExchangeDeclare(Topic, "topic");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _log.LogError(ex, "Failed to create connection");
+                _conn = null;
+                _channel = null;
+            }
+            return false;
+        }
+
+        void Teardown()
+        {
+            try
+            {
+                _channel.Close();
+                _channel.Dispose();
+                _conn.Close();
+                _conn.Dispose();
+            }
+            catch (Exception ex)
+            {
+                _log.LogError(ex, "Failed teardown");
+            }
+            _conn = null;
+            _channel = null;
         }
 
         /// <inheritdoc/>
         public async Task<bool> TryPublish(IMessage message)
         {
+            if (_conn == null && !Setup())
+                return false;
+
             using (var ctx = MessageCounters.LatencyHistogram.CreateContext(Topic, "publish"))
                 try
                 {
@@ -64,6 +102,7 @@ namespace Lucent.Common.Messaging
                 {
                     _log.LogWarning(e, "Failed to publish message on {0}", Topic);
                     MessageCounters.ErrorCounter.WithLabels(Topic, e.GetType().Name).Inc();
+                    Teardown();
                 }
 
             return false;
@@ -90,10 +129,6 @@ namespace Lucent.Common.Messaging
         }
 
         /// <inheritdoc/>
-        public void Dispose()
-        {
-            _channel.Close();
-            _conn.Close();
-        }
+        public void Dispose() => Teardown();
     }
 }
