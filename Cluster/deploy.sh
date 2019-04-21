@@ -38,10 +38,6 @@ if [ "${1:-ldap}" == "ldap" ]; then
     kubectl get secret --namespace lucent openldap-secret -o jsonpath="{.data.LDAP_ADMIN_PASSWORD}" | base64 --decode; echo
 fi
 
-if [ "${1:-portal}" == "portal" ]; then
-    helm upgrade --install --tiller-namespace=lucent --namespace=lucent portal ./charts/portal/ -f ${2-.}/portal.yaml
-fi
-
 if [ "${1:-bidder}" == "bidder" ]; then
     helm upgrade --install --tiller-namespace=lucent --namespace=lucent bidder ./charts/bidder/ -f ${2-.}/bidder.yaml
 fi

@@ -17,10 +17,6 @@ docker build --rm=false -t telefrek/lucent-build:$IMAGE_TAG .
 
 sleep 2
 
-echo 'Tagging images'
-docker tag $(docker ps -a -f "label=component=portal" -f "status=exited" --format "{{.Image}}") telefrek/lucent-portal:$LUCENT_VERSION
-docker tag telefrek/lucent-portal:$LUCENT_VERSION telefrek/lucent-portal:latest
-
 docker tag $(docker ps -a -f "label=component=bidder" -f "status=exited" --format "{{.Image}}") telefrek/lucent-bidder:$LUCENT_VERSION
 docker tag telefrek/lucent-bidder:$LUCENT_VERSION telefrek/lucent-bidder:latest
 
@@ -34,11 +30,6 @@ docker tag $(docker ps -a -f "label=component=scoring" -f "status=exited" --form
 docker tag telefrek/lucent-scoring:$LUCENT_VERSION telefrek/lucent-scoring:latest
 
 echo 'Pushing images'
-
-if [ "${1:-portal}" == "portal" ]; then
-    docker push telefrek/lucent-portal:$LUCENT_VERSION
-    docker push telefrek/lucent-portal:latest
-fi
 
 if [ "${1:-bidder}" == "bidder" ]; then
 docker push telefrek/lucent-bidder:$LUCENT_VERSION
