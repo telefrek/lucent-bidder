@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Lucent.Common.Bidding;
 using Lucent.Common.Caching;
+using Lucent.Common.Entities;
 using Lucent.Common.Messaging;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -64,7 +65,7 @@ namespace Lucent.Common.Budget
         }
 
         /// <inheritdoc/>
-        public async Task RequestAdditional(string entityId)
+        public async Task RequestAdditional(string entityId, EntityType entityType)
         {
             if (_memcache.Get(entityId) != null)
                 return;
@@ -80,7 +81,7 @@ namespace Lucent.Common.Budget
                 _memcache.Set(entityId, new object(), new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(15) });
 
                 BidCounters.BudgetRequests.WithLabels("request").Inc();
-                if (!await _budgetClient.RequestBudget(entityId))
+                if (!await _budgetClient.RequestBudget(entityId, entityType))
                     _memcache.Remove(entityId);
             }
             catch (Exception e)

@@ -48,7 +48,7 @@ namespace Lucent.Common.Budget
         /// Check if the budget is exhausted
         /// </summary>
         /// <returns></returns>
-        public bool IsExhausted() => Interlocked.Read(ref _current) / 10000d + Last < 0d;
+        public bool IsExhausted() => Interlocked.Read(ref _current) / 10000d + Last <= 0d;
 
         /// <summary>
         /// Collect the budget and reset it to 0

@@ -32,7 +32,6 @@ namespace Lucent.Common.Bidding
         IStorageRepository<Campaign> _campaignRepo;
         IStorageRepository<Creative> _creativeRepo;
         IBudgetCache _budgetCache;
-        LocalBudget _exchangeBudget;
 
         /// <summary>
         /// Default constructor
@@ -139,23 +138,20 @@ namespace Lucent.Common.Bidding
         public Task Initialize(AdExchange exchange)
         {
             _exchangeId = exchange.ExchangeId.ToString();
-            _exchangeBudget = LocalBudget.Get(_exchangeId);
             return Task.CompletedTask;
         }
 
         /// <inheritdoc/>
-        public Task<bool> CanBid()
+        public async Task<bool> CanBid()
         {
-            if (_isBudgetExhausted |= _exchangeBudget.IsExhausted())
+            if (_isBudgetExhausted |= LocalBudget.Get(_exchangeId).IsExhausted())
             {
                 BidCounters.NoBidReason.WithLabels("no_exchange_budget").Inc();
-                #pragma warning disable
-                _budgetManager.RequestAdditional(_exchangeId);
-                #pragma warning restore
-                return Task.FromResult(false);
+                await _budgetManager.RequestAdditional(_exchangeId, EntityType.Exchange);
+                return false;
             }
 
-            return Task.FromResult(!_isBudgetExhausted);
+            return !_isBudgetExhausted;
         }
 
         /// <summary>

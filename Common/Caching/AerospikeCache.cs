@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Aerospike.Client;
 using Lucent.Common.Storage;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -64,22 +65,34 @@ namespace Lucent.Common.Caching
     /// </summary>
     public class MockAspkCache : IAerospikeCache
     {
+        static readonly MemoryCache _memcache = new MemoryCache(new MemoryCacheOptions { ExpirationScanFrequency = TimeSpan.FromSeconds(15) });
+
         /// <inheritdoc/>
         public Task<double> Get(string key)
         {
-            return Task.FromResult(0.1);
+            return Task.FromResult(((double?)_memcache.Get(key)).GetValueOrDefault(0d));
         }
 
         /// <inheritdoc/>
-        public Task<double> Inc(string key, double value, TimeSpan expiration)
+        public async Task<double> Inc(string key, double value, TimeSpan expiration)
         {
-            return Task.FromResult(value);
+            return _memcache.Set(key, await Get(key) + value, new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = expiration
+            });
         }
 
         /// <inheritdoc/>
-        public Task<bool> TryUpdateBudget(string key, double inc, double max, TimeSpan expiration)
+        public async Task<bool> TryUpdateBudget(string key, double inc, double max, TimeSpan expiration)
         {
-            return Task.FromResult(true);
+            var cur = await Get(key);
+            if(cur + inc <= max)
+            {
+                await Inc(key, inc, expiration);
+                return true;
+            }
+
+            return false;
         }
     }
 

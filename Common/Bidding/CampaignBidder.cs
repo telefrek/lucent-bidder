@@ -103,7 +103,7 @@ namespace Lucent.Common.Bidding
                 {
                     BidCounters.NoBidReason.WithLabels("no_campaign_budget").Inc();
 #pragma warning disable
-                    _budgetManager.RequestAdditional(_campaign.Id);
+                    _budgetManager.RequestAdditional(_campaign.Id, EntityType.Campaign);
 #pragma warning restore
                     return NO_MATCHES;
                 }

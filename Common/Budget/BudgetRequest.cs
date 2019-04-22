@@ -1,4 +1,5 @@
 using System;
+using Lucent.Common.Entities;
 using Lucent.Common.Serialization;
 
 namespace Lucent.Common.Budget
@@ -21,5 +22,12 @@ namespace Lucent.Common.Budget
         /// <value></value>
         [SerializationProperty(2, "correlationId")]
         public Guid CorrelationId { get; set; }
+
+        /// <summary>
+        /// The type of entity requested
+        /// </summary>
+        /// <value></value>
+        [SerializationProperty(3, "eType")]
+        public EntityType EntityType {get;set;}
     }
 }

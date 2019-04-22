@@ -128,7 +128,7 @@ namespace Lucent.Common.Entities
         /// <value></value>
         [Display(Name = "Budget Schedule")]
         [SerializationProperty(12, "budgetSchedule")]
-        public BudgetSchedule SpendCaps { get; set; } = new BudgetSchedule { };
+        public BudgetSchedule BudgetSchedule { get; set; } = new BudgetSchedule { };
 
         /// <summary>
         /// 

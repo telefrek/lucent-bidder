@@ -13,5 +13,7 @@ namespace Lucent.Common.Events
         EntityUpdate = 2,
         /// <value></value>
         EntityDelete = 3,
+        /// <value></value>
+        BudgetUpdate = 4,
     }
 }

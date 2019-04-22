@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Lucent.Common.Entities;
 using Lucent.Common.Storage;
 
 namespace Lucent.Common.Budget
@@ -19,7 +20,8 @@ namespace Lucent.Common.Budget
         /// Request additional budget for the entity
         /// </summary>
         /// <param name="entityId"></param>
+        /// <param name="entityType"></param>
         /// <returns></returns>
-        Task RequestAdditional(string entityId);
+        Task RequestAdditional(string entityId, EntityType entityType);
     }
 }

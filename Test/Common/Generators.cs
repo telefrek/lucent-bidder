@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Lucent.Common.Budget;
 using Lucent.Common.Entities;
 using Lucent.Common.Filters;
 using Lucent.Common.OpenRTB;
@@ -32,6 +33,17 @@ namespace Lucent.Common.Test
                     }
                 },
                 ConversionPrice = 1,
+                Schedule = new CampaignSchedule
+                {
+                    StartDate = DateTime.UtcNow.AddMinutes(-5),
+                    EndDate = DateTime.UtcNow.AddDays(1),
+                },
+                BudgetSchedule = new BudgetSchedule
+                {
+                    ScheduleType = ScheduleType.Even,
+                    HourlyCap = 5,
+                    DailyCap = 10,
+                }
             };
         }
     }

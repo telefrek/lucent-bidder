@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Lucent.Common.Client;
+using Lucent.Common.Entities;
 using Lucent.Common.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -40,10 +41,11 @@ namespace Lucent.Common.Budget
         /// 
         /// </summary>
         /// <param name="entityId"></param>
+        /// <param name="entityType"></param>
         /// <returns></returns>
-        public async Task<bool> RequestBudget(string entityId)
+        public async Task<bool> RequestBudget(string entityId, EntityType entityType)
         {            
-            var req = new BudgetRequest { EntityId = entityId, CorrelationId = SequentialGuid.NextGuid() };
+            var req = new BudgetRequest { EntityId = entityId, CorrelationId = SequentialGuid.NextGuid(), EntityType = entityType };
             using (var ms = new MemoryStream())
             {
                 await _serializationContext.WriteTo(req, ms, true, SerializationFormat.JSON);

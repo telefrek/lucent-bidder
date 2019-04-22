@@ -29,6 +29,7 @@ namespace Lucent.Common.Middleware
         readonly ISerializationContext _serializationContext;
         readonly ILogger<BudgetOrchestrator> _logger;
         readonly IStorageRepository<Campaign> _campaignRepository;
+        readonly IStorageRepository<Exchange> _exchangeRepository;
         readonly IMessageFactory _messageFactory;
         readonly IAerospikeCache _aerospikeCache;
         IBudgetCache _budgetCache;
@@ -49,6 +50,7 @@ namespace Lucent.Common.Middleware
         {
             _storageManager = storageManager;
             _campaignRepository = storageManager.GetRepository<Campaign>();
+            _exchangeRepository = storageManager.GetRepository<Exchange>();
             _serializationContext = serializationContext;
             _messageFactory = messageFactory;
             _logger = logger;
@@ -84,15 +86,60 @@ namespace Lucent.Common.Middleware
 
                         await _budgetLock.WaitAsync();
 
-                        // Add a dollar if they've been good...
-                        BidCounters.BudgetRequests.WithLabels("recieved").Inc();
+                        var schedule = (BudgetSchedule)null;
 
-                        if (await _aerospikeCache.TryUpdateBudget(request.EntityId, 1d, 5d, TimeSpan.FromMinutes(5)))
-                            if (await _budgetCache.TryUpdateBudget(request.EntityId, 1.0) == double.NaN)
-                                await _aerospikeCache.TryUpdateBudget(request.EntityId, -1d, 5d, TimeSpan.FromMinutes(5));
+                        switch (request.EntityType)
+                        {
+                            case EntityType.Campaign:
+                                var camp = await _campaignRepository.Get(new StringStorageKey(request.EntityId));
+                                if (camp != null)
+                                    schedule = camp.BudgetSchedule;
+                                break;
+                            case EntityType.Exchange:
+                                var exchange = await _exchangeRepository.Get(new GuidStorageKey(Guid.Parse(request.EntityId)));
+                                if (exchange != null)
+                                    schedule = exchange.BudgetSchedule;
+                                break;
+                            default:
+                                break;
+                        }
+
+                        if (schedule == null)
+                        {
+                            httpContext.Response.StatusCode = 400;
+                            return;
+                        }
+
+                        var ttl = 5;
+                        var amount = 0d;
+
+                        switch (schedule.ScheduleType)
+                        {
+                            case ScheduleType.Aggressive:
+                                ttl = 60 - DateTime.Now.Minute;
+                                amount = schedule.HourlyCap;
+                                break;
+                            case ScheduleType.Even:
+                                amount = schedule.HourlyCap / 12; // 5 minutes per segment
+                                break;
+                            default:
+                                httpContext.Response.StatusCode = 400;
+                                return;
+                        }
+
+                        if (amount > 0)
+                        {
+
+                            // Add a dollar if they've been good...
+                            BidCounters.BudgetRequests.WithLabels("recieved").Inc();
+
+                            if (await _aerospikeCache.TryUpdateBudget(request.EntityId, amount, schedule.HourlyCap, TimeSpan.FromMinutes(ttl)))
+                                if (await _budgetCache.TryUpdateBudget(request.EntityId, amount) == double.NaN)
+                                    await _aerospikeCache.TryUpdateBudget(request.EntityId, -amount, schedule.HourlyCap, TimeSpan.FromMinutes(ttl));
+                        }
 
                         _budgetLock.Release();
-                        
+
                         var msg = _messageFactory.CreateMessage<BudgetEventMessage>();
                         msg.Body = new BudgetEvent { EntityId = request.EntityId };
                         await _budgetPublisher.TryPublish(msg);
@@ -112,12 +159,12 @@ namespace Lucent.Common.Middleware
                 {
                     var msg = _messageFactory.CreateMessage<EntityEventMessage>();
                     msg.Body = evt;
-                    msg.Route = "campaign";
+                    msg.Route = request.EntityType.ToString().ToLowerInvariant();
                     await _messageFactory.CreatePublisher(Topics.BIDDING).TryPublish(msg);
 
                     var sync = _messageFactory.CreateMessage<LucentMessage<BudgetRequest>>();
                     sync.Body = request;
-                    sync.Route = "campaign";
+                    msg.Route = request.EntityType.ToString().ToLowerInvariant();
                     await _messageFactory.CreatePublisher(Topics.ENTITIES).TryBroadcast(msg);
                 }
             }

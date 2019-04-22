@@ -122,7 +122,7 @@ namespace Lucent.Common.Bidding
             public HttpClient OrchestrationClient => _orchestrationClient;
         }
 
-        
+
 
         [TestMethod]
         public async Task TestSuccessfulBid()
@@ -139,13 +139,26 @@ namespace Lucent.Common.Bidding
 
             var campaign = await SetupCampaign(_orchestrationClient, _orchestrationHost.Provider);
 
-            // Bid again, should be failed
+            // Bid again, should be failed, no exchange
             resp = await MakeBid(_biddingClient, bid, serializationContext, exchangeId);
             Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
 
             // Add the exchange
             await SetupExchange(exchangeId, _orchestrationClient, _orchestrationHost.Provider);
 
+            // Bid again, no exchange budget
+            resp = await MakeBid(_biddingClient, bid, serializationContext, exchangeId);
+            Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
+
+            await Task.Delay(1000);
+
+            // Bid again, no campaign budget
+            resp = await MakeBid(_biddingClient, bid, serializationContext, exchangeId);
+            Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
+
+            await Task.Delay(1000);
+            
+            // Should work
             resp = await MakeBid(_biddingClient, bid, serializationContext, exchangeId);
             Assert.AreEqual(HttpStatusCode.OK, resp.StatusCode);
 
@@ -301,6 +314,12 @@ namespace Lucent.Common.Bidding
                 Name = "test",
                 Id = id,
                 LastCodeUpdate = DateTime.UtcNow,
+                BudgetSchedule = new BudgetSchedule
+                {
+                    ScheduleType = ScheduleType.Aggressive,
+                    HourlyCap = 25,
+                    DailyCap = 300,
+                }
             };
 
             var context = serviceProvider.GetRequiredService<ISerializationContext>();
