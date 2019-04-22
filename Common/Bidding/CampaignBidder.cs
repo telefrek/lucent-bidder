@@ -63,8 +63,8 @@ namespace Lucent.Common.Bidding
 
             _budgetManager.RegisterHandler(new BudgetEventHandler
             {
-                IsMatch = (e)=>{return e.EntityId == _campaignId;},
-                HandleAsync = async (e)=>
+                IsMatch = (e) => { return e.EntityId == _campaignId; },
+                HandleAsync = async (e) =>
                 {
                     var rem = await _budgetCache.TryGetBudget(_campaignId);
                     LocalBudget.Get(_campaignId).Last = rem;
@@ -112,7 +112,7 @@ namespace Lucent.Common.Bidding
                 var allMatched = true;
 
                 // Make sure there is at least one content per impression
-                foreach (var imp in request.Impressions)
+                foreach (var imp in request.Impressions.Where(i => i.BidFloor <= _campaign.MaxCPM))
                 {
                     // Get the potential matches
                     var matches = _campaign.Creatives.SelectMany(c => c.Contents.Where(cc => !cc.Filter(imp))
@@ -155,8 +155,8 @@ namespace Lucent.Common.Bidding
 
                 var ret = impList.Select(bidContext =>
                 {
-                // TODO: This is a terrible cpm calculation lol
-                var cpm = Math.Round(Math.Max(0.5, score * Campaign.ConversionPrice), 4);
+                    // TODO: This is a terrible cpm calculation lol
+                    var cpm = Math.Round(score * Campaign.ConversionPrice * .9, 4);
                     if (cpm >= bidContext.Impression.BidFloor)
                     {
                         bidContext.BaseUri = baseUri;
