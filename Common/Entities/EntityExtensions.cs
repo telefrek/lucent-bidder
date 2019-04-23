@@ -29,8 +29,10 @@ namespace Lucent.Common
                 switch (tokens[i].Value)
                 {
                     case "adv_id":
+                        s = s.Replace("{" + tokens[i] + "}", "");
                         break;
                     case "click_id":
+                        s = s.Replace("{" + tokens[i] + "}", "");
                         break;
                     case "pub_id":
                         s = s.Replace("{pub_id}", bidContext.Request.App != null ? bidContext.Request.App.Name ?? bidContext.Request.App.Id ?? "" : bidContext.Request.Site != null ? bidContext.Request.Site.Name ?? bidContext.Request.Site.Id ?? "" : "");
@@ -42,6 +44,7 @@ namespace Lucent.Common
                         s = s.Replace("{city}", device.Geo.City ?? "");
                         break;
                     case "country_code":
+                        s = s.Replace("{" + tokens[i] + "}", "");
                         break;
                     case "currency":
                         s = s.Replace("{currency}", "USD");
@@ -62,12 +65,16 @@ namespace Lucent.Common
                         s = s.Replace("{carrier}", device.Carrier ?? "");
                         break;
                     case "payout":
+                        s = s.Replace("{" + tokens[i] + "}", "");
                         break;
                     case "purchase":
+                        s = s.Replace("{" + tokens[i] + "}", "");
                         break;
                     case "conversion_id":
+                        s = s.Replace("{" + tokens[i] + "}", "");
                         break;
                     case "event":
+                        s = s.Replace("{" + tokens[i] + "}", "");
                         break;
                     case "device_brand":
                         // TODO: Figure out how to do this
@@ -83,20 +90,29 @@ namespace Lucent.Common
                         s = s.Replace("{device_os_version}", device.OSVersion ?? "");
                         break;
                     case "google_aid":
+                        s = s.Replace("{" + tokens[i] + "}", "");
                         break;
                     case "android_id":
+                        s = s.Replace("{" + tokens[i] + "}", "");
                         break;
                     case "idfa":
+                        s = s.Replace("{" + tokens[i] + "}", "");
                         break;
                     case "unid":
+                        s = s.Replace("{" + tokens[i] + "}", "");
                         break;
                     case "user_id":
+                        s = s.Replace("{" + tokens[i] + "}", "");
                         break;
                     case "creative_id":
                         // TODO: Figure out if this or content id...
                         s = s.Replace("{creative_id}", bidContext.Creative.Id);
                         break;
                     case "creative_group":
+                        s = s.Replace("{" + tokens[i] + "}", "");
+                        break;
+                    default:
+                        s = s.Replace("{" + tokens[i] + "}", "");
                         break;
                 }
 
