@@ -149,15 +149,28 @@ namespace Lucent.Common.Bidding
             // Bid again, no exchange budget
             resp = await MakeBid(_biddingClient, bid, serializationContext, exchangeId);
             Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
+            await Task.Delay(1000);
+
+            // Bid again, no campaigns on exchange
+            resp = await MakeBid(_biddingClient, bid, serializationContext, exchangeId);
+            Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
+
+            var ex = await GetExchange(_orchestrationClient, exchangeId.ToString(), serializationContext);
+            ex.CampaignIds = campaigns.Select(c=>c.Id).ToArray();
+
+            Assert.IsTrue(await TryUpdateExchange(_orchestrationClient, ex, serializationContext));
 
             await Task.Delay(1000);
 
             // Bid again, no campaign budget
             resp = await MakeBid(_biddingClient, bid, serializationContext, exchangeId);
             Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
-
             await Task.Delay(1000);
-            
+
+            // Bid again, no campaign budget
+            resp = await MakeBid(_biddingClient, bid, serializationContext, exchangeId);
+            Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
+
             // Should work
             resp = await MakeBid(_biddingClient, bid, serializationContext, exchangeId);
             Assert.AreEqual(HttpStatusCode.OK, resp.StatusCode);
@@ -304,6 +317,29 @@ namespace Lucent.Common.Bidding
             return null;
         }
 
+        public async Task<Exchange> GetExchange(HttpClient orchestrationClient, String exchangeId, ISerializationContext serializationContext)
+        {
+            var resp = await orchestrationClient.GetAsync("api/exchanges/" + exchangeId);
+            if (resp.StatusCode == HttpStatusCode.OK)
+            {
+                var tags = (IEnumerable<string>)null;
+                var etag = "";
+                if (resp.Headers.TryGetValues("X-LUCENT-ETAG", out tags))
+                    etag = tags.FirstOrDefault() ?? "";
+                var exchange = await serializationContext.ReadFrom<Exchange>(await resp.Content.ReadAsStreamAsync(), false, SerializationFormat.JSON);
+                exchange.ETag = etag;
+                return exchange;
+            }
+
+            return null;
+        }
+
+        public async Task<bool> TryUpdateExchange(HttpClient orchestrationClient, Exchange exchange, ISerializationContext serializationContext)
+        {
+            var resp = await orchestrationClient.PutJsonAsync(serializationContext, exchange, "api/exchanges/" + exchange.Id.ToString(), exchange.ETag);
+            return (resp.StatusCode == HttpStatusCode.Accepted);
+        }
+
         async Task SetupExchange(Guid id, HttpClient orchestrationClient, IServiceProvider serviceProvider)
         {
             var target = Path.Combine(Directory.GetCurrentDirectory(), "SimpleExchange.dll");
@@ -362,6 +398,11 @@ namespace Lucent.Common.Bidding
             Assert.AreEqual(HttpStatusCode.Accepted, resp.StatusCode);
             campaigns.Add(campaign);
             return campaign;
+        }
+
+        async Task<bool> TryAddCampaign(HttpClient orchestrationClient, IServiceProvider serviceProvider, string campaignId)
+        {
+            return await Task.FromResult(false);
         }
 
         async Task<Creative> SetupCreative(HttpClient orchestrationClient, IServiceProvider serviceProvider)

@@ -57,6 +57,13 @@ namespace Lucent.Common.Entities
         public BudgetSchedule BudgetSchedule { get; set; }
 
         /// <summary>
+        /// CampaignIds that have been added to this exchange
+        /// </summary>
+        /// <value></value>
+        [SerializationProperty(5, "campaigns")]
+        public String[] CampaignIds {get;set;}
+
+        /// <summary>
         /// Instance code if loaded
         /// </summary>
         /// <value></value>

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Lucent.Common.Budget;
 using Lucent.Common.Caching;
@@ -27,6 +28,7 @@ namespace Lucent.Common.Bidding
         IMessageSubscriber<EntityEventMessage> _entityEvents;
         IBudgetManager _budgetManager;
         string _exchangeId;
+        Exchange _exchange;
         bool _isBudgetExhausted = false;
 
         IStorageRepository<Campaign> _campaignRepo;
@@ -55,11 +57,12 @@ namespace Lucent.Common.Bidding
             _creativeRepo = storageManager.GetRepository<Creative>();
             _budgetManager = budgetManager;
             _budgetCache = budgetCache;
+            _campaignRepo = storageManager.GetRepository<Campaign>();
 
             _budgetManager.RegisterHandler(new BudgetEventHandler
             {
-                IsMatch = (e)=>{return e.EntityId == _exchangeId;},
-                HandleAsync = async (e)=>
+                IsMatch = (e) => { return e.EntityId == _exchangeId; },
+                HandleAsync = async (e) =>
                 {
                     var rem = await _budgetCache.TryGetBudget(_exchangeId);
                     LocalBudget.Get(_exchangeId).Last = rem;
@@ -68,12 +71,6 @@ namespace Lucent.Common.Bidding
                     _log.LogInformation("Budget change for exchange : {0} ({1})", _exchangeId, _isBudgetExhausted);
                 }
             });
-
-            foreach (var campaign in _storageManager.GetRepository<Campaign>().GetAll().Result)
-            {
-                _log.LogInformation("Added bidder for campaign : {0}", campaign.Id);
-                Bidders.Add(_bidFactory.CreateBidder(FillCampaign(campaign).Result));
-            }
         }
 
         async Task<Campaign> FillCampaign(Campaign campaign)
@@ -98,7 +95,7 @@ namespace Lucent.Common.Bidding
         /// <returns></returns>
         async Task HandleMessage(EntityEventMessage message)
         {
-            if (message.Body != null)
+            if (message.Body != null && _exchange != null)
             {
                 try
                 {
@@ -110,19 +107,36 @@ namespace Lucent.Common.Bidding
                             {
                                 case EventType.EntityAdd:
                                 case EventType.EntityUpdate:
-                                    _log.LogInformation("Updating bidder for campaign : {0}", id);
-                                    var entity = await _storageManager.GetRepository<Campaign>().Get(new StringStorageKey(id));
-                                    Bidders.RemoveAll(b => b.Campaign.Id.Equals(id));
-                                    if (entity != null)
+                                    if (_exchange.CampaignIds != null && _exchange.CampaignIds.Any(c => c.Equals(id)))
                                     {
-                                        _log.LogInformation("Added bidder for campaign : {0}", id);
-                                        Bidders.Add(_bidFactory.CreateBidder(entity));
+                                        _log.LogInformation("Updating bidder for campaign : {0}", id);
+                                        var entity = await _storageManager.GetRepository<Campaign>().Get(new StringStorageKey(id));
+                                        Bidders.RemoveAll(b => b.Campaign.Id.Equals(id));
+                                        if (entity != null)
+                                        {
+                                            _log.LogInformation("Added bidder for campaign : {0}", id);
+                                            Bidders.Add(_bidFactory.CreateBidder(await FillCampaign(entity)));
+                                        }
+                                        break;
                                     }
-                                    break;
+
+                                    return;
                                 case EventType.EntityDelete:
                                     _log.LogInformation("Removing bidder for campaign : {0}", id);
                                     Bidders.RemoveAll(b => b.Campaign.Id.Equals(id));
                                     break;
+                            }
+                            break;
+                        case EntityType.Exchange:
+                            if (id == _exchangeId)
+                            {
+                                switch (message.Body.EventType)
+                                {
+                                    case EventType.EntityUpdate:
+                                        _exchange = await _storageManager.GetRepository<Exchange>().Get(new GuidStorageKey(Guid.Parse(_exchangeId))) ?? _exchange;
+                                        await UpdateCampaigns();
+                                        break;
+                                }
                             }
                             break;
                     }
@@ -135,10 +149,32 @@ namespace Lucent.Common.Bidding
         }
 
         /// <inheritdoc/>
-        public Task Initialize(AdExchange exchange)
+        public async Task Initialize(AdExchange adExchange)
         {
-            _exchangeId = exchange.ExchangeId.ToString();
-            return Task.CompletedTask;
+            _exchangeId = adExchange.ExchangeId.ToString();
+            _exchange = await _storageManager.GetRepository<Exchange>().Get(new GuidStorageKey(Guid.Parse(_exchangeId)));
+            if (_exchange != null && _exchange.CampaignIds != null)
+                await UpdateCampaigns();
+            else
+                Bidders.Clear();
+        }
+
+        async Task UpdateCampaigns()
+        {
+            // Remove missing campaigns
+            foreach (var removedId in Bidders.Select(b => b.Campaign.Id).Where(id => !(_exchange.CampaignIds ?? new string[0]).Contains(id)))
+                Bidders.RemoveAll(b => b.Campaign.Id.Equals(removedId));
+
+            // Update the rest
+            foreach (var campaignId in _exchange.CampaignIds)
+            {
+                var campaign = await _campaignRepo.Get(new StringStorageKey(campaignId));
+                if (campaign != null)
+                {
+                    Bidders.RemoveAll(b => b.Campaign.Id.Equals(campaignId));
+                    Bidders.Add(_bidFactory.CreateBidder(await FillCampaign(campaign)));
+                }
+            }
         }
 
         /// <inheritdoc/>
