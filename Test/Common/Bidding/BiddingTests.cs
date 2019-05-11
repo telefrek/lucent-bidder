@@ -122,6 +122,122 @@ namespace Lucent.Common.Bidding
             public HttpClient OrchestrationClient => _orchestrationClient;
         }
 
+        public async Task TestMultipleBids(string bidderUri, string orchestratorUri)
+        {
+            var sp = ServicePointManager.FindServicePoint(new Uri(bidderUri));
+            TestContext.WriteLine("bidder supports pipelining: {0}", sp.SupportsPipelining);
+
+            sp.UseNagleAlgorithm = false;
+            sp.ConnectionLimit = 128;
+
+            _orchestrationClient = new HttpClient { BaseAddress = new Uri(orchestratorUri) };
+            _biddingClient = new HttpClient { BaseAddress = new Uri(bidderUri) };
+
+            await SetupBidderFilters(_orchestrationClient, _orchestrationHost.Provider);
+
+            for (var i = 0; i < 10; ++i)
+                await SetupCampaign(_orchestrationClient, _orchestrationHost.Provider);
+
+            // Add the exchange
+            exchangeId = SequentialGuid.NextGuid();
+            await SetupExchange(exchangeId, _orchestrationClient, _orchestrationHost.Provider);
+
+            var ex = await GetExchange(_orchestrationClient, exchangeId.ToString(), _orchestrationHost.Provider.GetRequiredService<ISerializationContext>());
+            ex.CampaignIds = campaigns.Where(c => _rng.NextDouble() < .6).Select(c => c.Id).ToArray();
+
+            Assert.IsTrue(await TryUpdateExchange(_orchestrationClient, ex, _orchestrationHost.Provider.GetRequiredService<ISerializationContext>()));
+
+            await Task.Delay(5000);
+
+            var bidCnt = 0L;
+            var noBidCnt = 0L;
+            var bidWin = 0L;
+            var start = DateTime.Now.AddMinutes(-1);
+            var total = 0d;
+            var tlock = new object();
+
+            var tasks = new List<Task>();
+            var numCalls = 15000;
+
+            for (var i = 0; i < 96; ++i)
+            {
+                tasks.Add(Task.Factory.StartNew(async () =>
+                {
+                    var myTotal = 0d;
+                    var serializationContext = _biddingHost.Provider.GetRequiredService<ISerializationContext>();
+                    var sw = new Stopwatch();
+                    var rng = new Random();
+                    for (var n = 0; n < numCalls; ++n)
+                    {
+                        try
+                        {
+                            var bid = BidGenerator.GenerateBid(0);
+                            sw.Start();
+                            var resp = await MakeBid(_biddingClient, bid, serializationContext, exchangeId);
+                            sw.Stop();
+                            if (resp.StatusCode == HttpStatusCode.OK)
+                            {
+                                Interlocked.Increment(ref bidCnt);
+                                if (rng.NextDouble() < 0.07)
+                                {
+                                    var br = await VerifyBidResponse(resp, serializationContext);
+                                    if (br != null)
+                                    {
+                                        var b = br.Bids[_rng.Next(br.Bids.Length)].Bids.First();
+                                        if ((await AdvanceBid(_biddingClient, serializationContext, b, true, b.CPM)).StatusCode == HttpStatusCode.OK)
+                                        {
+                                            myTotal += b.CPM;
+                                            Interlocked.Increment(ref bidWin);
+                                            if (rng.NextDouble() < .02)
+                                            {
+                                                await PostbackAction(_biddingClient, bid, b, "install");
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                                Interlocked.Increment(ref noBidCnt);
+                        }
+                        catch (Exception e)
+                        {
+                            TestContext.WriteLine("Error : {0}", e.ToString());
+                        }
+                    }
+
+                    lock (tlock)
+                    {
+                        total += myTotal;
+                    }
+
+                    TestContext.WriteLine("Avg Time : {0:0.000} ms", (sw.ElapsedTicks * 1000d / Stopwatch.Frequency) / numCalls);
+                }).Unwrap());
+
+                // Delay adding new users
+                await Task.Delay(2000);
+            }
+
+            // Wait for the tasks to end
+            await Task.WhenAll(tasks);
+            TestContext.WriteLine("Bid   {0:#,##0} ({1:#,##0.00})", bidCnt, 1.0 * bidCnt / (bidCnt + noBidCnt));
+            TestContext.WriteLine("Wins  {0:#,##0} ({1:#,##0.00})", bidWin, 1.0 * bidWin / bidCnt);
+            TestContext.WriteLine("NoBid {0:#,##0} ({1:#,##0.00})", noBidCnt, 1.0 * noBidCnt / (bidCnt + noBidCnt));
+
+            var end = DateTime.Now.AddSeconds(1);
+
+            Assert.IsTrue(bidCnt > 0, "Failed to make any bids");
+
+            var summary = await GetTestSummary(_orchestrationClient, _biddingHost.Provider, exchangeId.ToString(), start, end);
+            Assert.IsNotNull(summary);
+            TestContext.WriteLine("Total spend : {0}", total / 1000d);
+            TestContext.WriteLine("Exchange: {0}", Encoding.UTF8.GetString(await _biddingHost.Provider.GetRequiredService<ISerializationContext>().AsBytes(summary, SerializationFormat.JSON)));
+
+            foreach (var campaign in campaigns)
+            {
+                summary = await GetTestSummary(_orchestrationClient, _biddingHost.Provider, campaign.Id, start, end);
+                TestContext.WriteLine("Campaign ({1}): {0}", Encoding.UTF8.GetString(await _biddingHost.Provider.GetRequiredService<ISerializationContext>().AsBytes(summary, SerializationFormat.JSON)), campaign.Id);
+            }
+        }
 
 
         [TestMethod]
@@ -156,7 +272,7 @@ namespace Lucent.Common.Bidding
             Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
 
             var ex = await GetExchange(_orchestrationClient, exchangeId.ToString(), serializationContext);
-            ex.CampaignIds = campaigns.Select(c=>c.Id).ToArray();
+            ex.CampaignIds = campaigns.Select(c => c.Id).ToArray();
 
             Assert.IsTrue(await TryUpdateExchange(_orchestrationClient, ex, serializationContext));
 
@@ -170,6 +286,7 @@ namespace Lucent.Common.Bidding
             // Bid again, no campaign budget
             resp = await MakeBid(_biddingClient, bid, serializationContext, exchangeId);
             Assert.AreEqual(HttpStatusCode.NoContent, resp.StatusCode);
+            await Task.Delay(1000);
 
             // Should work
             resp = await MakeBid(_biddingClient, bid, serializationContext, exchangeId);

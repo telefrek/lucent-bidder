@@ -51,7 +51,7 @@ namespace Lucent.Common.Messaging
             _channel = _conn.CreateModel();
 
             _channel.ExchangeDeclare(exchange: Topic, type: "topic");
-            _queueName = _channel.QueueDeclare(queue: _queueName ?? "").QueueName;
+            _queueName = _channel.QueueDeclare(queue: _queueName ?? "", autoDelete: true).QueueName;
 
             _channel.QueueBind(queue: _queueName,
                   exchange: Topic,

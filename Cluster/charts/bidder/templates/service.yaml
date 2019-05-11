@@ -5,7 +5,7 @@ metadata:
   labels:
     app: {{ template "bidder.name" . }}
     chart: {{ template "bidder.chart" . }}
-    release: {{ .Release.Name }}
+    release: {{ .Release.Service }}
     heritage: {{ .Release.Service }}
     component: bidder
 spec:
@@ -24,10 +24,10 @@ kind: ServiceMonitor
 metadata:
   name: bidder-sm
   labels:
-    prometheus: monitoring
+    prometheus: bidder
     app: {{ template "bidder.name" . }}
     chart: {{ template "bidder.chart" . }}
-    release: {{ .Release.Name }}
+    release: monitoring
     heritage: {{ .Release.Service }}
 spec:
   selector:

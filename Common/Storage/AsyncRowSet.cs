@@ -4,6 +4,7 @@ using Cassandra;
 using Lucent.Common.Collections;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using System;
 
 namespace Lucent.Common.Storage
 {
@@ -41,22 +42,32 @@ namespace Lucent.Common.Storage
         {
             var numRows = 0;
 
-            using (var rowEnum = rowSet.GetEnumerator())
+            try
             {
-                while (!rowSet.IsFullyFetched)
-                    if ((numRows = rowSet.GetAvailableWithoutFetching()) > 0)
-                        for (var i = 0; i < numRows && rowEnum.MoveNext(); ++i)
-                            while (!_rows.TryAdd(rowEnum.Current))
-                                await Task.Delay(100);
-                    else
-                        await rowSet.FetchMoreResultsAsync();
+                using (var rowEnum = rowSet.GetEnumerator())
+                {
+                    while (!rowSet.IsFullyFetched)
+                        if ((numRows = rowSet.GetAvailableWithoutFetching()) > 0)
+                            for (var i = 0; i < numRows && rowEnum.MoveNext(); ++i)
+                                while (!_rows.TryAdd(rowEnum.Current))
+                                    await Task.Delay(100);
+                        else
+                            await rowSet.FetchMoreResultsAsync();
 
-                while (rowEnum.MoveNext())
-                    while (!_rows.TryAdd(rowEnum.Current))
-                        await Task.Delay(100);
+                    while (rowEnum.MoveNext())
+                        while (!_rows.TryAdd(rowEnum.Current))
+                            await Task.Delay(100);
+                }
             }
+            catch(Exception)
+            {
+                // TODO: Handle me
+            }
+            finally
+            {
+                _rows.Close();
 
-            _rows.Close();
+            }
         }
 
         /// <inheritdoc/>

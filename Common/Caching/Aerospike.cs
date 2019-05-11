@@ -1,3 +1,4 @@
+using System;
 using Aerospike.Client;
 
 namespace Lucent.Common.Caching
@@ -10,8 +11,8 @@ namespace Lucent.Common.Caching
         {
             var policy = new AsyncClientPolicy
             {
-                asyncMaxCommands = 512,
-                asyncMaxCommandAction = MaxCommandAction.BLOCK,
+                asyncMaxCommands = 1024,
+                asyncMaxCommandAction = MaxCommandAction.DELAY,
                 readPolicyDefault = new Policy
                 {
                     readModeAP = ReadModeAP.ALL,
@@ -27,7 +28,14 @@ namespace Lucent.Common.Caching
                 },
             };
 
-            INSTANCE = new AsyncClient(policy, "aspk-cache.lucent.svc", 3000);
+            try
+            {
+                INSTANCE = new AsyncClient(policy, "aspk-cache.lucent.svc", 3000);
+            }
+            catch (Exception)
+            {
+                System.Environment.Exit(1); // Fail
+            }
         }
 
     }

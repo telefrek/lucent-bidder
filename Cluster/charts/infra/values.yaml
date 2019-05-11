@@ -1,5 +1,13 @@
 aerospike:
   replicaCount: 3
+  resources:
+    requests:
+        memory: 3Gi
+        cpu: 2
+    limits:
+        memory: 3Gi
+        cpu: 2
+
   confFile: |-
     service {
         user root
@@ -45,8 +53,5 @@ aerospike:
         replication-factor 2
         memory-size 2G
         default-ttl 1d
-        storage-engine device {
-        file /opt/aerospike/data/lucent.dat
-        filesize 20G
-        }
+        storage-engine memory
     }

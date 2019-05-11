@@ -1,142 +1,17 @@
-alertmanager:
-  enabled: true
-  serviceAccount:
-    create: true
-  alertmanagerSpec:
-    storage:
-      volumeClaimTemplate:
-        spec:
-          storageClassName: "default"
-          accessModes: ["ReadWriteOnce"]
-          resources:
-            requests:
-              storage: 50Gi
-        selector: {}
-
 grafana:
-  enabled: true
-  defaultDashboardsEnabled: true
-  adminPassword: prom-operator
   ingress:
-    enabled: false
-
-  sidecar:
-    dashboards:
-      enabled: false
-      label: grafana_dashboard
-    datasources:
-      enabled: false
-      label: grafana_datasource
-
-kubeApiServer:
-  enabled: false
-
-kubelet:
-  enabled: false
-
-coreDns:
-  enabled: false
-
-kubeDns:
-  enabled: true
-  service:
-    selector:
-      k8s-app: kube-dns
-      
-kubeEtcd:
-  enabled: false
-
-kubeScheduler:
-  enabled: false
-
-kubeStateMetrics:
-  enabled: true
-
-kube-state-metrics:
-  rbac:
-    create: true
-
-nodeExporter:
-  enabled: true
-  jobLabel: jobLabel
-
-prometheus-node-exporter:
-  podLabels:
-    jobLabel: node-exporter
-  extraArgs:
-    - --collector.filesystem.ignored-mount-points=^/(dev|proc|sys|var/lib/docker/.+)($|/)
-    - --collector.filesystem.ignored-fs-types=^(autofs|binfmt_misc|cgroup|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|mqueue|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|sysfs|tracefs)$
-
-prometheusOperator:
-  enabled: true
-  serviceAccount:
-    create: true
-
-  service:
-    type: ClusterIP
-
-  createCustomResource: true
-  cleanupCustomResource: false
-
-  kubeletService:
     enabled: true
-    namespace: kube-system
-
-  serviceMonitor:
-    selfMonitor: true
-
-  image:
-    repository: quay.io/coreos/prometheus-operator
-    tag: v0.25.0
-    pullPolicy: IfNotPresent
-
-  configmapReloadImage:
-    repository: quay.io/coreos/configmap-reload
-    tag: v0.0.1
-
-  prometheusConfigReloaderImage:
-    repository: quay.io/coreos/prometheus-config-reloader
-    tag: v0.25.0
-
-  hyperkubeImage:
-    repository: gcr.io/google-containers/hyperkube
-    tag: v1.12.1
-    pullPolicy: IfNotPresent
-
-prometheus:
-  enabled: true
-  serviceAccount:
-    create: true
-    name: ""
-
-  service:
-    type: ClusterIP
-
-  rbac:
-    roleNamespaces:
-      - kube-system
-
-  serviceMonitor:
-    selfMonitor: true
-
-  prometheusSpec:
-    serviceMonitorSelector:
-      matchLabels:
-        prometheus: monitoring
-        
-    image:
-      repository: quay.io/prometheus/prometheus
-      tag: v2.4.3
-
-    retention: 10d
-    replicas: 1
-    logLevel: info
-
-    storageSpec:
-      volumeClaimTemplate:
-        spec:
-          storageClassName: "default"
-          accessModes: ["ReadWriteOnce"]
-          resources:
-            requests:
-              storage: 128Gi
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      nginx.ingress.kubernetes.io/rewrite-target: /
+      nginx.ingress.kubernetes.io/affinity: "cookie"
+      nginx.ingress.kubernetes.io/session-cookie-name: "ingress-route"
+      nginx.ingress.kubernetes.io/session-cookie-hash: "sha1"
+    hosts: 
+      - monitoring.lucentbid.com
+    tls:
+      - secretName: lucent-tls
+        hosts:
+          - monitoring.lucentbid.com
+prometheusOperator:
+  createCustomResource: false

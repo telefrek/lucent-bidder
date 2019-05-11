@@ -10,6 +10,7 @@ using System.Dynamic;
 using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 using Lucent.Common.Serialization;
+using System.Threading;
 
 namespace Lucent.Common.Messaging
 {
@@ -107,9 +108,10 @@ namespace Lucent.Common.Messaging
 
                         using (var req = new HttpRequestMessage(HttpMethod.Post, _publishEndpoint.ToString()))
                         {
+                            var cts = new CancellationTokenSource(2000);
                             req.Content = new StringContent(msg, Encoding.UTF8, "application/json");
                             req.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes("{0}:{1}".FormatWith(_cluster.User, _cluster.Credentials))));
-                            var response = await _client.SendAsync(req);
+                            var response = await _client.SendAsync(req, cts.Token);
 
                             return response.IsSuccessStatusCode;
                         }

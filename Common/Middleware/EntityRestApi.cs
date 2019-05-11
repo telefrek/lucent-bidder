@@ -47,6 +47,11 @@ namespace Lucent.Common.Middleware
         /// </summary>
         protected readonly IMessageFactory _messageFactory;
 
+        /// <summary>
+        /// 
+        /// </summary>
+        protected readonly IMessagePublisher _bidderPublisher;
+
         IBudgetCache _budgetCache;
 
         /// <summary>
@@ -68,6 +73,7 @@ namespace Lucent.Common.Middleware
             _budgetCache = budgetCache;
 
             _messageFactory.CreateSubscriber<LucentMessage<T>>(Topics.ENTITIES, _messageFactory.WildcardFilter).OnReceive += UpdateEntity;
+            _bidderPublisher = _messageFactory.CreatePublisher(Topics.BIDDING);
         }
 
         /// <summary>
@@ -85,13 +91,15 @@ namespace Lucent.Common.Middleware
                     EntityId = entityEvent.Body.Key.ToString(),
                 };
 
-                // This is awful, don't do this for real
-                if (await _entityRepository.TryUpdate(entityEvent.Body))
-                    evt.EventType = EventType.EntityUpdate;
-                else if (await _entityRepository.TryInsert(entityEvent.Body))
-                    evt.EventType = EventType.EntityAdd;
-                else if (await _entityRepository.TryRemove(entityEvent.Body))
-                    evt.EventType = EventType.EntityDelete;
+                if (entityEvent.Body.EntityType == evt.EntityType)
+                {
+                    if (await _entityRepository.TryUpdate(entityEvent.Body))
+                        evt.EventType = EventType.EntityUpdate;
+                    else if (await _entityRepository.TryInsert(entityEvent.Body))
+                        evt.EventType = EventType.EntityAdd;
+                    else if (await _entityRepository.TryRemove(entityEvent.Body))
+                        evt.EventType = EventType.EntityDelete;
+                }
 
                 // Notify
                 if (evt.EventType != EventType.Unknown)
@@ -100,7 +108,7 @@ namespace Lucent.Common.Middleware
                     msg.Body = evt;
                     msg.Route = typeof(T).Name.ToLowerInvariant();
 
-                    await _messageFactory.CreatePublisher(Topics.BIDDING).TryPublish(msg);
+                    await _bidderPublisher.TryPublish(msg);
                 }
             }
         }

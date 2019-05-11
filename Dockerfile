@@ -12,12 +12,6 @@ RUN dotnet restore \
 ########################
 # Create runtime images
 ########################
-FROM telefrek/aspnet-core-ffmpeg:2.2
-WORKDIR /opt/lucent
-LABEL component=portal
-COPY --from=build-env /opt/lucent/Portal/bin/Release/netcoreapp2.2/publish .
-RUN rm -rf appsettings*.json
-ENTRYPOINT ["dotnet", "Portal.dll"]
 
 FROM telefrek/aspnet-core-ffmpeg:2.2
 WORKDIR /opt/lucent
