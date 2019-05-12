@@ -17,6 +17,7 @@ using Lucent.Common.Messaging;
 using Lucent.Common.OpenRTB;
 using Lucent.Common.Serialization;
 using Lucent.Common.Storage;
+using Lucent.Common.UserManagement;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
@@ -82,8 +83,9 @@ namespace Lucent.Common.Middleware
         /// Handle the request asynchronously
         /// </summary>
         /// <param name="httpContext">The current http context</param>
+        /// <param name="userManager">The user manager instance</param>
         /// <returns>A completed pipeline step</returns>
-        public async Task InvokeAsync(HttpContext httpContext)
+        public async Task InvokeAsync(HttpContext httpContext, IUserManager userManager)
         {
             try
             {
@@ -104,8 +106,12 @@ namespace Lucent.Common.Middleware
                         httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
                         return;
                     }
-
                     httpContext.Items.Add("exchange", exchange);
+
+                    // Get the user features
+                    var userFeatures = await userManager.GetFeaturesAsync(request);
+                    httpContext.Items.Add("userFeatures", userFeatures);
+
                     var response = await exchange.Bid(request, httpContext);
 
                     if (response != null)
@@ -119,10 +125,7 @@ namespace Lucent.Common.Middleware
 
                             httpContext.Response.StatusCode = StatusCodes.Status200OK;
                             await _serializationContext.WriteTo(httpContext, response);
-
-#pragma warning disable
-                            _bidCache.saveEntries(response);
-#pragma warning restore
+                            await _bidCache.saveEntries(response);
                         }
                         else
                         {

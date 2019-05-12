@@ -22,6 +22,7 @@ using System.Collections.Generic;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Hosting;
 using Lucent.Common.Background;
+using Lucent.Common.UserManagement;
 
 namespace Lucent.Common
 {
@@ -120,7 +121,8 @@ namespace Lucent.Common
                     .AddTransient<IBiddingManager, BiddingManager>()
                     .AddSingleton<IBidFactory, BidFactory>()
                     .AddSingleton<IExchangeRegistry, ExchangeRegistry>()
-                    .AddSingleton<IHostedService, BudgetSyncService>();
+                    .AddSingleton<IHostedService, BudgetSyncService>()
+                    .AddTransient<IUserManager, SimpleUserManager>();
             }
 
             if (includeOrchestration)

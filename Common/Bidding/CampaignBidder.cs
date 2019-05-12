@@ -102,9 +102,7 @@ namespace Lucent.Common.Bidding
                 if (_isBudgetExhausted |= _campaignBudget.IsExhausted())
                 {
                     BidCounters.NoBidReason.WithLabels("no_campaign_budget").Inc();
-#pragma warning disable
-                    _budgetManager.RequestAdditional(_campaign.Id, EntityType.Campaign);
-#pragma warning restore
+                    await _budgetManager.RequestAdditional(_campaign.Id, EntityType.Campaign);
                     return NO_MATCHES;
                 }
 
