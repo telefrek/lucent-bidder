@@ -23,9 +23,6 @@ docker tag telefrek/lucent-bidder:$LUCENT_VERSION telefrek/lucent-bidder:latest
 docker tag $(docker ps -a -f "label=component=orchestrator" -f "status=exited" --format "{{.Image}}") telefrek/lucent-orchestrator:$LUCENT_VERSION
 docker tag telefrek/lucent-orchestrator:$LUCENT_VERSION telefrek/lucent-orchestrator:latest
 
-docker tag $(docker ps -a -f "label=component=content" -f "status=exited" --format "{{.Image}}") telefrek/lucent-content:$LUCENT_VERSION
-docker tag telefrek/lucent-content:$LUCENT_VERSION telefrek/lucent-content:latest
-
 docker tag $(docker ps -a -f "label=component=scoring" -f "status=exited" --format "{{.Image}}") telefrek/lucent-scoring:$LUCENT_VERSION
 docker tag telefrek/lucent-scoring:$LUCENT_VERSION telefrek/lucent-scoring:latest
 
@@ -39,11 +36,6 @@ fi
 if [ "${1:-orchestrator}" == "orchestrator" ]; then
 docker push telefrek/lucent-orchestrator:$LUCENT_VERSION
 docker push telefrek/lucent-orchestrator:latest
-fi
-
-if [ "${1:-contents}" == "content" ]; then
-    docker push telefrek/lucent-content:$LUCENT_VERSION
-    docker push telefrek/lucent-content:latest
 fi
 
 echo 'Cleanup local docker'

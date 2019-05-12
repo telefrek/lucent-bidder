@@ -15,13 +15,6 @@ RUN dotnet restore \
 
 FROM telefrek/aspnet-core-ffmpeg:2.2
 WORKDIR /opt/lucent
-LABEL component=content
-COPY --from=build-env /opt/lucent/ContentServer/bin/Release/netcoreapp2.2/publish .
-RUN rm -rf appsettings*.json
-ENTRYPOINT ["dotnet", "ContentServer.dll"]
-
-FROM telefrek/aspnet-core-ffmpeg:2.2
-WORKDIR /opt/lucent
 LABEL component=bidder
 COPY --from=build-env /opt/lucent/Bidder/bin/Release/netcoreapp2.2/publish .
 RUN rm -rf appsettings*.json 

@@ -52,6 +52,8 @@ spec:
           volumeMounts:
             - mountPath: /etc/config
               name: app-config
+            - mountPath: {{ .Values.content.path }}
+              name: ad-contents
           ports:
             - name: http
               containerPort: 80
@@ -82,3 +84,6 @@ spec:
         - name: app-config
           configMap:
             name: orchestrator-config
+        - name: ad-contents
+          persistentVolumeClaim:
+            claimName: ad-content-pvc

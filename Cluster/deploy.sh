@@ -32,20 +32,10 @@ if [ "${1:-ldap}" == "monitoring" ]; then
     helm upgrade --install --tiller-namespace=lucent --namespace=lucent prometheus stable/prometheus-operator -f ${2-.}/monitoring.yaml
 fi
 
-if [ "${1:-ldap}" == "ldap" ]; then
-    helm upgrade --install --tiller-namespace=lucent --namespace=lucent openldap ./charts/openldap
-    echo 'ldap credentials:'
-    kubectl get secret --namespace lucent openldap-secret -o jsonpath="{.data.LDAP_ADMIN_PASSWORD}" | base64 --decode; echo
-fi
-
 if [ "${1:-bidder}" == "bidder" ]; then
     helm upgrade --install --tiller-namespace=lucent --namespace=lucent bidder ./charts/bidder/ -f ${2-.}/bidder.yaml
 fi
 
 if [ "${1:-orchestrator}" == "orchestrator" ]; then
     helm upgrade --install --tiller-namespace=lucent --namespace=lucent orchestrator ./charts/orchestrator/ -f ${2-.}/orchestrator.yaml
-fi
-
-if [ "${1:-contenta}" == "content" ]; then
-    helm upgrade --install --tiller-namespace=lucent --namespace=lucent content ./charts/cntent/ -f ${2-.}/content.yaml
 fi

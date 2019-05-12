@@ -10,7 +10,7 @@ mountOptions:
   - gid=1000
 parameters:
   skuName: Standard_LRS
-  storageAccount: adcontents
+  storageAccount: adcontent
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRole

@@ -28,6 +28,9 @@ resources:
    memory: 256Mi
    cpu: .25
 
+content:
+  path: '/opt/lucent/adcontents'
+
 hostAlias: {}
 
 nodeSelector: {}

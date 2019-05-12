@@ -18,6 +18,7 @@ data:
           "System.GC.Concurrent": true
         }
       },
+      "ContentPath":"adcontents",
       "AllowedHosts": "*",
       "rabbit": {
         "host": "rabbitmq.lucent.svc",
