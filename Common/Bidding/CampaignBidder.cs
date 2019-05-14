@@ -172,7 +172,7 @@ namespace Lucent.Common.Bidding
                             BidExpiresSeconds = 300,
                             Bundle = bidContext.Campaign.BundleId,
                             ContentCategories = bidContext.Content.Categories,
-                            ImageUrl = bidContext.Content.RawUri,
+                            ImageUrl = bidContext.Content.CreativeUri,
                             AdId = bidContext.Creative.Id,
                             CreativeId = bidContext.Creative.Id,
                             CampaignId = bidContext.Campaign.Id,

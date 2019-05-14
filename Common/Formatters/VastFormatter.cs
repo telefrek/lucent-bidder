@@ -80,7 +80,7 @@ namespace Lucent.Common.Formatters
             var mediaFiles = xDoc.CreateMediaFiles(bidContext.Content, 4);
 
             var mez = xDoc.CreateElement("Mezzanine");
-            mez.AppendChild(xDoc.CreateCDataSection(bidContext.Content.RawUri));
+            mez.AppendChild(xDoc.CreateCDataSection(bidContext.Content.CreativeUri));
             mediaFiles.AppendChild(mez);
 
             linear.AppendChild(mediaFiles);
@@ -139,7 +139,7 @@ namespace Lucent.Common.Formatters
             var mediaFiles = xDoc.CreateMediaFiles(bidContext.Content, 4);
 
             var mez = xDoc.CreateElement("Mezzanine");
-            mez.AppendChild(xDoc.CreateCDataSection(bidContext.Content.RawUri));
+            mez.AppendChild(xDoc.CreateCDataSection(bidContext.Content.CreativeUri));
             mediaFiles.AppendChild(mez);
 
             linear.AppendChild(mediaFiles);

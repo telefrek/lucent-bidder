@@ -10,6 +10,7 @@ using Lucent.Common.Storage;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Net.Http.Headers;
 
@@ -21,11 +22,14 @@ namespace Lucent.Common.Middleware
     public class CreativeApi : EntityRestApi<Creative>
     {
         IMediaScanner _mediaScanner;
+        IConfiguration _config;
 
         /// <inheritdoc/>
-        public CreativeApi(RequestDelegate next, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<EntityRestApi<Creative>> logger, IMediaScanner mediaScanner) : base(next, storageManager, messageFactory, serializationContext, logger, null)
+        public CreativeApi(RequestDelegate next, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<EntityRestApi<Creative>> logger, IMediaScanner mediaScanner,
+        IConfiguration configuration) : base(next, storageManager, messageFactory, serializationContext, logger, null)
         {
             _mediaScanner = mediaScanner;
+            _config = configuration;
         }
 
         /// <inheritdoc/>
@@ -57,7 +61,8 @@ namespace Lucent.Common.Middleware
                                 ContentDispositionHeaderValue contentDisposition;
                                 if (ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out contentDisposition))
                                 {
-                                    var fileName = contentDisposition.FileName.Value.Trim('"');
+                                    var fileName = Path.Combine(Directory.GetCurrentDirectory(), _config.GetValue("ContentPath", "adcontent"), creative.Id, contentDisposition.FileName.Value.Trim('"'));
+                                    Directory.CreateDirectory(Path.GetDirectoryName(fileName));
 
                                     _log.LogInformation("Creating {0}", fileName);
                                     _log.LogInformation("ContentType: {0}", section.ContentType);
@@ -77,9 +82,9 @@ namespace Lucent.Common.Middleware
                                         File.Copy(tempFile, fileName, true);
                                         File.Delete(tempFile);
 
-                                        content.ContentLocation = tempFile;
-                                        content.RawUri = "/content/creatives/" + creative.Id + "/" + fileName;
-                                        content.CreativeUri = "/content/creatives/" + creative.Id + "/" + fileName;
+                                        content.ContentLocation = fileName;
+                                        content.RawUri = _config.GetValue("rawUri", "https://east-cdn.lucentbid.com") + "/creatives/" + creative.Id + "/" + fileName;
+                                        content.CreativeUri = _config.GetValue("cacheUri", "https://east-cache.lucentbid.com") + "/creatives/" + creative.Id + "/" + fileName;
                                         var contents = creative.Contents ?? new CreativeContent[0];
                                         Array.Resize(ref contents, contents.Length + 1);
                                         contents[contents.Length - 1] = content;
