@@ -29,5 +29,8 @@ namespace Lucent.Common.Storage
 
         /// <inheritdoc/>
         public virtual int CompareTo(object obj) => throw new InvalidCastException();
+
+        /// <inheritdoc/>
+        public override string ToString() => string.Join(".", RawValue());
     }
 }

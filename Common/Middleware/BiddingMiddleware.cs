@@ -44,6 +44,8 @@ namespace Lucent.Common.Middleware
             LabelNames = new string[] { "protocol", "direction" },
             Buckets = new double[] { 0.001, 0.002, 0.005, 0.007, 0.01, 0.015 },
         });
+        StorageCache _storageCache;
+
 
 
         /// <summary>
@@ -67,6 +69,7 @@ namespace Lucent.Common.Middleware
             _bidFilters = _bidFiltersCollection.Entities.Where(f => f.BidFilter != null).Select(f => f.BidFilter.GenerateCode()).ToList();
             _messageFactory = messageFactory;
             _bidCache = bidCache;
+            _storageCache = new StorageCache(serializationContext, storageManager);
         }
 
         /// <summary>
@@ -120,8 +123,8 @@ namespace Lucent.Common.Middleware
                         if (response.Bids.Length > 0)
                         {
                             // Incremenb bid counters
-                            foreach (var c in response.Bids.SelectMany(b => b.Bids).Select(b => b.CampaignId).Distinct())
-                                BidCounters.CampaignBids.WithLabels(c).Inc();
+                            foreach (var c in response.Bids.SelectMany(b => b.Bids).Select(b => b.CampaignId).Distinct().Select(c=>_storageCache.Get<Campaign>(new StringStorageKey(c))))
+                                await c.ContinueWith(t=>BidCounters.CampaignBids.WithLabels(t.Result.Name).Inc());
 
                             httpContext.Response.StatusCode = StatusCodes.Status200OK;
                             await _serializationContext.WriteTo(httpContext, response);
