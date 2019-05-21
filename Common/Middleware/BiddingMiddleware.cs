@@ -44,7 +44,7 @@ namespace Lucent.Common.Middleware
             LabelNames = new string[] { "protocol", "direction" },
             Buckets = new double[] { 0.001, 0.002, 0.005, 0.007, 0.01, 0.015 },
         });
-        StorageCache _storageCache;
+        StorageCache _storageCache; 
 
 
 
@@ -58,7 +58,8 @@ namespace Lucent.Common.Middleware
         /// <param name="exchangeRegistry"></param>
         /// <param name="storageManager"></param>
         /// <param name="bidCache"></param>
-        public BiddingMiddleware(RequestDelegate next, ILogger<BiddingMiddleware> logger, IMessageFactory messageFactory, ISerializationContext serializationContext, IExchangeRegistry exchangeRegistry, IStorageManager storageManager, IBidCache bidCache)
+        /// <param name="storageCache"></param>
+        public BiddingMiddleware(RequestDelegate next, ILogger<BiddingMiddleware> logger, IMessageFactory messageFactory, ISerializationContext serializationContext, IExchangeRegistry exchangeRegistry, IStorageManager storageManager, IBidCache bidCache, StorageCache storageCache)
         {
             _log = logger;
             _serializationContext = serializationContext;
@@ -69,7 +70,7 @@ namespace Lucent.Common.Middleware
             _bidFilters = _bidFiltersCollection.Entities.Where(f => f.BidFilter != null).Select(f => f.BidFilter.GenerateCode()).ToList();
             _messageFactory = messageFactory;
             _bidCache = bidCache;
-            _storageCache = new StorageCache(serializationContext, storageManager);
+            _storageCache = storageCache;
         }
 
         /// <summary>

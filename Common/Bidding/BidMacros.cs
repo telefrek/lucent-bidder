@@ -101,7 +101,7 @@ namespace Lucent.Common.Bidding
         /// <summary>
         /// Name of the event (example: Install)
         /// </summary>
-        /// </value></value>
+        /// <value></value>
         public static readonly string EVENT = "{event}";
 
         /// <summary>

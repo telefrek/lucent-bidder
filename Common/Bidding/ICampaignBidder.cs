@@ -16,7 +16,6 @@ namespace Lucent.Common.Bidding
         /// <value></value>
         Campaign Campaign { get; }
 
-
         /// <summary>
         /// Check to see if the bidder wants to bid on part/all of this request
         /// </summary>

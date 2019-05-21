@@ -102,7 +102,7 @@ namespace Lucent.Common
                 });
             }
 
-            services.AddSingleton<StorageCache>();
+            services.AddSingleton<StorageCache, StorageCache>();
             services.AddSingleton<IEntityWatcher, EntityWatcher>();
 
             if (includePortal)

@@ -24,10 +24,10 @@ kind: ServiceMonitor
 metadata:
   name: bidder-sm
   labels:
-    prometheus: bidder
+    prometheus: monitoring
     app: {{ template "bidder.name" . }}
     chart: {{ template "bidder.chart" . }}
-    release: monitoring
+    release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
   selector:

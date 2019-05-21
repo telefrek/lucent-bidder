@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using Lucent.Common.Budget;
 using Lucent.Common.Entities;
 using Lucent.Common.Filters;
@@ -9,12 +10,14 @@ namespace Lucent.Common.Test
 {
     public class CampaignGenerator
     {
+        static long cid = 0;
+
         public static Campaign GenerateCampaign()
         {
             return new Campaign
             {
                 Id = SequentialGuid.NextGuid().ToString(),
-                Name = "Test Campaign",
+                Name = "Test Campaign " + Interlocked.Add(ref cid, 1),
                 LandingPage = "https://localhost/landing?lctx={CONTEXT}",
                 AdDomains = new string[] { "lucentbid.com", "lucentbid.co" },
                 BuyerId = "buyerid",
@@ -38,6 +41,7 @@ namespace Lucent.Common.Test
                     StartDate = DateTime.UtcNow.AddMinutes(-5),
                     EndDate = DateTime.UtcNow.AddDays(1),
                 },
+                MaxCPM = 5,
                 BudgetSchedule = new BudgetSchedule
                 {
                     ScheduleType = ScheduleType.Even,
@@ -85,7 +89,7 @@ namespace Lucent.Common.Test
                 {
                     Geo = new Geo
                     {
-                        Country = "USA",
+                        Country = _rng.NextDouble() < .1 ? "CAN" : "USA",
                     }
                 }
             };

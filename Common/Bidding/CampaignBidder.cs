@@ -141,9 +141,6 @@ namespace Lucent.Common.Bidding
                     return NO_MATCHES;
                 }
 
-                // Get a score for the campaign to the request
-                var score = await _scoringService.Score(Campaign, request);
-
                 // Need some uri building
                 var baseUri = new UriBuilder
                 {
@@ -151,11 +148,15 @@ namespace Lucent.Common.Bidding
                     Host = httpContext.Request.Host.Value,
                 };
 
+                // Get the current stats
+                var stats = CampaignStats.Get(_campaignId);
+
                 var ret = impList.Select(bidContext =>
                 {
-                    // TODO: This is a terrible cpm calculation lol
-                    var cpm = Math.Round(score * Campaign.ConversionPrice * .9, 4);
-                    if (cpm >= bidContext.Impression.BidFloor)
+                    var cpm = Math.Round(stats.eCPC * stats.CTR * 1000, 4);
+                    if (cpm == 0) cpm = Campaign.MaxCPM;
+
+                    if (cpm >= bidContext.Impression.BidFloor && cpm <= Campaign.MaxCPM)
                     {
                         bidContext.BaseUri = baseUri;
                         bidContext.Bid = new Bid

@@ -13,19 +13,16 @@ namespace Lucent.Common.Caching
     public class StorageCache
     {
         private readonly IMemoryCache _memCache;
-        private readonly ISerializationContext _serializationContext;
         private readonly IStorageManager _storageManager;
 
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="serializationContext"></param>
         /// <param name="storageManager"></param>
-        public StorageCache(ISerializationContext serializationContext, IStorageManager storageManager)
+        public StorageCache(IStorageManager storageManager)
         {
-            _memCache = new MemoryCache(new MemoryCacheOptions { ExpirationScanFrequency = TimeSpan.FromSeconds(15), SizeLimit = 32 * 1024L * 1024L });
+            _memCache = new MemoryCache(new MemoryCacheOptions { ExpirationScanFrequency = TimeSpan.FromSeconds(15), SizeLimit = 1024 });
             _storageManager = storageManager;
-            _serializationContext = serializationContext;
         }
 
         /// <summary>
@@ -38,21 +35,18 @@ namespace Lucent.Common.Caching
         public async Task<T> Get<T>(StorageKey key, bool refresh = false) where T : IStorageEntity, new()
         {
             // Get from the memory cache
-            var entry = (byte[])null;
-            if (_memCache.TryGetValue(key.ToString(), out entry)) return await _serializationContext.ReadFrom<T>(new MemoryStream(entry), false, SerializationFormat.PROTOBUF);
+            var instance = default(T);
+            if (_memCache.TryGetValue(key.ToString(), out instance)) return instance;
 
             // Get from the implementation
-            var instance = await _storageManager.GetRepository<T>().Get(key);
+            instance = await _storageManager.GetRepository<T>().Get(key);
             if (instance != null)
             {
-                // Apply appropriate serialization
-                entry = await _serializationContext.AsBytes(instance, SerializationFormat.PROTOBUF);
-
                 // Update the memory cache
-                _memCache.Set(key.ToString(), entry, new MemoryCacheEntryOptions
+                _memCache.Set(key.ToString(), instance, new MemoryCacheEntryOptions
                 {
                     SlidingExpiration = TimeSpan.FromSeconds(300),
-                    Size = entry.Length,
+                    Size = 1,
                 });
             }
 
