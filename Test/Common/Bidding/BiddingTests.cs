@@ -188,7 +188,7 @@ namespace Lucent.Common.Bidding
                                         {
                                             myTotal += b.CPM;
                                             Interlocked.Increment(ref bidWin);
-                                            if (rng.NextDouble() < .02)
+                                            if (rng.NextDouble() < rng.NextDouble() * .07)
                                             {
                                                 await PostbackAction(_biddingClient, bid, b, "install");
                                             }
@@ -470,7 +470,7 @@ namespace Lucent.Common.Bidding
                 BudgetSchedule = new BudgetSchedule
                 {
                     ScheduleType = ScheduleType.Aggressive,
-                    HourlyCap = 25,
+                    HourlyCap = 50,
                     DailyCap = 300,
                 }
             };

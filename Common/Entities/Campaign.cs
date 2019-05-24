@@ -131,14 +131,6 @@ namespace Lucent.Common.Entities
         public BudgetSchedule BudgetSchedule { get; set; } = new BudgetSchedule { };
 
         /// <summary>
-        /// 
-        /// </summary>
-        /// <value></value>
-        [Display(Name = "Conversion Price")]
-        [SerializationProperty(13, "conversion")]
-        public double ConversionPrice { get; set; }
-
-        /// <summary>
         /// The set of actions associated with this campaigns
         /// </summary>
         /// <value></value>

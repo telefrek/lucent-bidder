@@ -120,6 +120,13 @@ namespace Lucent.Common.Middleware
         /// <returns></returns>
         protected virtual async Task<T> ReadEntity(HttpContext httpContext) => await _serializationContext.ReadAs<T>(httpContext);
 
+        /// <summary>
+        /// Hook for post delete actions
+        /// </summary>
+        /// <param name="httpContext"></param>
+        /// <param name="entity"></param>
+        protected virtual void PostDelete(HttpContext httpContext, T entity){}
+
 
         /// <summary>
         /// Handle the call asynchronously
@@ -218,6 +225,7 @@ namespace Lucent.Common.Middleware
                                 entity.ETag = httpContext.Request.Headers["X-LUCENT-ETAG"];
                                 if (await _entityRepository.TryRemove(entity))
                                 {
+                                    PostDelete(httpContext, entity);
                                     evt.EntityId = entity.Key.ToString();
                                     evt.EventType = EventType.EntityDelete;
                                     httpContext.Response.StatusCode = 204;

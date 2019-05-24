@@ -124,5 +124,20 @@ namespace Lucent.Common.Middleware
                 httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
             }
         }
+
+        /// <summary>
+        /// Purge the contents
+        /// </summary>
+        /// <param name="httpContext"></param>
+        /// <param name="entity"></param>
+        protected override void PostDelete(HttpContext httpContext, Creative entity)
+        {
+            foreach(var content in entity.Contents ?? new CreativeContent[0])
+            {
+                File.Delete(content.ContentLocation);
+            }
+
+            Directory.Delete(Path.Combine(Directory.GetCurrentDirectory(), _config.GetValue("ContentPath", "adcontent"), entity.Id));
+        }
     }
 }

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Aerospike.Client;
@@ -58,6 +60,15 @@ namespace Lucent.Common.Caching
         /// <param name="expiration"></param>
         /// <returns></returns>
         Task<bool> TryUpdateBudget(string key, double inc, double max, TimeSpan expiration);
+
+        /// <summary>
+        /// Try to update all the buckets
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="expiration"></param>
+        /// <param name="buckets"></param>
+        /// <returns></returns>
+        Task<bool> TryUpdate(string key, TimeSpan expiration, params Tuple<string, DistributedValue>[] buckets);
     }
 
     /// <summary>
@@ -83,10 +94,33 @@ namespace Lucent.Common.Caching
         }
 
         /// <inheritdoc/>
+        public Task<bool> TryUpdate(string key, TimeSpan expiration, params Tuple<string, DistributedValue>[] buckets)
+        {
+            foreach (var bucket in buckets)
+            {
+                var val = bucket.Item2.Reset();
+                var valKey = key + bucket.Item1;
+                try
+                {
+                    bucket.Item2.Last = _memcache.Set(valKey, ((long?)_memcache.Get(valKey) ?? 0L) + val, new MemoryCacheEntryOptions
+                    {
+                        AbsoluteExpirationRelativeToNow = expiration
+                    });
+                }
+                catch
+                {
+                    bucket.Item2.Inc(val);
+                }
+            }
+
+            return Task.FromResult(true);
+        }
+
+        /// <inheritdoc/>
         public async Task<bool> TryUpdateBudget(string key, double inc, double max, TimeSpan expiration)
         {
             var cur = await Get(key);
-            if(cur + inc <= max)
+            if (cur + inc <= max)
             {
                 await Inc(key, inc, expiration);
                 return true;
@@ -113,7 +147,7 @@ namespace Lucent.Common.Caching
         }
 
         /// <inheritdoc/>
-        public void Dispose() {}
+        public void Dispose() { }
 
         /// <inheritdoc/>
         public async Task<double> Inc(string key, double value, TimeSpan expiration)
@@ -193,6 +227,38 @@ namespace Lucent.Common.Caching
             }
 
             return double.NaN;
+        }
+
+        /// <inheritdoc/>
+        public async Task<bool> TryUpdate(string key, TimeSpan expiration, params Tuple<string, DistributedValue>[] buckets)
+        {
+            using (var ctx = StorageCounters.LatencyHistogram.CreateContext("aerospike", "lucent", "update"))
+            {
+                var operations = buckets.Select(b => new { Name = b.Item1, Val = b.Item2.Reset() }).ToArray();
+                try
+                {
+                    var res = await Aerospike.INSTANCE.Operate(new WritePolicy(Aerospike.INSTANCE.writePolicyDefault) { expiration = (int)expiration.TotalSeconds },
+                    default(CancellationToken), new Key("lucent", "lucent", key),
+                        operations.Select(o => Operation.Add(new Bin(o.Name, o.Val))).Concat(new Operation[] { Operation.Get() }).ToArray());
+
+                    if (res != null)
+                    {
+                        foreach(var bucket in buckets)
+                            if(res.bins.ContainsKey(bucket.Item1))
+                                bucket.Item2.Last = res.GetLong(bucket.Item1);
+                                
+                        return true;
+                    }
+                }
+                catch (Exception e)
+                {
+                    StorageCounters.ErrorCounter.WithLabels("aerospike", "lucent", e.GetType().Name).Inc();
+                    _log.LogError(e, "Error during tryUpdate");
+
+                }
+            }
+
+            return false;
         }
     }
 }

@@ -35,18 +35,17 @@ namespace Lucent.Common.Test
                         typeof(Geo).CreateFilter(FilterType.IN, "Country", "USA"),
                     }
                 },
-                ConversionPrice = 1,
                 Schedule = new CampaignSchedule
                 {
                     StartDate = DateTime.UtcNow.AddMinutes(-5),
                     EndDate = DateTime.UtcNow.AddDays(1),
                 },
-                MaxCPM = 5,
+                MaxCPM = 2,
                 BudgetSchedule = new BudgetSchedule
                 {
                     ScheduleType = ScheduleType.Even,
-                    HourlyCap = 5,
-                    DailyCap = 10,
+                    HourlyCap = 15,
+                    DailyCap = 25,
                 }
             };
         }

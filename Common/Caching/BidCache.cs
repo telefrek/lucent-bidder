@@ -39,7 +39,7 @@ namespace Lucent.Common.Caching
             using (var ctx = StorageCounters.LatencyHistogram.CreateContext("aerospike", "bids", "get"))
                 try
                 {
-                    res = await Aerospike.INSTANCE.Get(null, default(CancellationToken), new Key("lucent", "bids", id));
+                    res = await Aerospike.INSTANCE.Get(null, default(CancellationToken), new Key("lucent", "bids", id), "entry");
                 }
                 catch (Exception e)
                 {

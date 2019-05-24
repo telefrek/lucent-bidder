@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Lucent.Common.Bidding;
 using Lucent.Common.Budget;
 using Lucent.Common.Caching;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,13 +39,16 @@ namespace Lucent.Common.Background
             _timerTask = Task.Factory.StartNew(async () =>
             {
                 var bidCache = _serviceProvider.GetRequiredService<IBudgetCache>();
+                var aeroCache = _serviceProvider.GetRequiredService<IAerospikeCache>();
+
                 while (!_isStopped)
                 {
                     await Task.Delay(2000);
                     foreach (var budget in LocalBudget.GetAll())
+                    {
+                        var current = budget.Collect();
                         try
                         {
-                            var current = budget.Collect();
                             var next = await bidCache.TryUpdateBudget(budget.Id, current);
                             if (next == double.NaN)
                                 budget.Update(current);
@@ -54,7 +58,17 @@ namespace Lucent.Common.Background
                         catch (Exception e)
                         {
                             _log.LogError(e, "Error updating {0}", budget.Id);
+                            budget.Update(current);
                         }
+                    }
+
+                    foreach (var stat in CampaignStats.GetAll())
+                    {
+                        await aeroCache.TryUpdate(stat.Id, TimeSpan.FromDays(7),
+                            new Tuple<string, DistributedValue>("cpm", stat.CPM),
+                            new Tuple<string, DistributedValue>("wins", stat.Wins),
+                            new Tuple<string, DistributedValue>("conversions", stat.Conversions));
+                    }
                 }
             }).Unwrap();
 

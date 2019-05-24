@@ -153,10 +153,10 @@ namespace Lucent.Common.Bidding
 
                 var ret = impList.Select(bidContext =>
                 {
-                    var cpm = Math.Round(stats.eCPC * stats.CTR * 1000, 4);
-                    if (cpm == 0) cpm = Campaign.MaxCPM;
+                    var cpm = Math.Round(Campaign.Actions.First().Payout * stats.CTR * 1000 * .85, 4);
+                    if (cpm == 0 || cpm > Campaign.MaxCPM) cpm = Campaign.MaxCPM;
 
-                    if (cpm >= bidContext.Impression.BidFloor && cpm <= Campaign.MaxCPM)
+                    if (cpm >= bidContext.Impression.BidFloor)
                     {
                         bidContext.BaseUri = baseUri;
                         bidContext.Bid = new Bid

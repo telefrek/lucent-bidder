@@ -129,8 +129,6 @@ namespace Lucent.Common.Middleware
 
                         if (amount > 0)
                         {
-
-                            // Add a dollar if they've been good...
                             BidCounters.BudgetRequests.WithLabels("recieved").Inc();
 
                             if (await _aerospikeCache.TryUpdateBudget(request.EntityId, amount, schedule.HourlyCap, TimeSpan.FromMinutes(ttl)))

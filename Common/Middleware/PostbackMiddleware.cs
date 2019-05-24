@@ -85,6 +85,8 @@ namespace Lucent.Common.Middleware
 
                 var campaign = (await _storageCache.Get<Campaign>(new StringStorageKey(bidContext.CampaignId.ToString())));
 
+                var stats = CampaignStats.Get(campaign.Id);
+
                 switch (bidContext.Operation)
                 {
                     case BidOperation.Clicked:
@@ -100,6 +102,8 @@ namespace Lucent.Common.Middleware
                         // Update the exchange and campaign amounts
                         // TODO: handle errors
                         var acpm = Math.Round(cpm / 1000d, 4);
+                        stats.CPM.Inc(acpm);
+                        stats.Wins.Inc(1);
                         var entry = new BidEntry { BidContext = bidContext.ToString(), RequestId = bidContext.RequestId, Cost = acpm };
                         var response = await _bidCache.getEntryAsync(bidContext.RequestId);
                         if (response == null)
@@ -160,6 +164,7 @@ namespace Lucent.Common.Middleware
                                 var postbackAction = campaign.Actions.FirstOrDefault(pb => pb.Name.Equals(action, StringComparison.InvariantCultureIgnoreCase));
                                 if (postbackAction != null)
                                 {
+                                    stats.Conversions.Inc(1);
                                     BidCounters.CampaignConversions.WithLabels(campaign.Name).Inc();
                                     BidCounters.CampaignRevenue.WithLabels(campaign.Name).Inc(postbackAction.Payout);
                                 }
