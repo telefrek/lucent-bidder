@@ -1,4 +1,5 @@
 using System.Threading;
+using Prometheus;
 
 namespace Lucent.Common
 {
@@ -46,5 +47,27 @@ namespace Lucent.Common
         /// </summary>
         /// <returns>The aggregation of this process</returns>
         public long Reset() => Interlocked.Exchange(ref _current, 0L);
+
+        /// <summary>
+        /// Synchronize with source
+        /// </summary>
+        /// <param name="value"></param>
+        public void Sync(double value)
+        {
+            Reset();
+            SetLast(value);
+        }
+
+        /// <summary>
+        /// Set the last value as a double
+        /// </summary>
+        /// <param name="value"></param>
+        public void SetLast(double value)
+        {
+            lock (this)
+            {
+                Last = (long)(value * 1000L);
+            }
+        }
     }
 }

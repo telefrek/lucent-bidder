@@ -44,8 +44,8 @@ namespace Lucent.Common.Test
                 BudgetSchedule = new BudgetSchedule
                 {
                     ScheduleType = ScheduleType.Even,
-                    HourlyCap = 15,
-                    DailyCap = 25,
+                    HourlyCap = 3,
+                    DailyCap = 4,
                 }
             };
         }

@@ -66,11 +66,19 @@ namespace Lucent.Common.Bidding
                 IsMatch = (e) => { return e.EntityId == _campaignId; },
                 HandleAsync = async (e) =>
                 {
-                    var rem = await _budgetCache.TryGetBudget(_campaignId);
-                    LocalBudget.Get(_campaignId).Last = rem;
+                    var status = await _budgetCache.TryGetRemaining(_campaignId);
+                    if (status.Successful)
+                    {
+                        LocalBudget.Get(_campaignId).Budget.Sync(status.Remaining);
+                        _isBudgetExhausted = status.Remaining <= 0;
+                    }
+                    else
+                    {
+                        _isBudgetExhausted = true;
+                        _log.LogWarning("Failed to sync campaign budget for {0}, stopping to be safe", _campaign.Name);
+                    }
 
-                    _isBudgetExhausted = rem <= 0d;
-                    _log.LogInformation("Budget change {0} ({1})", e.EntityId, _isBudgetExhausted);
+                    _log.LogInformation("Budget change for campaign : {0} ({1})", _campaign.Name, _isBudgetExhausted);
                 }
             });
         }
@@ -92,17 +100,17 @@ namespace Lucent.Common.Bidding
         {
             using (var histogram = _bidderLatency.CreateContext())
             {
+                if (_isBudgetExhausted = _campaignBudget.Budget.GetDouble() <= 0)
+                {
+                    BidCounters.NoBidReason.WithLabels("campaign_suspended").Inc();
+                    await _budgetManager.RequestAdditional(_campaign.Id, EntityType.Campaign);
+                    return NO_MATCHES;
+                }
+
                 // Apply campaign filters and check budget
                 if (_campaign.IsFiltered(request))
                 {
                     BidCounters.NoBidReason.WithLabels("campaign_filtered").Inc();
-                    return NO_MATCHES;
-                }
-
-                if (_isBudgetExhausted |= _campaignBudget.IsExhausted())
-                {
-                    BidCounters.NoBidReason.WithLabels("no_campaign_budget").Inc();
-                    await _budgetManager.RequestAdditional(_campaign.Id, EntityType.Campaign);
                     return NO_MATCHES;
                 }
 

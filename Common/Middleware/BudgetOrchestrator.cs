@@ -17,6 +17,7 @@ using Lucent.Common.Storage;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using Prometheus;
 
 namespace Lucent.Common.Middleware
 {
@@ -28,35 +29,37 @@ namespace Lucent.Common.Middleware
         readonly IStorageManager _storageManager;
         readonly ISerializationContext _serializationContext;
         readonly ILogger<BudgetOrchestrator> _logger;
-        readonly IStorageRepository<Campaign> _campaignRepository;
-        readonly IStorageRepository<Exchange> _exchangeRepository;
         readonly IMessageFactory _messageFactory;
         readonly IAerospikeCache _aerospikeCache;
         IBudgetCache _budgetCache;
         readonly IMessagePublisher _budgetPublisher;
         readonly SemaphoreSlim _budgetLock = new SemaphoreSlim(1);
+        StorageCache _storageCache;
+
+        static Gauge _budgetValue = Metrics.CreateGauge("current_budget", "The current budget for an item", new GaugeConfiguration
+        {
+            LabelNames = new string[] { "entity", "type" }
+        });
 
         /// <summary>
         /// Default constructor
         /// </summary>
         /// <param name="next"></param>
-        /// <param name="storageManager"></param>
         /// <param name="messageFactory"></param>
         /// <param name="serializationContext"></param>
         /// <param name="logger"></param>
         /// <param name="budgetCache"></param>
         /// <param name="aerospikeCache"></param>
-        public BudgetOrchestrator(RequestDelegate next, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<BudgetOrchestrator> logger, IBudgetCache budgetCache, IAerospikeCache aerospikeCache)
+        /// <param name="storageCache"></param>
+        public BudgetOrchestrator(RequestDelegate next, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<BudgetOrchestrator> logger, IBudgetCache budgetCache, IAerospikeCache aerospikeCache, StorageCache storageCache)
         {
-            _storageManager = storageManager;
-            _campaignRepository = storageManager.GetRepository<Campaign>();
-            _exchangeRepository = storageManager.GetRepository<Exchange>();
             _serializationContext = serializationContext;
             _messageFactory = messageFactory;
             _logger = logger;
             _budgetCache = budgetCache;
             _budgetPublisher = _messageFactory.CreatePublisher(Topics.BUDGET);
             _aerospikeCache = aerospikeCache;
+            _storageCache = storageCache;
         }
 
         /// <summary>
@@ -87,18 +90,25 @@ namespace Lucent.Common.Middleware
                         await _budgetLock.WaitAsync();
 
                         var schedule = (BudgetSchedule)null;
+                        var entityName = (string)null;
 
                         switch (request.EntityType)
                         {
                             case EntityType.Campaign:
-                                var camp = await _campaignRepository.Get(new StringStorageKey(request.EntityId));
+                                var camp = await _storageCache.Get<Campaign>(new StringStorageKey(request.EntityId), true);
                                 if (camp != null)
+                                {
                                     schedule = camp.BudgetSchedule;
+                                    entityName = camp.Name;
+                                }
                                 break;
                             case EntityType.Exchange:
-                                var exchange = await _exchangeRepository.Get(new GuidStorageKey(Guid.Parse(request.EntityId)));
+                                var exchange = await _storageCache.Get<Exchange>(new GuidStorageKey(Guid.Parse(request.EntityId)), true);
                                 if (exchange != null)
+                                {
                                     schedule = exchange.BudgetSchedule;
+                                    entityName = exchange.Name;
+                                }
                                 break;
                             default:
                                 break;
@@ -110,30 +120,34 @@ namespace Lucent.Common.Middleware
                             return;
                         }
 
-                        var ttl = 5;
-                        var amount = 0d;
+                        BidCounters.BudgetRequests.WithLabels("recieved").Inc();
 
-                        switch (schedule.ScheduleType)
+                        var status = await _budgetCache.TryGetRemaining(request.EntityId);
+                        if (status.Successful)
                         {
-                            case ScheduleType.Aggressive:
-                                ttl = 60 - DateTime.Now.Minute;
-                                amount = schedule.HourlyCap;
-                                break;
-                            case ScheduleType.Even:
-                                amount = schedule.HourlyCap / 12; // 5 minutes per segment
-                                break;
-                            default:
-                                httpContext.Response.StatusCode = 400;
-                                return;
-                        }
+                            var elapsed = DateTime.UtcNow.Subtract(status.LastUpdate).TotalMinutes;
+                            var allocation = new BudgetAllocation
+                            {
+                                Key = request.EntityId,
+                                ResetSpend = DateTime.UtcNow.Hour != status.LastUpdate.Hour,
+                                ResetDaily = DateTime.UtcNow.Day != status.LastUpdate.Day
+                            };
 
-                        if (amount > 0)
-                        {
-                            BidCounters.BudgetRequests.WithLabels("recieved").Inc();
+                            // Check for an amount
+                            if (allocation.ResetDaily || status.TotalSpend < schedule.DailyCap)
+                            {
+                                var rem = schedule.HourlyCap - status.Spend;
+                                if(allocation.ResetSpend)
+                                    rem = schedule.HourlyCap;
 
-                            if (await _aerospikeCache.TryUpdateBudget(request.EntityId, amount, schedule.HourlyCap, TimeSpan.FromMinutes(ttl)))
-                                if (await _budgetCache.TryUpdateBudget(request.EntityId, amount) == double.NaN)
-                                    await _aerospikeCache.TryUpdateBudget(request.EntityId, -amount, schedule.HourlyCap, TimeSpan.FromMinutes(ttl));
+                                if(schedule.ScheduleType == ScheduleType.Even)
+                                    rem = elapsed >= 5 ? Math.Min(schedule.HourlyCap / 12, rem) : 0;
+                                    
+                                allocation.Amount = rem;
+                            }
+
+                            if(allocation.Amount > 0)
+                                status = await _budgetCache.TryUpdateBudget(allocation);
                         }
 
                         _budgetLock.Release();

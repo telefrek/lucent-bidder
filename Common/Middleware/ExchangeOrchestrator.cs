@@ -25,8 +25,8 @@ namespace Lucent.Common.Middleware
     public class ExchangeOrchestrator : EntityRestApi<Exchange>
     {
         /// <inheritdoc/>
-        public ExchangeOrchestrator(RequestDelegate next, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<EntityRestApi<Exchange>> logger, IBudgetCache budgetCache)
-            : base(next, storageManager, messageFactory, serializationContext, logger, budgetCache)
+        public ExchangeOrchestrator(RequestDelegate next, StorageCache storageCache, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<EntityRestApi<Exchange>> logger, IBudgetCache budgetCache)
+            : base(next, storageCache, storageManager, messageFactory, serializationContext, logger, budgetCache)
         {
         }
 
@@ -43,7 +43,7 @@ namespace Lucent.Common.Middleware
                 var segments = httpContext.Request.Path.Value.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
                 exchange = new Exchange();
                 exchange.Key.Parse(segments.Last());
-                exchange = await _entityRepository.Get(exchange.Key);
+                exchange = await _storageCache.Get<Exchange>(exchange.Key, true);
 
                 if (exchange != null)
                 {

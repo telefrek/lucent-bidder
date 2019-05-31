@@ -41,15 +41,17 @@ namespace Lucent.Common.Caching
         /// <param name="key"></param>
         /// <param name="value"></param>
         /// <param name="expiration"></param>
+        /// <param name="bin"></param>
         /// <returns></returns>
-        Task<double> Inc(string key, double value, TimeSpan expiration);
+        Task<double> Inc(string key, double value, TimeSpan expiration, string bin);
 
         /// <summary>
         /// Get the value
         /// </summary>
         /// <param name="key"></param>
+        /// <param name="bin"></param>
         /// <returns></returns>
-        Task<double> Get(string key);
+        Task<double> Get(string key, string bin);
 
         /// <summary>
         /// Try to update the budget
@@ -58,8 +60,9 @@ namespace Lucent.Common.Caching
         /// <param name="inc"></param>
         /// <param name="max"></param>
         /// <param name="expiration"></param>
+        /// <param name="bin"></param>
         /// <returns></returns>
-        Task<bool> TryUpdateBudget(string key, double inc, double max, TimeSpan expiration);
+        Task<bool> TryUpdateBudget(string key, double inc, double max, TimeSpan expiration, string bin);
 
         /// <summary>
         /// Try to update all the buckets
@@ -76,18 +79,18 @@ namespace Lucent.Common.Caching
     /// </summary>
     public class MockAspkCache : IAerospikeCache
     {
-        static readonly MemoryCache _memcache = new MemoryCache(new MemoryCacheOptions { ExpirationScanFrequency = TimeSpan.FromSeconds(15) });
+        static readonly IMemoryCache _memcache = new MemoryCache(new MemoryCacheOptions { ExpirationScanFrequency = TimeSpan.FromSeconds(15) });
 
         /// <inheritdoc/>
-        public Task<double> Get(string key)
+        public Task<double> Get(string key, string bin)
         {
-            return Task.FromResult(((double?)_memcache.Get(key)).GetValueOrDefault(0d));
+            return Task.FromResult(((double?)_memcache.Get(key + "." + bin)).GetValueOrDefault(0d));
         }
 
         /// <inheritdoc/>
-        public async Task<double> Inc(string key, double value, TimeSpan expiration)
+        public async Task<double> Inc(string key, double value, TimeSpan expiration, string bin)
         {
-            return _memcache.Set(key, await Get(key) + value, new MemoryCacheEntryOptions
+            return _memcache.Set(key + "." + bin, await Get(key, bin) + value, new MemoryCacheEntryOptions
             {
                 AbsoluteExpirationRelativeToNow = expiration
             });
@@ -100,6 +103,7 @@ namespace Lucent.Common.Caching
             {
                 var val = bucket.Item2.Reset();
                 var valKey = key + bucket.Item1;
+                    
                 try
                 {
                     bucket.Item2.Last = _memcache.Set(valKey, ((long?)_memcache.Get(valKey) ?? 0L) + val, new MemoryCacheEntryOptions
@@ -117,12 +121,12 @@ namespace Lucent.Common.Caching
         }
 
         /// <inheritdoc/>
-        public async Task<bool> TryUpdateBudget(string key, double inc, double max, TimeSpan expiration)
+        public async Task<bool> TryUpdateBudget(string key, double inc, double max, TimeSpan expiration, string bin)
         {
-            var cur = await Get(key);
+            var cur = await Get(key, bin);
             if (cur + inc <= max)
             {
-                await Inc(key, inc, expiration);
+                await Inc(key, inc, expiration, bin);
                 return true;
             }
 
@@ -150,16 +154,16 @@ namespace Lucent.Common.Caching
         public void Dispose() { }
 
         /// <inheritdoc/>
-        public async Task<double> Inc(string key, double value, TimeSpan expiration)
+        public async Task<double> Inc(string key, double value, TimeSpan expiration, string bin)
         {
             using (var ctx = StorageCounters.LatencyHistogram.CreateContext("aerospike", "lucent", "inc"))
                 try
                 {
                     var res = await Aerospike.INSTANCE.Operate(new WritePolicy(Aerospike.INSTANCE.writePolicyDefault) { expiration = (int)expiration.TotalSeconds },
                     default(CancellationToken), new Key("lucent", "lucent", key),
-                        Operation.Add(new Bin("budget", (int)(value * 10000))), Operation.Get("budget"));
+                        Operation.Add(new Bin(bin, (int)(value * 10000))), Operation.Get(bin));
                     if (res != null)
-                        return res.GetInt("budget") / 10000d;
+                        return res.GetInt(bin) / 10000d;
                 }
                 catch (Exception e)
                 {
@@ -171,30 +175,30 @@ namespace Lucent.Common.Caching
         }
 
         /// <inheritdoc/>
-        public async Task<bool> TryUpdateBudget(string key, double inc, double max, TimeSpan expiration)
+        public async Task<bool> TryUpdateBudget(string key, double inc, double max, TimeSpan expiration, string bin)
         {
             try
             {
                 Record res = null;
                 using (var ctx = StorageCounters.LatencyHistogram.CreateContext("aerospike", "budget", "get"))
-                    res = await Aerospike.INSTANCE.Get(null, default(CancellationToken), new Key("lucent", "budget", key));
+                    res = await Aerospike.INSTANCE.Get(null, default(CancellationToken), new Key("lucent", bin, key));
 
                 if (res == null)
                 {
                     using (var ctx = StorageCounters.LatencyHistogram.CreateContext("aerospike", "budget", "update"))
                         res = await Aerospike.INSTANCE.Operate(new WritePolicy(Aerospike.INSTANCE.writePolicyDefault) { expiration = (int)expiration.TotalSeconds },
                         default(CancellationToken), new Key("lucent", "budget", key),
-                            Operation.Add(new Bin("budget", (int)(inc * 10000))), Operation.Get("budget"));
+                            Operation.Add(new Bin(bin, (int)(inc * 10000))), Operation.Get(bin));
 
                     return res != null;
                 }
 
-                if (res.GetInt("budget") / 10000d + inc <= max)
+                if (res.GetInt(bin) / 10000d + inc <= max)
                 {
                     using (var ctx = StorageCounters.LatencyHistogram.CreateContext("aerospike", "budget", "update"))
                         res = await Aerospike.INSTANCE.Operate(new WritePolicy(Aerospike.INSTANCE.writePolicyDefault) { expiration = res.TimeToLive },
                         default(CancellationToken), new Key("lucent", "budget", key),
-                            Operation.Add(new Bin("budget", (int)(inc * 10000))), Operation.Get("budget"));
+                            Operation.Add(new Bin(bin, (int)(inc * 10000))), Operation.Get(bin));
 
                     return res != null;
                 }
@@ -209,7 +213,7 @@ namespace Lucent.Common.Caching
         }
 
         /// <inheritdoc/>
-        public async Task<double> Get(string key)
+        public async Task<double> Get(string key, string bin)
         {
             try
             {
@@ -217,7 +221,7 @@ namespace Lucent.Common.Caching
                 {
                     var res = await Aerospike.INSTANCE.Get(null, default(CancellationToken), new Key("lucent", "lucent", key));
                     if (res != null)
-                        return res.GetInt("budget") / 10000d;
+                        return res.GetInt(bin) / 10000d;
                 }
             }
             catch (Exception e)
@@ -243,10 +247,10 @@ namespace Lucent.Common.Caching
 
                     if (res != null)
                     {
-                        foreach(var bucket in buckets)
-                            if(res.bins.ContainsKey(bucket.Item1))
+                        foreach (var bucket in buckets)
+                            if (res.bins.ContainsKey(bucket.Item1))
                                 bucket.Item2.Last = res.GetLong(bucket.Item1);
-                                
+
                         return true;
                     }
                 }

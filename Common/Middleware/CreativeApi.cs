@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Lucent.Common.Caching;
 using Lucent.Common.Entities;
 using Lucent.Common.Media;
 using Lucent.Common.Messaging;
@@ -25,8 +26,8 @@ namespace Lucent.Common.Middleware
         IConfiguration _config;
 
         /// <inheritdoc/>
-        public CreativeApi(RequestDelegate next, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<EntityRestApi<Creative>> logger, IMediaScanner mediaScanner,
-        IConfiguration configuration) : base(next, storageManager, messageFactory, serializationContext, logger, null)
+        public CreativeApi(RequestDelegate next, StorageCache storageCache, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<EntityRestApi<Creative>> logger, IMediaScanner mediaScanner,
+        IConfiguration configuration) : base(next, storageCache, storageManager, messageFactory, serializationContext, logger, null)
         {
             _mediaScanner = mediaScanner;
             _config = configuration;
@@ -48,7 +49,7 @@ namespace Lucent.Common.Middleware
                     {
                         // Verify the creative exists
                         var creativeId = segments[segments.Length - 2];
-                        var creative = await _entityRepository.Get(new StringStorageKey(creativeId));
+                        var creative = await _storageCache.Get<Creative>(new StringStorageKey(creativeId), true);
                         if (creative != null)
                         {
                             var header = MediaTypeHeaderValue.Parse(httpContext.Request.ContentType);
@@ -91,7 +92,7 @@ namespace Lucent.Common.Middleware
                                         creative.Contents = contents;
                                         _log.LogInformation("Content count {0}", (creative.Contents ?? new CreativeContent[0]).Length);
 
-                                        if (await _entityRepository.TryUpdate(creative))
+                                        if (await _storageCache.TryUpdate(creative))
                                         {
                                             httpContext.Response.StatusCode = 201;
                                             return;

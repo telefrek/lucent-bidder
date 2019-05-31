@@ -17,7 +17,7 @@ namespace Lucent.Common.Budget
     /// </summary>
     public class SimpleBudgetManager : IBudgetManager
     {
-        static readonly MemoryCache _memcache = new MemoryCache(new MemoryCacheOptions { ExpirationScanFrequency = TimeSpan.FromSeconds(15) });
+        static readonly IMemoryCache _memcache = new MemoryCache(new MemoryCacheOptions { ExpirationScanFrequency = TimeSpan.FromSeconds(15) });
 
         HashSet<string> _entities = new HashSet<string>();
         HashSet<Guid> _ids = new HashSet<Guid>();

@@ -1,7 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
+using Aerospike.Client;
 using Lucent.Common.Serialization;
+using Lucent.Common.Storage;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -16,77 +20,126 @@ namespace Lucent.Common.Caching
     {
         ILogger _log;
         ISerializationContext _serializationContext;
-        IAerospikeCache _cache;
         object _budgetSync = new object();
-        bool localOnly;
-        MemoryCache _memcache = new MemoryCache(new MemoryCacheOptions { ExpirationScanFrequency = TimeSpan.FromSeconds(1), SizeLimit = 1024 * 1024 * 64 });
-
-
-        /// <summary>
-        /// Metric for tracking query latencies
-        /// </summary>
-        /// <value></value>
-        static Histogram _cacheLatency = Metrics.CreateHistogram("cache_latency", "Latency for Caching queries", new HistogramConfiguration
-        {
-            LabelNames = new string[] { "method" },
-            Buckets = new double[] { 0.0005, 0.001, 0.002, 0.005, 0.010, 0.015, 0.020, 0.025, 0.05 },
-        });
-
-        static Gauge _budgetValue = Metrics.CreateGauge("current_budget", "The current budget for an item", new GaugeConfiguration
-        {
-            LabelNames = new string[] { "entity" }
-        });
 
         /// <summary>
         /// Injection constructor
         /// </summary>
         /// <param name="logger"></param>
         /// <param name="serializationContext"></param>
-        /// <param name="cache"></param>
-        public BudgetCache(ILogger<BudgetCache> logger, ISerializationContext serializationContext, IAerospikeCache cache)
+        public BudgetCache(ILogger<BudgetCache> logger, ISerializationContext serializationContext)
         {
             _log = logger;
             _serializationContext = serializationContext;
-            _cache = cache;
-            localOnly = _cache == null;
         }
 
         /// <inheritdoc/>
-        public async Task<double> TryUpdateBudget(string key, double value)
+        public async Task<BudgetStatus> TryUpdateBudget(BudgetAllocation allocation)
         {
-            var res = 0d;
+            var status = new BudgetStatus();
+            var iValue = (long)Math.Floor(allocation.Amount * 10000);
 
-            if (localOnly)
-                res = 1d;
-            else
-                using (var context = _cacheLatency.CreateContext("inc"))
+            try
+            {
+                var ops = new List<Operation>();
+                ops.Add(Operation.Add(new Bin("budget", iValue)));
+                ops.Add(Operation.Put(new Bin("updated", DateTime.UtcNow.ToFileTimeUtc())));
+
+                if (allocation.ResetSpend)
+                    ops.Add(Operation.Put(new Bin("spend", 0L)));
+                if (allocation.ResetDaily)
+                    ops.Add(Operation.Put(new Bin("total", 0L)));
+
+                ops.Add(Operation.Get());
+
+                using (var ctx = StorageCounters.LatencyHistogram.CreateContext("aerospike", "lucent", "update_budget"))
                 {
-                    res = await _cache.Inc(key, value, TimeSpan.FromHours(1));
+                    var res = await Aerospike.INSTANCE.Operate(new WritePolicy(Aerospike.INSTANCE.writePolicyDefault) { expiration = 3600 }, default(CancellationToken), new Key("lucent", "budget", allocation.Key), ops.ToArray());
+
+                    // Validate the return
+                    if (res != null)
+                        return FromResult(res);
                 }
+            }
+            catch (Exception e)
+            {
+                _log.LogError(e, "failed to update budget for {0}", allocation.Key);
+            }
 
-            if (res != double.NaN)
-                _budgetValue.WithLabels(key).Set(res);
+            return status;
+        }
 
-            return res;
+        BudgetStatus FromResult(Record record)
+        {
+            var status = new BudgetStatus();
+            status.Successful = true;
+            status.LastUpdate = DateTime.UtcNow.AddDays(-1);
+
+            if (record.bins.ContainsKey("total"))
+                status.TotalSpend = record.GetLong("total") / 10000d;
+            if (record.bins.ContainsKey("spend"))
+                status.Spend = record.GetLong("total") / 10000d;
+            if (record.bins.ContainsKey("updated"))
+                status.LastUpdate = DateTime.FromFileTimeUtc(record.GetLong("updated"));
+            if (record.bins.ContainsKey("budget"))
+                status.Remaining = record.GetLong("budget") / 10000d;
+
+            return status;
         }
 
         /// <inheritdoc/>
-        public async Task<double> TryGetBudget(string key)
+        public async Task<BudgetStatus> TryUpdateSpend(string key, double value)
         {
-            var res = 0d;
+            var status = new BudgetStatus();
+            var iValue = (long)Math.Floor(value * 10000);
 
-            if (localOnly)
-                res = 1d;
-            else
-                using (var context = _cacheLatency.CreateContext("get"))
+            try
+            {
+                using (var ctx = StorageCounters.LatencyHistogram.CreateContext("aerospike", "lucent", "update_spend"))
                 {
-                    res = await _cache.Get(key);
+                    var res = await Aerospike.INSTANCE.Operate(new WritePolicy(Aerospike.INSTANCE.writePolicyDefault) { expiration = 3600 }, default(CancellationToken), new Key("lucent", "budget", key),
+                        Operation.Add(new Bin("spend", iValue)),
+                        Operation.Add(new Bin("total", iValue)),
+                        Operation.Add(new Bin("budget", -iValue)),
+                        Operation.Get());
+
+                    if (res != null)
+                        return FromResult(res);
                 }
+            }
+            catch (Exception e)
+            {
+                _log.LogError(e, "failed to update spend for {0}", key);
+            }
 
-            if (res != double.NaN)
-                _budgetValue.WithLabels(key).Set(res);
+            return status;
+        }
 
-            return res;
+        /// <inheritdoc/>
+        public async Task<BudgetStatus> TryGetRemaining(string key)
+        {
+            var status = new BudgetStatus();
+
+            try
+            {
+                using (var ctx = StorageCounters.LatencyHistogram.CreateContext("aerospike", "lucent", "get_budget"))
+                {
+                    var res = await Aerospike.INSTANCE.Get(null, default(CancellationToken), new Key("lucent", "budget", key));
+
+                    if (res != null)
+                        return FromResult(res);
+                    
+                    // Doesn't exist, need to update
+                    status.Successful = true;
+                    status.LastUpdate = DateTime.UtcNow.AddDays(-1);
+                }
+            }
+            catch (Exception e)
+            {
+                _log.LogError(e, "failed to get budget for {0}", key);
+            }
+
+            return status;
         }
     }
 }

@@ -16,7 +16,7 @@ namespace Lucent.Common.Budget
         /// </summary>
         /// <param name="entityId"></param>
         /// <returns></returns>
-        public static LocalBudget Get(string entityId) => _budgets.GetOrAdd(entityId, new LocalBudget { Id = entityId, Last = 0d });
+        public static LocalBudget Get(string entityId) => _budgets.GetOrAdd(entityId, new LocalBudget { Id = entityId });
 
         /// <summary>
         /// Get all the budgets
@@ -33,27 +33,27 @@ namespace Lucent.Common.Budget
         public string Id { get; set; }
 
         /// <summary>
-        /// Get the last value
+        /// Hourly spend value
         /// </summary>
         /// <value></value>
-        public double Last { get; set; }
+        public DistributedValue Budget { get; set; } = new DistributedValue();
 
         /// <summary>
-        /// Update the local budget for the entity
+        /// Action counts for campaign
         /// </summary>
-        /// <param name="value"></param>
-        public double Update(double value) => (Interlocked.Add(ref _current, (long)(value * 10000L)) / 10000d) + Last;
+        /// <value></value>
+        public DistributedValue ActionLimit { get; set; } = new DistributedValue();
 
         /// <summary>
-        /// Check if the budget is exhausted
+        /// Daily revenue for the campaign
         /// </summary>
-        /// <returns></returns>
-        public bool IsExhausted() => Interlocked.Read(ref _current) / 10000d + Last <= 0d;
+        /// <value></value>
+        public DistributedValue DailyRevenueSpend { get; set; } = new DistributedValue();
 
         /// <summary>
-        /// Collect the budget and reset it to 0
+        /// Total revenue for this campaign
         /// </summary>
-        /// <returns></returns>
-        public double Collect() => Interlocked.Exchange(ref _current, 0) / 10000d;
+        /// <value></value>
+        public DistributedValue TotalRevenueSpend { get; set; } = new DistributedValue();
     }
 }

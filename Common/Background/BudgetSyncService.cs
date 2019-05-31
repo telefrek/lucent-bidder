@@ -46,19 +46,11 @@ namespace Lucent.Common.Background
                     await Task.Delay(2000);
                     foreach (var budget in LocalBudget.GetAll())
                     {
-                        var current = budget.Collect();
-                        try
+                        var res = await bidCache.TryGetRemaining(budget.Id);
+                        if(res.Successful)
                         {
-                            var next = await bidCache.TryUpdateBudget(budget.Id, current);
-                            if (next == double.NaN)
-                                budget.Update(current);
-                            else
-                                budget.Last = next;
-                        }
-                        catch (Exception e)
-                        {
-                            _log.LogError(e, "Error updating {0}", budget.Id);
-                            budget.Update(current);
+                            budget.Budget.Reset();
+                            budget.Budget.SetLast(res.Remaining);
                         }
                     }
 

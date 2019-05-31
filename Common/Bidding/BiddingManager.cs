@@ -22,7 +22,6 @@ namespace Lucent.Common.Bidding
     {
         ILogger<BiddingManager> _log;
         ISerializationContext _serializationContext;
-        IStorageManager _storageManager;
         IMessageFactory _messageFactory;
         IBidFactory _bidFactory;
         IMessageSubscriber<EntityEventMessage> _entityEvents;
@@ -31,43 +30,48 @@ namespace Lucent.Common.Bidding
         Exchange _exchange;
         bool _isBudgetExhausted = false;
 
-        IStorageRepository<Campaign> _campaignRepo;
-        IStorageRepository<Creative> _creativeRepo;
         IBudgetCache _budgetCache;
+        StorageCache _storageCache;
 
         /// <summary>
         /// Default constructor
         /// </summary>
         /// <param name="logger"></param>
         /// <param name="serializationContext"></param>
-        /// <param name="storageManager"></param>
+        /// <param name="storageCache"></param>
         /// <param name="messageFactory"></param>
         /// <param name="bidFactory"></param>
         /// <param name="budgetManager"></param>
         /// <param name="budgetCache"></param>
-        public BiddingManager(ILogger<BiddingManager> logger, ISerializationContext serializationContext, IStorageManager storageManager, IMessageFactory messageFactory, IBidFactory bidFactory, IBudgetManager budgetManager, IBudgetCache budgetCache)
+        public BiddingManager(ILogger<BiddingManager> logger, ISerializationContext serializationContext, StorageCache storageCache, IMessageFactory messageFactory, IBidFactory bidFactory, IBudgetManager budgetManager, IBudgetCache budgetCache)
         {
             _log = logger;
             _serializationContext = serializationContext;
-            _storageManager = storageManager;
+            _storageCache = storageCache;
             _messageFactory = messageFactory;
             _bidFactory = bidFactory;
             _entityEvents = _messageFactory.CreateSubscriber<EntityEventMessage>(Topics.BIDDING, _messageFactory.WildcardFilter);
             _entityEvents.OnReceive = HandleMessage;
-            _creativeRepo = storageManager.GetRepository<Creative>();
             _budgetManager = budgetManager;
             _budgetCache = budgetCache;
-            _campaignRepo = storageManager.GetRepository<Campaign>();
 
             _budgetManager.RegisterHandler(new BudgetEventHandler
             {
                 IsMatch = (e) => { return e.EntityId == _exchangeId; },
                 HandleAsync = async (e) =>
                 {
-                    var rem = await _budgetCache.TryGetBudget(_exchangeId);
-                    LocalBudget.Get(_exchangeId).Last = rem;
+                    var status = await _budgetCache.TryGetRemaining(_exchangeId);
+                    if (status.Successful)
+                    {
+                        LocalBudget.Get(_exchangeId).Budget.Sync(status.Remaining);
+                        _isBudgetExhausted = status.Remaining <= 0;
+                    }
+                    else
+                    {
+                        _isBudgetExhausted = true;
+                        _log.LogWarning("Failed to sync exchange budget for {0}, stopping to be safe", _exchangeId);
+                    }
 
-                    _isBudgetExhausted = rem <= 0d;
                     _log.LogInformation("Budget change for exchange : {0} ({1})", _exchangeId, _isBudgetExhausted);
                 }
             });
@@ -77,7 +81,7 @@ namespace Lucent.Common.Bidding
         {
             foreach (var creativeId in campaign.CreativeIds)
             {
-                var cr = await _creativeRepo.Get(new StringStorageKey(creativeId));
+                var cr = await _storageCache.Get<Creative>(new StringStorageKey(creativeId), true);
                 foreach (var content in cr.Contents ?? new CreativeContent[0])
                     if (content.Filter == null)
                         content.HydrateFilter();
@@ -110,7 +114,7 @@ namespace Lucent.Common.Bidding
                                     if (_exchange.CampaignIds != null && _exchange.CampaignIds.Any(c => c.Equals(id)))
                                     {
                                         _log.LogInformation("Updating bidder for campaign : {0}", id);
-                                        var entity = await _storageManager.GetRepository<Campaign>().Get(new StringStorageKey(id));
+                                        var entity = await _storageCache.Get<Campaign>(new StringStorageKey(id), true);
                                         Bidders.RemoveAll(b => b.Campaign.Id.Equals(id));
                                         if (entity != null)
                                         {
@@ -133,7 +137,7 @@ namespace Lucent.Common.Bidding
                                 switch (message.Body.EventType)
                                 {
                                     case EventType.EntityUpdate:
-                                        _exchange = await _storageManager.GetRepository<Exchange>().Get(new GuidStorageKey(Guid.Parse(_exchangeId))) ?? _exchange;
+                                        _exchange = await _storageCache.Get<Exchange>(new GuidStorageKey(Guid.Parse(_exchangeId)), true) ?? _exchange;
                                         await UpdateCampaigns();
                                         break;
                                 }
@@ -152,7 +156,7 @@ namespace Lucent.Common.Bidding
         public async Task Initialize(AdExchange adExchange)
         {
             _exchangeId = adExchange.ExchangeId.ToString();
-            _exchange = await _storageManager.GetRepository<Exchange>().Get(new GuidStorageKey(Guid.Parse(_exchangeId)));
+            _exchange = await _storageCache.Get<Exchange>(new GuidStorageKey(Guid.Parse(_exchangeId)), true);
             if (_exchange != null && _exchange.CampaignIds != null)
                 await UpdateCampaigns();
             else
@@ -166,9 +170,9 @@ namespace Lucent.Common.Bidding
                 Bidders.RemoveAll(b => b.Campaign.Id.Equals(removedId));
 
             // Update the rest
-            foreach (var campaignId in _exchange.CampaignIds)
+            foreach (var campaignId in _exchange.CampaignIds ?? new string[0])
             {
-                var campaign = await _campaignRepo.Get(new StringStorageKey(campaignId));
+                var campaign = await _storageCache.Get<Campaign>(new StringStorageKey(campaignId), true);
                 if (campaign != null)
                 {
                     Bidders.RemoveAll(b => b.Campaign.Id.Equals(campaignId));
@@ -180,7 +184,7 @@ namespace Lucent.Common.Bidding
         /// <inheritdoc/>
         public async Task<bool> CanBid()
         {
-            if (_isBudgetExhausted |= LocalBudget.Get(_exchangeId).IsExhausted())
+            if (_isBudgetExhausted = LocalBudget.Get(_exchangeId).Budget.GetDouble() <= 0)
             {
                 BidCounters.NoBidReason.WithLabels("no_exchange_budget").Inc();
                 await _budgetManager.RequestAdditional(_exchangeId, EntityType.Exchange);

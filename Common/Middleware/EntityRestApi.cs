@@ -25,22 +25,12 @@ namespace Lucent.Common.Middleware
         /// <summary>
         /// 
         /// </summary>
-        protected readonly IStorageManager _storageManager;
-
-        /// <summary>
-        /// 
-        /// </summary>
         protected readonly ISerializationContext _serializationContext;
 
         /// <summary>
         /// 
         /// </summary>
         protected readonly ILogger<EntityRestApi<T>> _log;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        protected readonly IStorageRepository<T> _entityRepository;
 
         /// <summary>
         /// 
@@ -52,20 +42,27 @@ namespace Lucent.Common.Middleware
         /// </summary>
         protected readonly IMessagePublisher _bidderPublisher;
 
+        /// <summary>
+        /// 
+        /// </summary>
+        protected StorageCache _storageCache;
+
         IBudgetCache _budgetCache;
+        IStorageRepository<T> _entityRepository;
 
         /// <summary>
         /// Default constructor
         /// </summary>
         /// <param name="next"></param>
+        /// <param name="storageCache"></param>
         /// <param name="storageManager"></param>
         /// <param name="messageFactory"></param>
         /// <param name="serializationContext"></param>
         /// <param name="logger"></param>
         /// <param name="budgetCache"></param>
-        public EntityRestApi(RequestDelegate next, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<EntityRestApi<T>> logger, IBudgetCache budgetCache)
+        public EntityRestApi(RequestDelegate next, StorageCache storageCache, IStorageManager storageManager, IMessageFactory messageFactory, ISerializationContext serializationContext, ILogger<EntityRestApi<T>> logger, IBudgetCache budgetCache)
         {
-            _storageManager = storageManager;
+            _storageCache = storageCache;
             _entityRepository = storageManager.GetRepository<T>();
             _serializationContext = serializationContext;
             _messageFactory = messageFactory;
@@ -93,11 +90,11 @@ namespace Lucent.Common.Middleware
 
                 if (entityEvent.Body.EntityType == evt.EntityType)
                 {
-                    if (await _entityRepository.TryUpdate(entityEvent.Body))
+                    if (await _storageCache.TryUpdate(entityEvent.Body))
                         evt.EventType = EventType.EntityUpdate;
-                    else if (await _entityRepository.TryInsert(entityEvent.Body))
+                    else if (await _storageCache.TryInsert(entityEvent.Body))
                         evt.EventType = EventType.EntityAdd;
-                    else if (await _entityRepository.TryRemove(entityEvent.Body))
+                    else if (await _storageCache.TryRemove(entityEvent.Body, true))
                         evt.EventType = EventType.EntityDelete;
                 }
 
@@ -153,7 +150,7 @@ namespace Lucent.Common.Middleware
                         {
                             var t = new T();
                             t.Key.Parse(segments.Last());
-                            entity = await _entityRepository.Get(t.Key);
+                            entity = await _storageCache.Get<T>(t.Key, true);
                             if (entity != null)
                             {
                                 httpContext.Response.StatusCode = 200;
@@ -175,7 +172,7 @@ namespace Lucent.Common.Middleware
                         entity = await ReadEntity(httpContext);
                         if (entity != null)
                         {
-                            if (await _entityRepository.TryInsert(entity))
+                            if (await _storageCache.TryInsert(entity))
                             {
                                 httpContext.Response.StatusCode = 201;
                                 evt.EventType = EventType.EntityAdd;
@@ -197,7 +194,7 @@ namespace Lucent.Common.Middleware
                         if (entity != null)
                         {
                             entity.ETag = httpContext.Request.Headers["X-LUCENT-ETAG"];
-                            if (await _entityRepository.TryUpdate(entity))
+                            if (await _storageCache.TryUpdate(entity))
                             {
                                 httpContext.Response.StatusCode = 202;
                                 evt.EntityId = entity.Key.ToString();
@@ -218,12 +215,12 @@ namespace Lucent.Common.Middleware
                         {
                             var t = new T();
                             t.Key.Parse(segments.Last());
-                            entity = await _entityRepository.Get(t.Key);
+                            entity = await _storageCache.Get<T>(t.Key, true);
 
                             if (entity != null)
                             {
                                 entity.ETag = httpContext.Request.Headers["X-LUCENT-ETAG"];
-                                if (await _entityRepository.TryRemove(entity))
+                                if (await _storageCache.TryRemove(entity, true))
                                 {
                                     PostDelete(httpContext, entity);
                                     evt.EntityId = entity.Key.ToString();

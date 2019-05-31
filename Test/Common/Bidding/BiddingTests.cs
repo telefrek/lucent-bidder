@@ -128,7 +128,7 @@ namespace Lucent.Common.Bidding
             TestContext.WriteLine("bidder supports pipelining: {0}", sp.SupportsPipelining);
 
             sp.UseNagleAlgorithm = false;
-            sp.ConnectionLimit = 128;
+            sp.ConnectionLimit = 256;
 
             _orchestrationClient = new HttpClient { BaseAddress = new Uri(orchestratorUri) };
             _biddingClient = new HttpClient { BaseAddress = new Uri(bidderUri) };
@@ -157,7 +157,7 @@ namespace Lucent.Common.Bidding
             var tlock = new object();
 
             var tasks = new List<Task>();
-            var numCalls = 15000;
+            var numCalls = 175000;
 
             for (var i = 0; i < 96; ++i)
             {

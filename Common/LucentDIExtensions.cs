@@ -65,7 +65,7 @@ namespace Lucent.Common
             if (localOnly)
             {
                 services.AddSingleton<IAerospikeCache, MockAspkCache>()
-                .AddSingleton<IBudgetCache, BudgetCache>();
+                .AddSingleton<IBudgetCache, InMemoryBudgetCache>();
                 services.AddSingleton<IStorageManager, InMemoryStorage>();
                 services.AddSingleton<IMessageFactory, InMemoryMessageFactory>();
                 services.AddSingleton<IBidLedger, MemoryBudgetLedger>()

@@ -77,7 +77,7 @@ namespace Lucent.Common.Caching
     public class MemoryBidCache : IBidCache
     {
 
-        static readonly MemoryCache _memcache = new MemoryCache(new MemoryCacheOptions { ExpirationScanFrequency = TimeSpan.FromSeconds(15), SizeLimit = 100 });
+        static readonly IMemoryCache _memcache = new MemoryCache(new MemoryCacheOptions { ExpirationScanFrequency = TimeSpan.FromSeconds(15), SizeLimit = 100 });
 
         /// <inheritdoc/>
         public Task<BidResponse> getEntryAsync(string id) => Task.FromResult((BidResponse)_memcache.Get(id));

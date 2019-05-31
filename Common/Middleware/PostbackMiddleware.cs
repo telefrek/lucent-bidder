@@ -27,7 +27,7 @@ namespace Lucent.Common.Middleware
     {
         ILogger<PostbackMiddleware> _log;
 
-        static readonly MemoryCache _memcache = new MemoryCache(new MemoryCacheOptions { ExpirationScanFrequency = TimeSpan.FromSeconds(5) });
+        static readonly IMemoryCache _memcache = new MemoryCache(new MemoryCacheOptions { ExpirationScanFrequency = TimeSpan.FromSeconds(5) });
 
         ISerializationContext _serializationContext;
         IStorageManager _storageManager;
@@ -37,6 +37,7 @@ namespace Lucent.Common.Middleware
         IMessagePublisher _budgetPublisher;
         IStorageRepository<Campaign> _campaignRepo;
         StorageCache _storageCache;
+        IBudgetCache _budgetCache;
 
         /// <summary>
         /// Default constructor
@@ -45,22 +46,21 @@ namespace Lucent.Common.Middleware
         /// <param name="log"></param>
         /// <param name="factory"></param>
         /// <param name="serializationContext"></param>
-        /// <param name="storageManager"></param>
         /// <param name="bidderCache"></param>
         /// <param name="budgetLedger"></param>
         /// <param name="messageFactory"></param>
         /// <param name="storageCache"></param>
-        public PostbackMiddleware(RequestDelegate next, ILogger<PostbackMiddleware> log, IMessageFactory factory, ISerializationContext serializationContext, IStorageManager storageManager, IBidCache bidderCache, IBidLedger budgetLedger, IMessageFactory messageFactory, StorageCache storageCache)
+        /// <param name="budgetCache"></param>
+        public PostbackMiddleware(RequestDelegate next, ILogger<PostbackMiddleware> log, IMessageFactory factory, ISerializationContext serializationContext, IBidCache bidderCache, IBidLedger budgetLedger, IMessageFactory messageFactory, StorageCache storageCache, IBudgetCache budgetCache)
         {
             _log = log;
             _serializationContext = serializationContext;
-            _storageManager = storageManager;
             _bidCache = bidderCache;
             _ledger = budgetLedger;
             _messageFactory = messageFactory;
             _budgetPublisher = _messageFactory.CreatePublisher(Topics.BUDGET);
-            _campaignRepo = storageManager.GetRepository<Campaign>();
             _storageCache = storageCache;
+            _budgetCache = budgetCache;
         }
 
         /// <summary>
@@ -129,8 +129,8 @@ namespace Lucent.Common.Middleware
 
                         // Check for shutdown
                         var exchangeId = bidContext.ExchangeId.ToString();
-                        var exchgBudget = LocalBudget.Get(exchangeId);
-                        if (exchgBudget.Update(-acpm) <= 0 && _memcache.Get(exchangeId) == null)
+                        var status = await _budgetCache.TryUpdateSpend(exchangeId, acpm);
+                        if (status.Successful && status.Remaining <= 0 && _memcache.Get(exchangeId) == null)
                         {
                             var msg = _messageFactory.CreateMessage<BudgetEventMessage>();
                             msg.Body = new BudgetEvent { EntityId = bidContext.ExchangeId.ToString(), Exhausted = true };
@@ -139,9 +139,9 @@ namespace Lucent.Common.Middleware
                         }
 
                         var campaignId = bidContext.CampaignId.ToString();
-                        var campaignBudget = LocalBudget.Get(campaignId);
+                        status = await _budgetCache.TryUpdateSpend(campaignId, acpm);
 
-                        if (campaignBudget.Update(-acpm) <= 0 && _memcache.Get(campaignId) == null)
+                        if (status.Successful && status.Remaining <= 0 && _memcache.Get(campaignId) == null)
                         {
                             var msg = _messageFactory.CreateMessage<BudgetEventMessage>();
                             msg.Body = new BudgetEvent { EntityId = bidContext.CampaignId.ToString(), Exhausted = true };
@@ -167,6 +167,7 @@ namespace Lucent.Common.Middleware
                                     stats.Conversions.Inc(1);
                                     BidCounters.CampaignConversions.WithLabels(campaign.Name).Inc();
                                     BidCounters.CampaignRevenue.WithLabels(campaign.Name).Inc(postbackAction.Payout);
+                                    LocalBudget.Get(campaign.Id).ActionLimit.Inc(1);
                                 }
                                 else
                                     _log.LogWarning("Action {0} is not on campaign", action);
