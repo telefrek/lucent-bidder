@@ -80,7 +80,6 @@ namespace Lucent.Common.Budget
 
                 _memcache.Set(entityId, new object(), new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(15) });
 
-                BidCounters.BudgetRequests.WithLabels("request").Inc();
                 if (!await _budgetClient.RequestBudget(entityId, entityType))
                     _memcache.Remove(entityId);
             }

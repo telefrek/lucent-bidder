@@ -63,10 +63,22 @@ namespace Lucent.Common.Caching
         public double TotalSpend { get; set; }
 
         /// <summary>
-        /// Get the last hour
+        /// Get the last budget update
         /// </summary>
         /// <value></value>
         public DateTime LastUpdate { get; set; }
+
+        /// <summary>
+        /// Get the last time the hourly rollover happened
+        /// </summary>
+        /// <value></value>
+        public DateTime LastHourlyRollover { get; set; }
+
+        /// <summary>
+        /// Get the last time the daily rollover happened
+        /// </summary>
+        /// <value></value>
+        public DateTime LastDailyRollover { get; set; }
     }
 
     /// <summary>
@@ -117,6 +129,8 @@ namespace Lucent.Common.Caching
             {
                 status.Remaining = obj.budget;
                 status.LastUpdate = obj.updated;
+                status.LastHourlyRollover = obj.hourly ?? obj.updated;
+                status.LastDailyRollover = obj.daily ?? obj.updated;
                 status.Spend = obj.spend;
                 status.TotalSpend = obj.total;
             }
@@ -124,6 +138,8 @@ namespace Lucent.Common.Caching
             {
                 status.Remaining = 0;
                 status.LastUpdate = DateTime.UtcNow.AddDays(-1);
+                status.LastHourlyRollover = DateTime.UtcNow.AddDays(-1);
+                status.LastDailyRollover = DateTime.UtcNow.AddDays(-1);
                 status.Spend = 0;
                 status.TotalSpend = 0;
             }
@@ -143,14 +159,22 @@ namespace Lucent.Common.Caching
                 obj.spend = 0;
                 obj.total = 0;
                 obj.updated = DateTime.UtcNow.AddDays(-1);
+                obj.hourly = DateTime.UtcNow.AddDays(-1);
+                obj.daily = DateTime.UtcNow.AddDays(-1);
             }
 
             obj.budget += allocation.Amount;
 
-            if(allocation.ResetSpend)
+            if (allocation.ResetSpend)
+            {
                 obj.spend = 0;
+                obj.hourly = DateTime.UtcNow;
+            }
             if (allocation.ResetDaily)
+            {
                 obj.daily = 0;
+                obj.daily = DateTime.UtcNow;
+            }
 
             obj.updated = DateTime.UtcNow;
 
@@ -164,6 +188,8 @@ namespace Lucent.Common.Caching
             status.TotalSpend = obj.total;
             status.Remaining = obj.budget - obj.spend;
             status.LastUpdate = obj.updated;
+            status.LastHourlyRollover = obj.hourly ?? obj.updated;
+            status.LastDailyRollover = obj.daily ?? obj.updated;
 
             return Task.FromResult(status);
         }
@@ -196,6 +222,8 @@ namespace Lucent.Common.Caching
             status.Remaining = obj.budget - obj.spend;
             status.Spend = obj.spend;
             status.LastUpdate = obj.updated;
+            status.LastHourlyRollover = obj.hourly ?? obj.updated;
+            status.LastDailyRollover = obj.daily ?? obj.updated;
 
             return Task.FromResult(status);
         }

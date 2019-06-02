@@ -86,6 +86,7 @@ namespace Lucent.Common.Middleware
                 switch (httpContext.Request.Method.ToLowerInvariant())
                 {
                     case "post":
+                        BidCounters.BudgetRequests.WithLabels("recieved").Inc();
 
                         await _budgetLock.WaitAsync();
 
@@ -120,33 +121,55 @@ namespace Lucent.Common.Middleware
                             return;
                         }
 
-                        BidCounters.BudgetRequests.WithLabels("recieved").Inc();
 
                         var status = await _budgetCache.TryGetRemaining(request.EntityId);
                         if (status.Successful)
                         {
                             var elapsed = DateTime.UtcNow.Subtract(status.LastUpdate).TotalMinutes;
+                            _logger.LogInformation("Budget Elapsed: ({0} - {1} = {2}) [{3},{4},{5},{6}]", DateTime.UtcNow, status.LastUpdate, elapsed, status.Spend, status.TotalSpend, schedule.HourlyCap, schedule.DailyCap);
                             var allocation = new BudgetAllocation
                             {
                                 Key = request.EntityId,
-                                ResetSpend = DateTime.UtcNow.Hour != status.LastUpdate.Hour,
-                                ResetDaily = DateTime.UtcNow.Day != status.LastUpdate.Day
+                                ResetSpend = DateTime.UtcNow.Hour > status.LastHourlyRollover.Hour,
+                                ResetDaily = DateTime.UtcNow.Day > status.LastDailyRollover.Day
                             };
 
-                            // Check for an amount
-                            if (allocation.ResetDaily || status.TotalSpend < schedule.DailyCap)
+                            // Reset everything
+                            if (allocation.ResetDaily)
                             {
-                                var rem = schedule.HourlyCap - status.Spend;
-                                if(allocation.ResetSpend)
-                                    rem = schedule.HourlyCap;
+                                allocation.ResetSpend = true;
+                                var rem = schedule.HourlyCap;
 
-                                if(schedule.ScheduleType == ScheduleType.Even)
-                                    rem = elapsed >= 5 ? Math.Min(schedule.HourlyCap / 12, rem) : 0;
-                                    
+                                if (schedule.ScheduleType == ScheduleType.Even)
+                                    rem = Math.Min(schedule.HourlyCap / 12, rem);
+
                                 allocation.Amount = rem;
                             }
+                            else if (schedule.DailyCap > status.TotalSpend)
+                            {
+                                // Check for hourly rollover
+                                if (allocation.ResetSpend)
+                                {
+                                    var rem = Math.Min(schedule.HourlyCap, schedule.DailyCap - status.TotalSpend);
 
-                            if(allocation.Amount > 0)
+                                    if (schedule.ScheduleType == ScheduleType.Even)
+                                        rem = elapsed >= 5 ? Math.Min(schedule.HourlyCap / 12, rem) : 0;
+
+                                    allocation.Amount = rem;
+                                }
+                                else
+                                {
+                                    // Min of remaining hourly or daily for edge cases
+                                    var rem = Math.Min(schedule.HourlyCap - status.Spend, schedule.DailyCap - status.TotalSpend);
+
+                                    if (schedule.ScheduleType == ScheduleType.Even)
+                                        rem = elapsed >= 5 ? Math.Min(schedule.HourlyCap / 12, rem) : 0;
+
+                                    allocation.Amount = rem;
+                                }
+                            }
+
+                            if (allocation.Amount > 0)
                                 status = await _budgetCache.TryUpdateBudget(allocation);
                         }
 

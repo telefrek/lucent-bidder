@@ -118,7 +118,7 @@ namespace Lucent.Common
                     .AddSingleton<IScoringService, RandomScoring>()
                     .Configure<BudgetConfig>(configuration.GetSection(Topics.BUDGET))
                     .AddSingleton<IBudgetClient, SimpleBudgetClient>()
-                    .AddTransient<IBudgetManager, SimpleBudgetManager>()
+                    .AddSingleton<IBudgetManager, SimpleBudgetManager>()
                     .AddTransient<IBiddingManager, BiddingManager>()
                     .AddSingleton<IBidFactory, BidFactory>()
                     .AddSingleton<IExchangeRegistry, ExchangeRegistry>()

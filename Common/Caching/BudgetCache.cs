@@ -38,23 +38,33 @@ namespace Lucent.Common.Caching
         {
             var status = new BudgetStatus();
             var iValue = (long)Math.Floor(allocation.Amount * 10000);
+            var updated = DateTime.UtcNow.ToFileTimeUtc();
 
             try
             {
                 var ops = new List<Operation>();
                 ops.Add(Operation.Add(new Bin("budget", iValue)));
-                ops.Add(Operation.Put(new Bin("updated", DateTime.UtcNow.ToFileTimeUtc())));
+                ops.Add(Operation.Put(new Bin("updated", updated)));
 
-                if (allocation.ResetSpend)
-                    ops.Add(Operation.Put(new Bin("spend", 0L)));
                 if (allocation.ResetDaily)
+                {
                     ops.Add(Operation.Put(new Bin("total", 0L)));
+                    ops.Add(Operation.Put(new Bin("daily", updated)));
+
+                    ops.Add(Operation.Put(new Bin("spend", 0L)));
+                    ops.Add(Operation.Put(new Bin("hourly", updated)));
+                }
+                else if (allocation.ResetSpend)
+                {
+                    ops.Add(Operation.Put(new Bin("spend", 0L)));
+                    ops.Add(Operation.Put(new Bin("hourly", updated)));
+                }
 
                 ops.Add(Operation.Get());
 
                 using (var ctx = StorageCounters.LatencyHistogram.CreateContext("aerospike", "lucent", "update_budget"))
                 {
-                    var res = await Aerospike.INSTANCE.Operate(new WritePolicy(Aerospike.INSTANCE.writePolicyDefault) { expiration = 3600 }, default(CancellationToken), new Key("lucent", "budget", allocation.Key), ops.ToArray());
+                    var res = await Aerospike.INSTANCE.Operate(new WritePolicy(Aerospike.INSTANCE.writePolicyDefault) { expiration = 86400 }, default(CancellationToken), new Key("lucent", "budget", allocation.Key), ops.ToArray());
 
                     // Validate the return
                     if (res != null)
@@ -78,11 +88,21 @@ namespace Lucent.Common.Caching
             if (record.bins.ContainsKey("total"))
                 status.TotalSpend = record.GetLong("total") / 10000d;
             if (record.bins.ContainsKey("spend"))
-                status.Spend = record.GetLong("total") / 10000d;
+                status.Spend = record.GetLong("spend") / 10000d;
             if (record.bins.ContainsKey("updated"))
                 status.LastUpdate = DateTime.FromFileTimeUtc(record.GetLong("updated"));
             if (record.bins.ContainsKey("budget"))
                 status.Remaining = record.GetLong("budget") / 10000d;
+
+            if (record.bins.ContainsKey("hourly"))
+                status.LastHourlyRollover = DateTime.FromFileTimeUtc(record.GetLong("hourly"));
+            else
+                status.LastHourlyRollover = status.LastUpdate;
+
+            if (record.bins.ContainsKey("daily"))
+                status.LastDailyRollover = DateTime.FromFileTimeUtc(record.GetLong("daily"));
+            else
+                status.LastDailyRollover = status.LastUpdate;
 
             return status;
         }
@@ -97,7 +117,7 @@ namespace Lucent.Common.Caching
             {
                 using (var ctx = StorageCounters.LatencyHistogram.CreateContext("aerospike", "lucent", "update_spend"))
                 {
-                    var res = await Aerospike.INSTANCE.Operate(new WritePolicy(Aerospike.INSTANCE.writePolicyDefault) { expiration = 3600 }, default(CancellationToken), new Key("lucent", "budget", key),
+                    var res = await Aerospike.INSTANCE.Operate(new WritePolicy(Aerospike.INSTANCE.writePolicyDefault) { expiration = 86400 }, default(CancellationToken), new Key("lucent", "budget", key),
                         Operation.Add(new Bin("spend", iValue)),
                         Operation.Add(new Bin("total", iValue)),
                         Operation.Add(new Bin("budget", -iValue)),
@@ -128,7 +148,7 @@ namespace Lucent.Common.Caching
 
                     if (res != null)
                         return FromResult(res);
-                    
+
                     // Doesn't exist, need to update
                     status.Successful = true;
                     status.LastUpdate = DateTime.UtcNow.AddDays(-1);

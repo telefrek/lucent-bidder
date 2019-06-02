@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
+using Lucent.Common.Bidding;
 using Lucent.Common.Client;
 using Lucent.Common.Entities;
 using Lucent.Common.Serialization;
@@ -44,10 +45,11 @@ namespace Lucent.Common.Budget
         /// <param name="entityType"></param>
         /// <returns></returns>
         public async Task<bool> RequestBudget(string entityId, EntityType entityType)
-        {            
+        {
             var req = new BudgetRequest { EntityId = entityId, CorrelationId = SequentialGuid.NextGuid(), EntityType = entityType };
             using (var ms = new MemoryStream())
             {
+                BidCounters.BudgetRequests.WithLabels("request").Inc();
                 await _serializationContext.WriteTo(req, ms, true, SerializationFormat.JSON);
                 ms.Seek(0, SeekOrigin.Begin);
 

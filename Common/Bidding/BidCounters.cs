@@ -31,7 +31,7 @@ namespace Lucent.Common.Bidding
         /// <value></value>
         public static Counter CampaignBids = Metrics.CreateCounter("campaign_bids", "Bids per campaign", new CounterConfiguration
         {
-            LabelNames = new string[] { "campaign_id" }
+            LabelNames = new string[] { "campaign" }
         });
 
         /// <summary>
@@ -40,7 +40,7 @@ namespace Lucent.Common.Bidding
         /// <value></value>
         public static Counter CampaignWins = Metrics.CreateCounter("campaign_wins", "Wins per campaign", new CounterConfiguration
         {
-            LabelNames = new string[] { "campaign_id" }
+            LabelNames = new string[] { "campaign" }
         });
 
         /// <summary>
@@ -49,7 +49,7 @@ namespace Lucent.Common.Bidding
         /// <value></value>
         public static Counter CampaignClicks = Metrics.CreateCounter("campaign_clicks", "Clicks per campaign", new CounterConfiguration
         {
-            LabelNames = new string[] { "campaign_id" }
+            LabelNames = new string[] { "campaign" }
         });
 
         /// <summary>
@@ -58,19 +58,19 @@ namespace Lucent.Common.Bidding
         /// <value></value>
         public static Counter CampaignConversions = Metrics.CreateCounter("campaign_conversions", "Conversions per campaign", new CounterConfiguration
         {
-            LabelNames = new string[] { "campaign_id" }
+            LabelNames = new string[] { "campaign" }
         });
 
         /// <summary>
         /// Track campaign spend
         /// </summary>
         /// <value></value>
-        public static Counter CampaignSpend = Metrics.CreateCounter("campaign_spend", "Amount of spend per campaign", new CounterConfiguration { LabelNames = new string[] { "campaign_id" } });
+        public static Counter   CampaignSpend = Metrics.CreateCounter("campaign_spend", "Amount of spend per campaign", new CounterConfiguration { LabelNames = new string[] { "campaign" } });
 
         /// <summary>
         /// Track campaign revenue
         /// </summary>
         /// <value></value>
-        public static Counter CampaignRevenue = Metrics.CreateCounter("campaign_revenue", "Amount of spend per campaign", new CounterConfiguration { LabelNames = new string[] { "campaign_id" } });
+        public static Counter CampaignRevenue = Metrics.CreateCounter("campaign_revenue", "Amount of spend per campaign", new CounterConfiguration { LabelNames = new string[] { "campaign" } });
     }
 }

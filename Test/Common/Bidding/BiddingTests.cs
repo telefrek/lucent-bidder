@@ -121,7 +121,7 @@ namespace Lucent.Common.Bidding
         {
             public HttpClient OrchestrationClient => _orchestrationClient;
         }
-
+        
         public async Task TestMultipleBids(string bidderUri, string orchestratorUri)
         {
             var sp = ServicePointManager.FindServicePoint(new Uri(bidderUri));
