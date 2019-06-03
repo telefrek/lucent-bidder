@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -10,6 +11,8 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Mime;
 using System.Runtime.Loader;
+using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,7 +35,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Newtonsoft.Json;
 
 namespace Lucent.Common.Bidding
 {
@@ -112,6 +117,18 @@ namespace Lucent.Common.Bidding
             };
 
             _orchestrationClient = _orchestrationHost.CreateClient();
+            var secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("please don't use this"));
+            var signinCredentials = new SigningCredentials(secretKey, SecurityAlgorithms.HmacSha256);
+
+            var tokeOptions = new JwtSecurityToken(
+                issuer: "https://lucentbid.com",
+                audience: "https://lucentbid.com",
+                claims: new List<Claim>(),
+                expires: DateTime.Now.AddYears(1),
+                signingCredentials: signinCredentials
+            );
+
+            _orchestrationClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", new JwtSecurityTokenHandler().WriteToken(tokeOptions));
             _biddingClient = _biddingHost.CreateClient();
 
             await Task.CompletedTask;
@@ -121,7 +138,23 @@ namespace Lucent.Common.Bidding
         {
             public HttpClient OrchestrationClient => _orchestrationClient;
         }
-        
+
+        [TestMethod]
+        public void GenerateRSAParams()
+        {
+            using (var rsa = new RSACryptoServiceProvider(2048))
+            {
+                try
+                {
+                    TestContext.WriteLine(JsonConvert.SerializeObject(rsa.ExportParameters(true)));
+                }
+                finally
+                {
+                    rsa.PersistKeyInCsp = false;
+                }
+            }
+        }
+
         public async Task TestMultipleBids(string bidderUri, string orchestratorUri)
         {
             var sp = ServicePointManager.FindServicePoint(new Uri(bidderUri));

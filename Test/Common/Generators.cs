@@ -11,9 +11,10 @@ namespace Lucent.Common.Test
     public class CampaignGenerator
     {
         static long cid = 0;
-
+        static Random _rng = new Random();
         public static Campaign GenerateCampaign()
         {
+            
             return new Campaign
             {
                 Id = SequentialGuid.NextGuid().ToString(),
@@ -25,7 +26,7 @@ namespace Lucent.Common.Test
                 Actions = new PostbackAction[]{
                     new PostbackAction {
                         Name = "install",
-                        Payout = 3d
+                        Payout = _rng.NextDouble() * 5,
                     }
                 },
                 BidFilter = new BidFilter
@@ -40,12 +41,12 @@ namespace Lucent.Common.Test
                     StartDate = DateTime.UtcNow.AddMinutes(-5),
                     EndDate = DateTime.UtcNow.AddDays(1),
                 },
-                MaxCPM = 2,
+                MaxCPM = _rng.NextDouble() * 3,
                 BudgetSchedule = new BudgetSchedule
                 {
-                    ScheduleType = ScheduleType.Even,
-                    HourlyCap = 3,
-                    DailyCap = 4,
+                    ScheduleType = _rng.NextDouble() < .4 ? ScheduleType.Even : ScheduleType.Aggressive,
+                    HourlyCap = _rng.NextDouble() * 5,
+                    DailyCap = _rng.NextDouble() * 40 + 20,
                 }
             };
         }

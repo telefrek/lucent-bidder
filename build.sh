@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -xe
 IMAGE_TAG=${2:-alpha}
 LUCENT_VERSION="$(cat VERSION).$IMAGE_TAG"
 
@@ -15,7 +15,7 @@ docker image prune -f
 echo 'Building images'
 docker build --rm=false -t telefrek/lucent-build:$IMAGE_TAG . 
 
-sleep 2
+sleep 5
 
 docker tag $(docker ps -a -f "label=component=bidder" -f "status=exited" --format "{{.Image}}") telefrek/lucent-bidder:$LUCENT_VERSION
 docker tag telefrek/lucent-bidder:$LUCENT_VERSION telefrek/lucent-bidder:latest

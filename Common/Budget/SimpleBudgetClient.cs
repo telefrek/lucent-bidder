@@ -1,8 +1,12 @@
 using System;
+using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Claims;
+using System.Text;
 using System.Threading.Tasks;
 using Lucent.Common.Bidding;
 using Lucent.Common.Client;
@@ -10,6 +14,7 @@ using Lucent.Common.Entities;
 using Lucent.Common.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Lucent.Common.Budget
 {
@@ -22,6 +27,7 @@ namespace Lucent.Common.Budget
         BudgetConfig _config;
         ISerializationContext _serializationContext;
         IClientManager _clientManager;
+        String _jwt;
 
         /// <summary>
         /// 
@@ -36,6 +42,20 @@ namespace Lucent.Common.Budget
             _config = config.Value;
             _serializationContext = serializationContext;
             _clientManager = clientManager;
+
+            var secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("please don't use this"));
+            var signinCredentials = new SigningCredentials(secretKey, SecurityAlgorithms.HmacSha256);
+
+            var tokeOptions = new JwtSecurityToken(
+                issuer: "https://lucentbid.com",
+                audience: "https://lucentbid.com",
+                claims: new List<Claim>(),
+                expires: DateTime.Now.AddYears(1),
+                signingCredentials: signinCredentials
+            );
+
+            _jwt = new JwtSecurityTokenHandler().WriteToken(tokeOptions);
+            _clientManager.OrchestrationClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _jwt);
         }
 
         /// <summary>

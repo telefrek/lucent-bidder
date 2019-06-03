@@ -10,11 +10,11 @@ using Microsoft.Extensions.Primitives;
 namespace Lucent.Common.Middleware
 {
     /// <summary>
-    /// Handle ledger API operations
+    /// Handle reporting API operations
     /// </summary>
-    public class LedgerMiddleware
+    public class ReportMiddleware
     {
-        ILogger<LedgerMiddleware> _log;
+        ILogger<ReportMiddleware> _log;
         IBidLedger _ledger;
         ISerializationContext _serializationContext;
 
@@ -25,7 +25,7 @@ namespace Lucent.Common.Middleware
         /// <param name="logger">Logger for output</param>
         /// <param name="ledger">The ledger for the environment></param>
         /// <param name="serializationContext">Serializatoin context to use</param>
-        public LedgerMiddleware(RequestDelegate next, ILogger<LedgerMiddleware> logger, IBidLedger ledger, ISerializationContext serializationContext)
+        public ReportMiddleware(RequestDelegate next, ILogger<ReportMiddleware> logger, IBidLedger ledger, ISerializationContext serializationContext)
         {
             _log = logger;
             _ledger = ledger;
@@ -41,7 +41,6 @@ namespace Lucent.Common.Middleware
         {
             try
             {
-                _log.LogInformation("Leger call:  {0}", httpContext.Request.Path.Value);
                 var segments = httpContext.Request.Path.Value.Split(new char[] { '/' },
                     StringSplitOptions.RemoveEmptyEntries);
 
@@ -52,27 +51,22 @@ namespace Lucent.Common.Middleware
                 }
 
                 var ledgerId = segments.First();
-                _log.LogInformation("Getting ledger for {0}", ledgerId);
+                _log.LogInformation("Getting report for {0}", ledgerId);
 
                 switch (httpContext.Request.Method.ToLowerInvariant())
                 {
                     case "get":
                         // Query processing values
-                        var query = httpContext.Request.Query;
-                        var qp = new StringValues();
+                        // var query = httpContext.Request.Query;
+                        // var qp = new StringValues();
 
                         // Assume start/end for last hour
-                        var start = DateTime.UtcNow.AddHours(-1);
-                        var end = DateTime.UtcNow;
-                        var numSegments = (int?)null;
+                        var start = DateTime.UtcNow.AddDays(-1);
+                        start = start.AddTicks(-start.TimeOfDay.Ticks);
+                        var end = DateTime.UtcNow.AddHours(1);
+                        var numSegments = (int)end.Subtract(start).TotalHours;
 
                         // Read query parameters
-                        if (query.ContainsKey("start") && query.TryGetValue("start", out qp))
-                            start = DateTime.Parse(qp).ToUniversalTime();
-                        if (query.ContainsKey("end") && query.TryGetValue("end", out qp))
-                            end = DateTime.Parse(qp).ToUniversalTime();
-                        if(query.ContainsKey("segments") && query.TryGetValue("segments", out qp))
-                            numSegments = int.Parse(qp);
 
                         var summaries = await _ledger.TryGetSummary(ledgerId, start, end, numSegments);
                         if (summaries.Count > 0)

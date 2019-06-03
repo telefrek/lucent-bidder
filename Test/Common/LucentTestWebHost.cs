@@ -1,9 +1,13 @@
 using System;
+using System.Text;
+using Lucent.Common.Bootstrap;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Lucent.Common.Test
 {
@@ -26,6 +30,23 @@ namespace Lucent.Common.Test
             .UseSockets()
             .ConfigureServices(services =>
             {
+                if (typeof(TStartup) == typeof(OrchestrationStartup))
+
+                    services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                        .AddJwtBearer(options =>
+                        {
+                            options.TokenValidationParameters = new TokenValidationParameters
+                            {
+                                ValidateIssuer = true,
+                                ValidateAudience = true,
+                                ValidateLifetime = true,
+                                ValidateIssuerSigningKey = true,
+
+                                ValidIssuer = "https://lucentbid.com",
+                                ValidAudience = "https://lucentbid.com",
+                                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("please don't use this"))
+                            };
+                        });
                 // Add ALL the services muhahahaha
                 services.AddLucentServices(new ConfigurationBuilder()
                 .AddEnvironmentVariables()

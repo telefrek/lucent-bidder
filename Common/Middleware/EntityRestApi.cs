@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Lucent.Common;
@@ -11,6 +12,7 @@ using Lucent.Common.Events;
 using Lucent.Common.Messaging;
 using Lucent.Common.Serialization;
 using Lucent.Common.Storage;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
@@ -134,6 +136,13 @@ namespace Lucent.Common.Middleware
         {
             try
             {
+                var res = await httpContext.AuthenticateAsync("Bearer");
+                if(!res.Succeeded)
+                {
+                    httpContext.Response.StatusCode = 403;
+                    return;
+                }
+                
                 var segments = httpContext.Request.Path.Value.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
                 var entity = default(T);
 

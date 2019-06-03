@@ -38,6 +38,7 @@ namespace Lucent.Common.Bootstrap
             app.UseMetricServer();
             app.UseMiddleware<MonitoringMiddleware>();
             app.ConfigureHealth();
+            app.UseAuthentication();
 
             app.Map("/api/campaigns", (a) =>
             {
@@ -62,6 +63,11 @@ namespace Lucent.Common.Bootstrap
             app.Map("/api/ledger", (a) =>
             {
                 a.UseMiddleware<LedgerMiddleware>();
+            });
+
+            app.Map("/api/report", (a) =>
+            {
+                a.UseMiddleware<ReportMiddleware>();
             });
 
             app.Map("/api/budget/request", (a) =>

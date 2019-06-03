@@ -1,12 +1,14 @@
-﻿using Lucent.Common;
+﻿using System.Text;
+using Lucent.Common;
 using Lucent.Common.Bootstrap;
 using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-
+using Microsoft.IdentityModel.Tokens;
 
 namespace Orchestration
 {
@@ -46,6 +48,21 @@ namespace Orchestration
                         options.ValueLengthLimit = int.MaxValue;
                         options.MultipartHeadersLengthLimit = int.MaxValue;
                     });
+                    services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                        .AddJwtBearer(options =>
+                        {
+                            options.TokenValidationParameters = new TokenValidationParameters
+                            {
+                                ValidateIssuer = true,
+                                ValidateAudience = true,
+                                ValidateLifetime = true,
+                                ValidateIssuerSigningKey = true,
+                    
+                                ValidIssuer = "https://lucentbid.com",
+                                ValidAudience = "https://lucentbid.com",
+                                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("please don't use this"))
+                            };
+                        });
                     services.AddLucentServices(hostingContext.Configuration, includeOrchestration: true);
                 })
                 .UseStartup<OrchestrationStartup>();
