@@ -28,11 +28,6 @@ namespace Lucent.Samples.SimpleExchange
         ILogger<SimpleExchange> _log;
         MarkupGenerator _markup = new MarkupGenerator();
 
-        Histogram _bidderLatency = Metrics.CreateHistogram("exchange_bidder_latency", "Exchange bidder latency", new HistogramConfiguration
-        {
-            Buckets = MetricBuckets.LOW_LATENCY_10_MS
-        });
-
         /// <inheritdoc/>
         public override async Task Initialize(IServiceProvider provider)
         {
@@ -53,7 +48,7 @@ namespace Lucent.Samples.SimpleExchange
         /// <inheritdoc/>
         public override async Task<BidResponse> Bid(BidRequest request, HttpContext httpContext)
         {
-            using (var histo = _bidderLatency.CreateContext())
+            using (var histo = ExchangeCounters.ExchangeLatency.CreateContext("sample_exchange"))
                 if (_bidManager.Bidders.Count > 0 && await _bidManager.CanBid())
                 {
                     var resp = new BidResponse

@@ -142,6 +142,18 @@ namespace Lucent.Common.Bidding
         [TestMethod]
         public void GenerateRSAParams()
         {
+            var secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("please don't use this"));
+            var signinCredentials = new SigningCredentials(secretKey, SecurityAlgorithms.HmacSha256);
+
+            var tokeOptions = new JwtSecurityToken(
+                issuer: "https://lucentbid.com",
+                audience: "https://lucentbid.com",
+                claims: new List<Claim>(),
+                expires: DateTime.Now.AddYears(1),
+                signingCredentials: signinCredentials
+            );
+
+            TestContext.WriteLine("Bearer {0}", new JwtSecurityTokenHandler().WriteToken(tokeOptions));
             using (var rsa = new RSACryptoServiceProvider(2048))
             {
                 try
@@ -164,6 +176,19 @@ namespace Lucent.Common.Bidding
             sp.ConnectionLimit = 256;
 
             _orchestrationClient = new HttpClient { BaseAddress = new Uri(orchestratorUri) };
+            var secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("please don't use this"));
+            var signinCredentials = new SigningCredentials(secretKey, SecurityAlgorithms.HmacSha256);
+
+            var tokeOptions = new JwtSecurityToken(
+                issuer: "https://lucentbid.com",
+                audience: "https://lucentbid.com",
+                claims: new List<Claim>(),
+                expires: DateTime.Now.AddYears(1),
+                signingCredentials: signinCredentials
+            );
+
+            _orchestrationClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", new JwtSecurityTokenHandler().WriteToken(tokeOptions));
+            
             _biddingClient = new HttpClient { BaseAddress = new Uri(bidderUri) };
 
             await SetupBidderFilters(_orchestrationClient, _orchestrationHost.Provider);
@@ -190,7 +215,7 @@ namespace Lucent.Common.Bidding
             var tlock = new object();
 
             var tasks = new List<Task>();
-            var numCalls = 175000;
+            var numCalls = 10000;//175000;
 
             for (var i = 0; i < 96; ++i)
             {
