@@ -50,7 +50,7 @@ namespace Lucent.Common.Serialization.Json
         public async Task WriteAsync(float value) => await _jsonWriter.WriteValueAsync(value);
 
         /// <inheritdoc/>
-        public async Task WriteAsync(Guid value) => await _jsonWriter.WriteValueAsync(value.EncodeGuid());
+        public async Task WriteAsync(Guid value) => await _jsonWriter.WriteValueAsync(value.ToString());
 
         /// <inheritdoc/>
         public async Task WriteAsync(DateTime value) => await _jsonWriter.WriteValueAsync(value.ToFileTimeUtc());

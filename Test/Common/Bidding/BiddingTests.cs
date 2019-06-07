@@ -2,16 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Net.Mime;
-using System.Runtime.Loader;
-using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -20,22 +16,12 @@ using Lucent.Common.Bootstrap;
 using Lucent.Common.Budget;
 using Lucent.Common.Client;
 using Lucent.Common.Entities;
-using Lucent.Common.Entities.Events;
-using Lucent.Common.Events;
-using Lucent.Common.Exchanges;
 using Lucent.Common.Filters;
-
-using Lucent.Common.Messaging;
 using Lucent.Common.Middleware;
 using Lucent.Common.OpenRTB;
 using Lucent.Common.Serialization;
-using Lucent.Common.Storage;
 using Lucent.Common.Test;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
 
@@ -104,6 +90,8 @@ namespace Lucent.Common.Bidding
             }
         }
 
+
+
         [TestInitialize]
         public async Task TestInitialize()
         {
@@ -117,18 +105,7 @@ namespace Lucent.Common.Bidding
             };
 
             _orchestrationClient = _orchestrationHost.CreateClient();
-            var secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("please don't use this"));
-            var signinCredentials = new SigningCredentials(secretKey, SecurityAlgorithms.HmacSha256);
-
-            var tokeOptions = new JwtSecurityToken(
-                issuer: "https://lucentbid.com",
-                audience: "https://lucentbid.com",
-                claims: new List<Claim>(),
-                expires: DateTime.Now.AddYears(1),
-                signingCredentials: signinCredentials
-            );
-
-            _orchestrationClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", new JwtSecurityTokenHandler().WriteToken(tokeOptions));
+            _orchestrationClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", new JwtTokenGenerator().GetBearer(DateTime.Now.AddDays(5)));
             _biddingClient = _biddingHost.CreateClient();
 
             await Task.CompletedTask;
@@ -142,18 +119,6 @@ namespace Lucent.Common.Bidding
         [TestMethod]
         public void GenerateRSAParams()
         {
-            var secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("please don't use this"));
-            var signinCredentials = new SigningCredentials(secretKey, SecurityAlgorithms.HmacSha256);
-
-            var tokeOptions = new JwtSecurityToken(
-                issuer: "https://lucentbid.com",
-                audience: "https://lucentbid.com",
-                claims: new List<Claim>(),
-                expires: DateTime.Now.AddYears(1),
-                signingCredentials: signinCredentials
-            );
-
-            TestContext.WriteLine("Bearer {0}", new JwtSecurityTokenHandler().WriteToken(tokeOptions));
             using (var rsa = new RSACryptoServiceProvider(2048))
             {
                 try
@@ -176,19 +141,9 @@ namespace Lucent.Common.Bidding
             sp.ConnectionLimit = 256;
 
             _orchestrationClient = new HttpClient { BaseAddress = new Uri(orchestratorUri) };
-            var secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("please don't use this"));
-            var signinCredentials = new SigningCredentials(secretKey, SecurityAlgorithms.HmacSha256);
 
-            var tokeOptions = new JwtSecurityToken(
-                issuer: "https://lucentbid.com",
-                audience: "https://lucentbid.com",
-                claims: new List<Claim>(),
-                expires: DateTime.Now.AddYears(1),
-                signingCredentials: signinCredentials
-            );
+            _orchestrationClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", new JwtTokenGenerator().GetBearer(DateTime.Now.AddDays(5)));
 
-            _orchestrationClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", new JwtSecurityTokenHandler().WriteToken(tokeOptions));
-            
             _biddingClient = new HttpClient { BaseAddress = new Uri(bidderUri) };
 
             await SetupBidderFilters(_orchestrationClient, _orchestrationHost.Provider);
@@ -215,7 +170,7 @@ namespace Lucent.Common.Bidding
             var tlock = new object();
 
             var tasks = new List<Task>();
-            var numCalls = 10000;//175000;
+            var numCalls = 1000;//175000;
 
             for (var i = 0; i < 96; ++i)
             {
@@ -230,6 +185,8 @@ namespace Lucent.Common.Bidding
                         try
                         {
                             var bid = BidGenerator.GenerateBid(0);
+                            if(n == 0)
+                                TestContext.WriteLine(Encoding.UTF8.GetString(await serializationContext.AsBytes(bid, SerializationFormat.JSON)));
                             sw.Start();
                             var resp = await MakeBid(_biddingClient, bid, serializationContext, exchangeId);
                             sw.Stop();
@@ -555,6 +512,7 @@ namespace Lucent.Common.Bidding
         {
             var campaign = CampaignGenerator.GenerateCampaign();
             var context = serviceProvider.GetRequiredService<ISerializationContext>();
+            TestContext.WriteLine(Encoding.UTF8.GetString(await context.AsBytes(campaign, SerializationFormat.JSON)));
             var resp = await orchestrationClient.PostJsonAsync(context, campaign, "/api/campaigns");
             Assert.AreEqual(HttpStatusCode.Created, resp.StatusCode);
             var tags = (IEnumerable<string>)null;
@@ -584,6 +542,7 @@ namespace Lucent.Common.Bidding
         {
             creative = CreativeGenerator.GenerateCreative();
             var context = serviceProvider.GetRequiredService<ISerializationContext>();
+            TestContext.WriteLine(Encoding.UTF8.GetString(await context.AsBytes(creative, SerializationFormat.JSON)));
             var resp = await orchestrationClient.PostJsonAsync(context, creative, "/api/creatives");
             Assert.AreEqual(HttpStatusCode.Created, resp.StatusCode);
 

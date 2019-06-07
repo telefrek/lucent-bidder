@@ -62,8 +62,9 @@ namespace Lucent.Common.Middleware
                                 ContentDispositionHeaderValue contentDisposition;
                                 if (ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out contentDisposition))
                                 {
-                                    var fileName = Path.Combine(Directory.GetCurrentDirectory(), _config.GetValue("ContentPath", "adcontent"), creative.Id, contentDisposition.FileName.Value.Trim('"'));
-                                    Directory.CreateDirectory(Path.GetDirectoryName(fileName));
+                                    var fileName = contentDisposition.FileName.Value.Trim('"');
+                                    var filePath = Path.Combine(Directory.GetCurrentDirectory(), _config.GetValue("ContentPath", "adcontent"), creative.Id, contentDisposition.FileName.Value.Trim('"'));
+                                    Directory.CreateDirectory(Path.GetDirectoryName(filePath));
 
                                     _log.LogInformation("Creating {0}", fileName);
                                     _log.LogInformation("ContentType: {0}", section.ContentType);
@@ -80,12 +81,12 @@ namespace Lucent.Common.Middleware
                                     if (content != null)
                                     {
                                         _log.LogInformation("Adding file {0}", fileName);
-                                        File.Copy(tempFile, fileName, true);
+                                        File.Copy(tempFile, filePath, true);
                                         File.Delete(tempFile);
 
-                                        content.ContentLocation = fileName;
-                                        content.RawUri = _config.GetValue("rawUri", "https://east-cdn.lucentbid.com") + "/creatives/" + creative.Id + "/" + fileName;
-                                        content.CreativeUri = _config.GetValue("cacheUri", "https://east-cache.lucentbid.com") + "/creatives/" + creative.Id + "/" + fileName;
+                                        content.ContentLocation = filePath;
+                                        content.CreativeUri = _config.GetValue("rawUri", "https://east-cdn.lucentbid.com") + "/creatives/" + creative.Id + "/" + fileName;
+                                        content.RawUri = _config.GetValue("cacheUri", "https://east-cache.lucentbid.com") + "/" + creative.Id + "/" + fileName;
                                         var contents = creative.Contents ?? new CreativeContent[0];
                                         Array.Resize(ref contents, contents.Length + 1);
                                         contents[contents.Length - 1] = content;

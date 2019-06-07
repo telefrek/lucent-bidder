@@ -109,7 +109,7 @@ namespace Lucent.Common.Serialization.Json
             if (!value.IsNullOrDefault())
             {
                 await _jsonWriter.WritePropertyNameAsync(property.Name);
-                await _jsonWriter.WriteValueAsync(value.EncodeGuid());
+                await _jsonWriter.WriteValueAsync(value.ToString());
             }
         }
 

@@ -53,7 +53,7 @@ namespace Lucent.Common.Entities
         /// Budget scheduling for the exchange
         /// </summary>
         /// <value></value>
-        [SerializationProperty(4, "budgetSchdule")]
+        [SerializationProperty(4, "budgetSchedule")]
         public BudgetSchedule BudgetSchedule { get; set; }
 
         /// <summary>

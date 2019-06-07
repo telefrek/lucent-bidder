@@ -119,7 +119,7 @@ namespace Lucent.Common.Entities
         /// 
         /// </summary>
         /// <returns></returns>
-        [SerializationProperty(11, "createiveids")]
+        [SerializationProperty(11, "creatives")]
         public string[] CreativeIds { get; set; }
 
         /// <summary>
