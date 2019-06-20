@@ -55,6 +55,11 @@ namespace Lucent.Common.Bootstrap
                 a.UseMiddleware<ExchangeOrchestrator>();
             });
 
+            app.Map("/api/filters/campaigns", (a)=>
+            {
+                a.UseMiddleware<FiltersMiddleware>();
+            });
+
             app.Map("/api/filters", (a) =>
             {
                 a.UseMiddleware<EntityRestApi<BidderFilter>>();

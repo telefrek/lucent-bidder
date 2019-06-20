@@ -132,6 +132,9 @@ namespace Lucent.Common.Bidding
             }
         }
 
+        // [TestMethod]
+        // public async Task TestMultiple() => await TestMultipleBids("https://east.lucentbid.com", "https://orchestration.lucentbid.com");
+
         public async Task TestMultipleBids(string bidderUri, string orchestratorUri)
         {
             var sp = ServicePointManager.FindServicePoint(new Uri(bidderUri));
@@ -170,7 +173,7 @@ namespace Lucent.Common.Bidding
             var tlock = new object();
 
             var tasks = new List<Task>();
-            var numCalls = 1000;//175000;
+            var numCalls = 10000;//175000;
 
             for (var i = 0; i < 96; ++i)
             {
