@@ -60,7 +60,7 @@ namespace Orchestration
                     
                                 ValidIssuer = "https://lucentbid.com",
                                 ValidAudience = "https://lucentbid.com",
-                                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("please don't use this"))
+                                IssuerSigningKey = new JwtTokenGenerator().GetKey(),
                             };
                         });
                     services.AddLucentServices(hostingContext.Configuration, includeOrchestration: true);

@@ -44,7 +44,7 @@ namespace Lucent.Common.Test
 
                                 ValidIssuer = "https://lucentbid.com",
                                 ValidAudience = "https://lucentbid.com",
-                                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("please don't use this"))
+                                IssuerSigningKey = new JwtTokenGenerator().GetKey(),
                             };
                         });
                 // Add ALL the services muhahahaha
