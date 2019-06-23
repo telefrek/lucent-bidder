@@ -26,6 +26,8 @@ spec:
         app: {{ template "orchestrator.name" . }}
         release: {{ .Release.Name }}
         component: orchestrator
+      annotations:
+        timstamp: "{{ date "20060102150405" .Release.Time }}"
     spec:
       restartPolicy: Always
       dnsPolicy: ClusterFirst

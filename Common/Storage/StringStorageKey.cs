@@ -12,7 +12,7 @@ namespace Lucent.Common.Storage
         /// <summary>
         /// Default constructor
         /// </summary>
-        public StringStorageKey() => _value = string.Empty;
+        public StringStorageKey() => _value = SequentialGuid.NextGuid().ToString();
 
         /// <summary>
         /// Default constructor

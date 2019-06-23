@@ -27,7 +27,7 @@ namespace Lucent.Common.Entities
         /// 
         /// </summary>
         /// <value></value>
-        public StorageKey Key { get; set; } = new GuidStorageKey();
+        public StorageKey Key { get; set; } = new GuidStorageKey(SequentialGuid.NextGuid());
 
         /// <inheritdoc/>
         public string ETag { get; set; }
@@ -61,7 +61,7 @@ namespace Lucent.Common.Entities
         /// </summary>
         /// <value></value>
         [SerializationProperty(5, "campaigns")]
-        public String[] CampaignIds {get;set;}
+        public String[] CampaignIds { get; set; }
 
         /// <summary>
         /// Instance code if loaded

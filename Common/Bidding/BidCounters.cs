@@ -47,6 +47,15 @@ namespace Lucent.Common.Bidding
         /// Track campaign clicks for ctr
         /// </summary>
         /// <value></value>
+        public static Counter CampaignImpressions = Metrics.CreateCounter("campaign_impressions", "Impressions per campaign", new CounterConfiguration
+        {
+            LabelNames = new string[] { "campaign" }
+        });
+
+        /// <summary>
+        /// Track campaign clicks for ctr
+        /// </summary>
+        /// <value></value>
         public static Counter CampaignClicks = Metrics.CreateCounter("campaign_clicks", "Clicks per campaign", new CounterConfiguration
         {
             LabelNames = new string[] { "campaign" }

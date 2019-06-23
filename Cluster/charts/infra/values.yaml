@@ -52,6 +52,5 @@ aerospike:
     namespace lucent {
         replication-factor 2
         memory-size 2G
-        default-ttl 1d
         storage-engine memory
     }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -38,6 +39,7 @@ namespace Lucent.Common.Middleware
         IStorageRepository<Campaign> _campaignRepo;
         StorageCache _storageCache;
         IBudgetCache _budgetCache;
+        static readonly byte[] PIXEL_BYTES = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=");
 
         /// <summary>
         /// Default constructor
@@ -152,7 +154,12 @@ namespace Lucent.Common.Middleware
                         context.Response.StatusCode = StatusCodes.Status200OK;
                         break;
                     case BidOperation.Impression:
-                        BidCounters.CampaignClicks.WithLabels(campaign.Name).Inc();
+                        BidCounters.CampaignImpressions.WithLabels(campaign.Name).Inc();
+                        context.Response.Headers.Add("Content-Type", "image/png");
+                        context.Response.Headers.ContentLength = PIXEL_BYTES.Length;
+                        _log.LogInformation("Writing {0} bytes", PIXEL_BYTES.Length);
+                        await context.Response.Body.WriteAsync(PIXEL_BYTES, 0, PIXEL_BYTES.Length);
+                        await context.Response.Body.FlushAsync();
                         context.Response.StatusCode = StatusCodes.Status200OK;
                         break;
                     case BidOperation.Action:

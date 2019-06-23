@@ -32,6 +32,8 @@ spec:
         app: {{ template "bidder.name" . }}
         release: {{ .Release.Name }}
         component: bidder
+      annotations:
+        timstamp: "{{ date "20060102150405" .Release.Time }}"
     spec:
       restartPolicy: Always
       dnsPolicy: ClusterFirst
