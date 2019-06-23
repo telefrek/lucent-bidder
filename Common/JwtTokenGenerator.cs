@@ -17,7 +17,7 @@ namespace Lucent.Common
 
         static JwtTokenGenerator()
         {
-            key = new SymmetricSecurityKey(File.Exists("/etc/jwt/key") ? File.ReadAllBytes("/etc/jwt/key") : Encoding.UTF8.GetBytes("please don't use this"));
+            key = new SymmetricSecurityKey(File.Exists("/etc/keys/jwt") ? File.ReadAllBytes("/etc/keys/jwt") : Encoding.UTF8.GetBytes("please don't use this"));
         }
 
         /// <summary>

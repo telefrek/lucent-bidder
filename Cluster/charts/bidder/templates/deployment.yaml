@@ -58,6 +58,8 @@ spec:
           volumeMounts:
             - mountPath: /etc/config
               name: app-config
+            - mountPath: /etc/keys
+              name: keys-config
             - mountPath: /etc/exchanges
               name: exchange-config
           ports:
@@ -93,3 +95,6 @@ spec:
         - name: exchange-config
           configMap:
             name: exchanges
+        - name: keys-config
+          configMap:
+            name: lucent-keys

@@ -52,6 +52,8 @@ spec:
           volumeMounts:
             - mountPath: /etc/config
               name: app-config
+            - mountPath: /etc/keys
+              name: keys-config
             - mountPath: {{ .Values.content.path }}
               name: ad-contents
           ports:
@@ -87,3 +89,6 @@ spec:
         - name: ad-contents
           persistentVolumeClaim:
             claimName: ad-content-pvc
+        - name: keys-config
+          configMap:
+            name: lucent-keys

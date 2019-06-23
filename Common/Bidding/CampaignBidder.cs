@@ -183,7 +183,7 @@ namespace Lucent.Common.Bidding
                             ContentCategories = bidContext.Content.Categories,
                             ImageUrl = bidContext.Content.CreativeUri,
                             AdId = bidContext.Creative.Id,
-                            CreativeId = bidContext.Creative.Id,
+                            CreativeId = bidContext.Creative.Id + "." + bidContext.Content.Id,
                             CampaignId = bidContext.Campaign.Id,
                         };
 

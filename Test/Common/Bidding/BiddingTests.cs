@@ -119,17 +119,7 @@ namespace Lucent.Common.Bidding
         [TestMethod]
         public void GenerateRSAParams()
         {
-            using (var rsa = new RSACryptoServiceProvider(2048))
-            {
-                try
-                {
-                    TestContext.WriteLine(JsonConvert.SerializeObject(rsa.ExportParameters(true)));
-                }
-                finally
-                {
-                    rsa.PersistKeyInCsp = false;
-                }
-            }
+            TestContext.WriteLine("Bearer {0}", new JwtTokenGenerator().GetBearer(DateTime.Now.AddYears(2)));
         }
 
         // [TestMethod]

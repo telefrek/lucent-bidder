@@ -109,6 +109,13 @@ namespace Lucent.Common.Entities
         public string[] Categories { get; set; }
 
         /// <summary>
+        /// Content unique id
+        /// </summary>
+        /// <value></value>
+        [SerializationProperty(15, "id")]
+        public int Id { get; set; }
+
+        /// <summary>
         /// 
         /// </summary>
         /// <value></value>

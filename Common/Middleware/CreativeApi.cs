@@ -90,6 +90,7 @@ namespace Lucent.Common.Middleware
                                         var contents = creative.Contents ?? new CreativeContent[0];
                                         Array.Resize(ref contents, contents.Length + 1);
                                         contents[contents.Length - 1] = content;
+                                        content.Id = contents.Select(c => c.Id).Max() + 1;
                                         creative.Contents = contents;
                                         _log.LogInformation("Content count {0}", (creative.Contents ?? new CreativeContent[0]).Length);
 
@@ -134,7 +135,7 @@ namespace Lucent.Common.Middleware
         /// <param name="entity"></param>
         protected override void PostDelete(HttpContext httpContext, Creative entity)
         {
-            foreach(var content in entity.Contents ?? new CreativeContent[0])
+            foreach (var content in entity.Contents ?? new CreativeContent[0])
             {
                 File.Delete(content.ContentLocation);
             }
