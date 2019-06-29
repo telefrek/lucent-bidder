@@ -218,5 +218,8 @@ namespace Lucent.Common.Filters
         /// <value></value>
         [Display(Name = "not in")]
         NOTIN = 7,
+        /// <value></value>
+        [Display(Name = "has value")]
+        HASVALUE = 8,
     }
 }

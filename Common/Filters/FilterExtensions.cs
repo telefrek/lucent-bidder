@@ -166,6 +166,9 @@ namespace Lucent.Common
                 case FilterType.LTE:
                     exp = Expression.LessThanOrEqual(prop, fExpVal);
                     break;
+                case FilterType.HASVALUE:
+                    exp = Expression.Not(Expression.Call(null, typeof(LucentExtensions).GetMethods().Single(m => m.Name.Equals("IsNullOrDefault") && m.IsGenericMethod && m.GetParameters().Length == 1).MakeGenericMethod(ptype), prop));
+                    break;
                 case FilterType.IN:
                 case FilterType.NOTIN:
                     if (ptype.IsArray)

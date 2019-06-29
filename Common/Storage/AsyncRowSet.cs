@@ -15,17 +15,20 @@ namespace Lucent.Common.Storage
     {
         IRingBuffer<Row> _rows;
         IEnumerator<Row> _enum;
+        ILogger _log;
 
         /// <summary>
         /// Asynchronous rowset enumerator
         /// </summary>
         /// <param name="original"></param>
-        public AsyncRowSet(RowSet original)
+        /// <param name="log"></param>
+        public AsyncRowSet(RowSet original, ILogger log)
         {
             // Create and open the buffer, assign the enum for wrapping
             _rows = new RingBuffer<Row>();
             _rows.Open();
             _enum = _rows.GetEnumerator();
+            _log = log;
 
             // Appreciate the warning, but this is done on purpose...
 #pragma warning disable
@@ -59,9 +62,9 @@ namespace Lucent.Common.Storage
                             await Task.Delay(100);
                 }
             }
-            catch(Exception)
+            catch(Exception e)
             {
-                // TODO: Handle me
+                _log.LogError(e, "failed to process query");
             }
             finally
             {

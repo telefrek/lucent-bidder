@@ -79,6 +79,33 @@ namespace Lucent.Common.Storage.Test
         }
 
         [TestMethod]
+        public void TestHasValueFilter()
+        {
+            var req = new BidRequest
+            {
+                Impressions = new Impression[] { new Impression { ImpressionId = "test" } },
+                User = new User { Gender = "M" }
+            };
+
+            var bFilter = new BidFilter
+            {
+                ImpressionFilters = new[] { new Filter { Property = "BidCurrency", Value = "CAN" } },
+                UserFilters = new[] { new Filter { Property = "Gender", Value = "U" } },
+                GeoFilters = new[] { new Filter { FilterType = FilterType.HASVALUE, Property = "Country", Value = "CAN" } }
+            };
+
+
+            var f = bFilter.GenerateCode();
+
+            Assert.IsFalse(f.Invoke(req), "Filter should not have matched");
+
+            req.User.Geo = new Geo { Country = "CAN" };
+
+            Assert.IsTrue(f.Invoke(req), "Filter should have matched");
+        }
+
+
+        [TestMethod]
         public void TestInFilter()
         {
             var req = new BidRequest

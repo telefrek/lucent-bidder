@@ -124,7 +124,7 @@ namespace Lucent.Common.Middleware
         /// </summary>
         /// <param name="httpContext"></param>
         /// <param name="entity"></param>
-        protected virtual void PostDelete(HttpContext httpContext, T entity){}
+        protected virtual void PostDelete(HttpContext httpContext, T entity) { }
 
 
         /// <summary>
@@ -137,12 +137,12 @@ namespace Lucent.Common.Middleware
             try
             {
                 var res = await httpContext.AuthenticateAsync("Bearer");
-                if(!res.Succeeded)
+                if (!res.Succeeded)
                 {
                     httpContext.Response.StatusCode = 403;
                     return;
                 }
-                
+
                 var segments = httpContext.Request.Path.Value.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
                 var entity = default(T);
 
@@ -171,7 +171,9 @@ namespace Lucent.Common.Middleware
                         }
                         else
                         {
+                            _log.LogInformation("Getting all for {0}", typeof(T).Name);
                             var entities = await _entityRepository.GetAll();
+                            _log.LogInformation("Read {0} entities", entities.Count);
                             httpContext.Response.StatusCode = entities.Count > 0 ? 200 : 204;
                             if (entities.Count > 0)
                                 await _serializationContext.WriteTo(httpContext, entities);

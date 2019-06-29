@@ -97,7 +97,7 @@ namespace Lucent.Common.Storage
             {
                 using (var context = StorageCounters.LatencyHistogram.CreateContext("cassandra", _session.Keyspace, queryName))
                 {
-                    return new AsyncRowSet(await _session.ExecuteAsync(statement));
+                    return new AsyncRowSet(await _session.ExecuteAsync(statement), _log);
                 }
             }
             catch (InvalidQueryException queryError)
@@ -109,7 +109,7 @@ namespace Lucent.Common.Storage
                 {
                     // Recreate
                     await CreateTableAsync();
-                    return new AsyncRowSet(await _session.ExecuteAsync(statement));
+                    return new AsyncRowSet(await _session.ExecuteAsync(statement), _log);
                 }
                 throw;
             }
@@ -180,22 +180,28 @@ namespace Lucent.Common.Storage
         {
             var instances = new List<T>();
 
-            foreach(var row in rowSet)
+            foreach (var row in rowSet)
             {
-
-                var contents = row.GetValue<byte[]>("contents");
-                var format = Enum.Parse<SerializationFormat>(row.GetValue<string>("format"));
-                var etag = row.GetValue<string>("etag");
-
-                using (var ms = new MemoryStream(contents))
+                try
                 {
-                    var obj = await _serializationContext.ReadFrom<T>(ms, false, format);
-                    await ReadExtraAsync<T>(row, obj);
-                    obj.ETag = etag;
-                    instances.Add(obj);
+                    var contents = row.GetValue<byte[]>("contents");
+                    var format = Enum.Parse<SerializationFormat>(row.GetValue<string>("format"));
+                    var etag = row.GetValue<string>("etag");
+
+                    using (var ms = new MemoryStream(contents))
+                    {
+                        var obj = await _serializationContext.ReadFrom<T>(ms, false, format);
+                        await ReadExtraAsync<T>(row, obj);
+                        obj.ETag = etag;
+                        instances.Add(obj);
+                    }
+                }
+                catch (Exception e)
+                {
+                    _log.LogError(e, "Failed to deserialize {0}", typeof(T).Name);
                 }
             }
-            
+
             return instances;
         }
     }

@@ -57,7 +57,7 @@ namespace Lucent.Common.Middleware
                             var reader = new MultipartReader(boundary, httpContext.Request.Body);
 
                             var section = await reader.ReadNextSectionAsync();
-                            if (section != null)
+                            while (section != null)
                             {
                                 ContentDispositionHeaderValue contentDisposition;
                                 if (ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out contentDisposition))
@@ -111,8 +111,8 @@ namespace Lucent.Common.Middleware
                                         _log.LogWarning("Failed to parse contents");
                                         File.Delete(tempFile);
                                     }
-
                                 }
+                                section = await reader.ReadNextSectionAsync();
                             }
                         }
                     }
