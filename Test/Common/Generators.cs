@@ -41,6 +41,7 @@ namespace Lucent.Common.Test
                     StartDate = DateTime.UtcNow.AddMinutes(-5),
                     EndDate = DateTime.UtcNow.AddDays(1),
                 },
+                Status = CampaignStatus.Active,
                 MaxCPM = _rng.NextDouble() * 3,
                 BudgetSchedule = new BudgetSchedule
                 {

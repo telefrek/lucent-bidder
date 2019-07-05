@@ -191,7 +191,7 @@ namespace Lucent.Common.Entities
         [Display(Name = "Active")]
         Active = 1,
         /// <value></value>
-        [Display(Name = "InActive")]
+        [Display(Name = "Paused")]
         InActive = 2,
         /// <value></value>
         [Display(Name = "Budget Exhausted")]

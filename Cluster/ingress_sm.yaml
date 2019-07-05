@@ -3,7 +3,7 @@ kind: ServiceMonitor
 metadata:
   name: ingress-sm
   labels:
-    release: monitoring
+    prometheus: monitoring
 spec:
   selector:
     matchLabels:

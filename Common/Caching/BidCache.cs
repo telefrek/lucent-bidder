@@ -67,7 +67,7 @@ namespace Lucent.Common.Caching
                 catch (AerospikeException e)
                 {
                     StorageCounters.ErrorCounter.WithLabels("aerospike", "bids", "save", e.Result.ToString()).Inc();
-                    _log.LogError(e, "Error during save");
+                    _log.LogError(e, "Error during save: {0} ({1})", response.Id, contents.Length);
                 }
         }
     }

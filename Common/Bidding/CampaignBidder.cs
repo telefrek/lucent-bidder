@@ -102,6 +102,12 @@ namespace Lucent.Common.Bidding
         {
             using (var histogram = _bidderLatency.CreateContext())
             {
+                if(_campaign.Status != CampaignStatus.Active)
+                {
+                    BidCounters.NoBidReason.WithLabels("campaign_inactive").Inc();
+                    return NO_MATCHES;
+                }
+
                 if (_isBudgetExhausted = _campaignBudget.Budget.GetDouble() <= 0)
                 {
                     BidCounters.NoBidReason.WithLabels("campaign_suspended").Inc();
