@@ -63,6 +63,14 @@ namespace Lucent.Common.Entities
         [SerializationProperty(5, "campaigns")]
         public String[] CampaignIds { get; set; }
 
+
+        /// <summary>
+        /// CampaignIds that have been added to this exchange
+        /// </summary>
+        /// <value></value>
+        [SerializationProperty(6, "offset")]
+        public int Offset { get; set; }
+
         /// <summary>
         /// Instance code if loaded
         /// </summary>

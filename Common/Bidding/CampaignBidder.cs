@@ -127,6 +127,12 @@ namespace Lucent.Common.Bidding
                     return NO_MATCHES;
                 }
 
+                if(_campaign.Schedule.EndDate != null && DateTime.UtcNow < _campaign.Schedule.EndDate)
+                {
+                    BidCounters.NoBidReason.WithLabels("campaign_ended").Inc();
+                    return NO_MATCHES;
+                }
+
                 // Apply campaign filters and check budget
                 if (_campaign.IsFiltered(request))
                 {

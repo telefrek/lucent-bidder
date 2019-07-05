@@ -151,6 +151,14 @@ namespace Lucent.Common.Entities
         [SerializationProperty(16, "targetting")]
         public BidTargets BidTargets { get; set; }
 
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
+        [SerializationProperty(17, "offset")]
+        public int Offset { get; set; }
+
         /// <summary>
         /// 
         /// </summary>

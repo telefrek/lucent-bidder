@@ -92,6 +92,7 @@ namespace Lucent.Common.Middleware
 
                         var schedule = (BudgetSchedule)null;
                         var entityName = (string)null;
+                        var endDate = DateTime.Now.AddDays(1).Date;
 
                         switch (request.EntityType)
                         {
@@ -101,6 +102,7 @@ namespace Lucent.Common.Middleware
                                 {
                                     schedule = camp.BudgetSchedule;
                                     entityName = camp.Name;
+                                    endDate = endDate.AddHours(camp.Offset);
                                 }
                                 break;
                             case EntityType.Exchange:
@@ -109,6 +111,7 @@ namespace Lucent.Common.Middleware
                                 {
                                     schedule = exchange.BudgetSchedule;
                                     entityName = exchange.Name;
+                                    endDate = endDate.AddHours(exchange.Offset);
                                 }
                                 break;
                             default:
@@ -131,7 +134,7 @@ namespace Lucent.Common.Middleware
                             {
                                 Key = request.EntityId,
                                 ResetSpend = DateTime.UtcNow.Hour > status.LastHourlyRollover.Hour,
-                                ResetDaily = DateTime.UtcNow.Day > status.LastDailyRollover.Day
+                                ResetDaily = DateTime.Now >= endDate,
                             };
 
                             // Reset everything
