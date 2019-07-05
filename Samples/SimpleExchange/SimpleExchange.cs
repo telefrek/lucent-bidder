@@ -40,7 +40,7 @@ namespace Lucent.Samples.SimpleExchange
         {
             var bid = bidContext.Bid;
 
-            bid.AdMarkup = _markup.GenerateMarkup(bidContext);
+            _markup.GenerateMarkup(bidContext);
 
             return bid;
         }
@@ -77,15 +77,7 @@ namespace Lucent.Samples.SimpleExchange
                                 BuyerId = c.BuyerId,
                                 Bids = bids.Select(b =>
                                 {
-                                    switch (b.Content.ContentType)
-                                    {
-                                        case ContentType.Video:
-                                            b.Bid.AdMarkup = b.ToVast();
-                                            break; ;
-                                        case ContentType.Banner:
-                                            b.Bid.AdMarkup = b.ToImageLinkMarkup(new Uri(httpContext.Request.Scheme + "://" + httpContext.Request.Host.Value));
-                                            break;
-                                    }
+                                    new MarkupGenerator().GenerateMarkup(b);
                                     return b.Bid;
                                 }).ToArray()
                             };

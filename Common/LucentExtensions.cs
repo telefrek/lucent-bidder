@@ -85,6 +85,22 @@ public static partial class LucentExtensions
     /// <param name="type"></param>
     /// <param name="filterType"></param>
     /// <param name="property"></param>
+    /// <param name="value"></param>
+    /// <returns></returns>
+    public static Target CreateTarget(this Type type, FilterType filterType, string property, TargetValue value) => new Target
+    {
+        TargetType = filterType,
+        Property = property,
+        PropertyType = type.GetProperty(property).PropertyType,
+        Value = value,
+    };
+
+    /// <summary>
+    /// Create a filter for the type
+    /// </summary>
+    /// <param name="type"></param>
+    /// <param name="filterType"></param>
+    /// <param name="property"></param>
     /// <param name="values"></param>
     /// <returns></returns>
     public static Filter CreateFilter(this Type type, FilterType filterType, string property, FilterValue[] values) => new Filter

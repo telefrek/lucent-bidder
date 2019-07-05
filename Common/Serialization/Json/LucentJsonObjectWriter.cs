@@ -26,7 +26,7 @@ namespace Lucent.Common.Serialization.Json
         }
 
         /// <inheritdoc/>
-        public SerializationFormat Format { get { return SerializationFormat.PROTOBUF; } }
+        public SerializationFormat Format { get { return SerializationFormat.JSON; } }
 
         /// <inheritdoc/>
         public async Task WriteAsync(PropertyId property, bool value)

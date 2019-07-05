@@ -95,7 +95,7 @@ namespace Lucent.Common
                     using (var scope = provider.CreateScope())
                     {
                         var sm = scope.ServiceProvider.GetRequiredService<IStorageManager>();
-                        var ledger = (BidLedger)scope.ServiceProvider.CreateInstance<BidLedger>((sm as CassandraStorageManager).Session, SerializationFormat.PROTOBUF);
+                        var ledger = (BidLedger)scope.ServiceProvider.CreateInstance<BidLedger>((sm as CassandraStorageManager).Session, SerializationFormat.JSON);
                         ledger.Initialize(provider).Wait();
                         return ledger;
                     }

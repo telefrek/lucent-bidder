@@ -58,18 +58,196 @@ namespace Lucent.Common
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="bidFilter"></param>
+        /// <param name="bidTarget"></param>
         /// <returns></returns>
-        public static Func<BidRequest, bool> GenerateCode(this BidFilter bidFilter)
+        public static Func<BidRequest, bool> GenerateTargets(this BidTargets bidTarget)
         {
             // Need our input parameter :)
             var bidParam = Expression.Parameter(typeof(BidRequest), "bid");
 
             // Need a variable to track the complex filtering
-            var fValue = Expression.Variable(typeof(bool), "isFiltered");
+            var fValue = Expression.Variable(typeof(bool), "isTargetted");
+            var gValue = Expression.Variable(typeof(int), "geoMatch");
 
             // Keep track of all the expressions in this chain
             var expList = new List<Expression> { };
+            expList.Add(Expression.Assign(gValue, Expression.Constant(2)));
+
+            // Need a sentinal value for breaking in loops
+            var loopBreak = Expression.Label();
+            var ret = Expression.Label(typeof(bool)); // We're going to return a bool
+
+            // Process the impressions filters
+            if (bidTarget.ImpressionTargets != null)
+            {
+                // Get the impressions
+                var impProp = Expression.Property(bidParam, "Impressions");
+                var impType = typeof(Impression);
+
+                // Create a loop parameter and the filter
+                var impParam = Expression.Parameter(impType, "imp");
+                var impTest = CombineTargets(bidTarget.ImpressionTargets, impParam);
+
+                // Create the loop and add it to this block
+                expList.Add(
+                    Expression.IfThenElse(
+                        Expression.NotEqual(impProp, Expression.Constant(null)),
+                        ForEach(impProp, impParam,
+                            Expression.IfThen(
+                                Expression.OrElse(
+                                    Expression.Equal(impParam, Expression.Constant(null)),
+                                    Expression.Not(impTest)),
+                                    Expression.Return(ret, Expression.Constant(false)))),
+                        Expression.Return(ret, Expression.Constant(false))));
+            }
+
+            // Process the user filters
+            if (bidTarget.DeviceTargets != null || bidTarget.GeoTargets != null)
+            {
+                // Get the user property and filters
+                var deviceProp = Expression.Property(bidParam, "Device");
+                var deviceFilter = CombineTargets(bidTarget.DeviceTargets, deviceProp);
+
+                // Get the geographical filter and property
+                var geoProp = Expression.Property(deviceProp, "Geo");
+                var geoFilter = (Expression)Expression.Constant(bidTarget.GeoTargets == null);
+                if (bidTarget.GeoTargets != null)
+                    geoFilter = CombineTargets(bidTarget.GeoTargets, geoProp);
+
+                if (deviceFilter != null)
+                    expList.Add(
+                        Expression.IfThen(
+                            Expression.OrElse(
+                                Expression.Equal(deviceProp, Expression.Constant(null)),
+                                Expression.Not(deviceFilter)
+                            ),
+                            Expression.Return(ret, Expression.Constant(false))
+                        )
+                    );
+
+                if (geoFilter != null)
+                    expList.Add(
+                        Expression.IfThen(
+                            Expression.OrElse(
+                                Expression.OrElse(
+                                    Expression.Equal(deviceProp, Expression.Constant(null)),
+                                    Expression.Equal(geoProp, Expression.Constant(null))),
+                                Expression.Not(geoFilter)
+                            ),
+                            Expression.Assign(gValue, Expression.Decrement(gValue))
+                        )
+                    );
+            }
+
+            // Process the user filters
+            if (bidTarget.UserTargets != null || bidTarget.GeoTargets != null)
+            {
+                // Get the user property and filters
+                var userProp = Expression.Property(bidParam, "User");
+                var userFilter = CombineTargets(bidTarget.UserTargets, userProp);
+
+                // Get the geographical filter and property
+                var geoProp = Expression.Property(userProp, "Geo");
+                var geoFilter = (Expression)Expression.Constant(bidTarget.GeoTargets == null);
+                if (bidTarget.GeoTargets != null)
+                    geoFilter = CombineTargets(bidTarget.GeoTargets, geoProp);
+
+                if (userFilter != null)
+                    expList.Add(
+                        Expression.IfThen(
+                            Expression.OrElse(
+                                Expression.Equal(userProp, Expression.Constant(null)),
+                                Expression.Not(userFilter)
+                            ),
+                            Expression.Return(ret, Expression.Constant(false))
+                        )
+                    );
+
+                if (geoFilter != null)
+                    expList.Add(
+                        Expression.IfThen(
+                            Expression.OrElse(
+                                Expression.OrElse(
+                                    Expression.Equal(userProp, Expression.Constant(null)),
+                                    Expression.Equal(geoProp, Expression.Constant(null))),
+                                Expression.Not(geoFilter)
+                            ),
+                            Expression.Assign(gValue, Expression.Decrement(gValue))
+                        )
+                    );
+            }
+
+            // Geo check
+            expList.Add(Expression.IfThen(Expression.Equal(gValue, Expression.Constant(0)),
+                Expression.Return(ret, Expression.Constant(false))));
+
+            // Process the site filters
+            if (bidTarget.SiteTargets != null)
+            {
+                // Get the impressions
+                var siteProp = Expression.Property(bidParam, "Site");
+                var siteTest = CombineTargets(bidTarget.SiteTargets, siteProp);
+
+                // Create the loop and add it to this block
+                if (siteTest != null)
+                    expList.Add(
+                        Expression.IfThen(
+                            Expression.OrElse(
+                                Expression.Equal(siteProp, Expression.Constant(null)),
+                                Expression.Not(siteTest)
+                            ),
+                            Expression.Return(ret, Expression.Constant(false))
+                        )
+                    );
+            }
+
+            // Process the app filters
+            if (bidTarget.AppTargets != null)
+            {
+                // Get the impressions
+                var appProp = Expression.Property(bidParam, "App");
+                var appTest = CombineTargets(bidTarget.SiteTargets, appProp);
+
+                // Create the loop and add it to this block
+                if (appTest != null)
+                    expList.Add(
+                        Expression.IfThen(
+                            Expression.OrElse(
+                                Expression.Equal(appProp, Expression.Constant(null)),
+                                Expression.Not(appTest)
+                            ),
+                            Expression.Return(ret, Expression.Constant(false))
+                        )
+                    );
+            }
+
+            // If you make it through all targets, you pass
+            expList.Add(Expression.Label(ret, Expression.Constant(true)));
+
+            var final = Expression.Block(new ParameterExpression[] { gValue }, expList);
+
+            var ftype = typeof(Func<,>).MakeGenericType(typeof(BidRequest), typeof(bool));
+            var comp = makeLambda.MakeGenericMethod(ftype).Invoke(null, new object[] { final, new ParameterExpression[] { bidParam } });
+            return (Func<BidRequest, bool>)comp.GetType().GetMethod("Compile", Type.EmptyTypes).Invoke(comp, new object[] { });
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="bidFilter"></param>
+        /// <returns></returns>
+        public static Func<BidRequest, bool> GenerateFilter(this BidFilter bidFilter)
+        {
+            // Need our input parameter :)
+            var bidParam = Expression.Parameter(typeof(BidRequest), "bid");
+
+            // Need a variable to track the complex filtering
+            var fValue = Expression.Variable(typeof(bool), "isTargetted");
+            var gValue = Expression.Variable(typeof(int), "geoMatch");
+
+            // Keep track of all the expressions in this chain
+            var expList = new List<Expression> { };
+            expList.Add(Expression.Assign(gValue, Expression.Constant(2)));
 
             // Need a sentinal value for breaking in loops
             var loopBreak = Expression.Label();
@@ -87,49 +265,265 @@ namespace Lucent.Common
                 var impTest = CombineFilters(bidFilter.ImpressionFilters, impParam);
 
                 // Create the loop and add it to this block
-                expList.Add(Expression.IfThen(Expression.NotEqual(impProp, Expression.Constant(null)),
-                    ForEach(impProp, impParam, Expression.IfThen(impTest, Expression.Return(ret, Expression.Constant(true))))));
+                expList.Add(
+                    Expression.IfThenElse(
+                        Expression.NotEqual(impProp, Expression.Constant(null)),
+                        ForEach(impProp, impParam,
+                            Expression.IfThen(
+                                    impTest,
+                                    Expression.Return(ret, Expression.Constant(true)))),
+                        Expression.Return(ret, Expression.Constant(true))));
             }
 
             // Process the user filters
-            if (bidFilter.UserFilters != null)
+            if (bidFilter.DeviceFilters != null || bidFilter.GeoFilters != null)
+            {
+                // Get the user property and filters
+                var deviceProp = Expression.Property(bidParam, "Device");
+                var deviceFilter = CombineFilters(bidFilter.DeviceFilters, deviceProp);
+
+                // Get the geographical filter and property
+                var geoProp = Expression.Property(deviceProp, "Geo");
+                var geoFilter = (Expression)Expression.Constant(bidFilter.GeoFilters == null);
+                if (bidFilter.GeoFilters != null)
+                    geoFilter = CombineFilters(bidFilter.GeoFilters, geoProp);
+
+                if (deviceFilter != null)
+                    expList.Add(
+                        Expression.IfThen(
+                            Expression.AndAlso(
+                                Expression.NotEqual(deviceProp, Expression.Constant(null)),
+                                deviceFilter
+                            ),
+                            Expression.Return(ret, Expression.Constant(true)))
+                    );
+
+                if (geoFilter != null)
+                    expList.Add(
+                        Expression.IfThen(
+                            Expression.AndAlso(
+                                Expression.Not(Expression.OrElse(
+                                    Expression.Equal(deviceProp, Expression.Constant(null)),
+                                    Expression.Equal(geoProp, Expression.Constant(null)))),
+                                geoFilter
+                            ),
+                            Expression.Assign(gValue, Expression.Decrement(gValue))
+                        )
+                    );
+            }
+
+            // Process the user filters
+            if (bidFilter.UserFilters != null || bidFilter.GeoFilters != null)
             {
                 // Get the user property and filters
                 var userProp = Expression.Property(bidParam, "User");
-                var userType = typeof(User);
                 var userFilter = CombineFilters(bidFilter.UserFilters, userProp);
 
                 // Get the geographical filter and property
                 var geoProp = Expression.Property(userProp, "Geo");
-                var geoFilter = (Expression)Expression.Constant(false);
+                var geoFilter = (Expression)Expression.Constant(bidFilter.GeoFilters == null);
                 if (bidFilter.GeoFilters != null)
                     geoFilter = CombineFilters(bidFilter.GeoFilters, geoProp);
 
-                // Add the filter if(usr != null
-                expList.Add(Expression.IfThen(
-                    Expression.AndAlso(Expression.NotEqual(userProp, Expression.Constant(null)), Expression.OrElse(userFilter, Expression.AndAlso(Expression.NotEqual(geoProp, Expression.Constant(null)), geoFilter))), Expression.Return(ret, Expression.Constant(true))));
+                if (userFilter != null)
+                    expList.Add(
+                        Expression.IfThen(
+                            Expression.AndAlso(
+                                Expression.NotEqual(userProp, Expression.Constant(null)),
+                                userFilter
+                            ),
+                            Expression.Return(ret, Expression.Constant(true))
+                        )
+                    );
+
+                if (geoFilter != null)
+                    expList.Add(
+                        Expression.IfThen(
+                            Expression.AndAlso(
+                                Expression.Not(Expression.OrElse(
+                                    Expression.Equal(userProp, Expression.Constant(null)),
+                                    Expression.Equal(geoProp, Expression.Constant(null)))),
+                                geoFilter
+                            ),
+                            Expression.Assign(gValue, Expression.Decrement(gValue))
+                        )
+                    );
             }
+
+            // Geo check
+            expList.Add(Expression.IfThen(Expression.LessThan(gValue, Expression.Constant(2)),
+                Expression.Return(ret, Expression.Constant(true))));
 
             // Process the site filters
             if (bidFilter.SiteFilters != null)
             {
                 // Get the impressions
                 var siteProp = Expression.Property(bidParam, "Site");
-                var siteType = typeof(Site);
                 var siteTest = CombineFilters(bidFilter.SiteFilters, siteProp);
 
                 // Create the loop and add it to this block
-                expList.Add(Expression.IfThen(Expression.AndAlso(Expression.NotEqual(siteProp, Expression.Constant(null)),
-                    siteTest), Expression.Return(ret, Expression.Constant(true))));
+                if (siteTest != null)
+                    expList.Add(
+                        Expression.IfThen(
+                            Expression.AndAlso(
+                                Expression.NotEqual(siteProp, Expression.Constant(null)),
+                                siteTest
+                            ),
+                            Expression.Return(ret, Expression.Constant(true))
+                        )
+                    );
             }
 
+            // Process the app filters
+            if (bidFilter.AppFilters != null)
+            {
+                // Get the impressions
+                var appProp = Expression.Property(bidParam, "App");
+                var appTest = CombineFilters(bidFilter.SiteFilters, appProp);
+
+                // Create the loop and add it to this block
+                if (appTest != null)
+                    expList.Add(
+                        Expression.IfThen(
+                            Expression.AndAlso(
+                                Expression.NotEqual(appProp, Expression.Constant(null)),
+                                appTest
+                            ),
+                            Expression.Return(ret, Expression.Constant(true))
+                        )
+                    );
+            }
+
+            // If you make it through all filters, you pass
             expList.Add(Expression.Label(ret, Expression.Constant(false)));
 
-            var final = Expression.Block(expList);
+            var final = Expression.Block(new ParameterExpression[] { gValue }, expList);
 
             var ftype = typeof(Func<,>).MakeGenericType(typeof(BidRequest), typeof(bool));
             var comp = makeLambda.MakeGenericMethod(ftype).Invoke(null, new object[] { final, new ParameterExpression[] { bidParam } });
             return (Func<BidRequest, bool>)comp.GetType().GetMethod("Compile", Type.EmptyTypes).Invoke(comp, new object[] { });
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="target"></param>
+        /// <param name="p"></param>
+        /// <returns></returns>
+        public static Expression CreateExpression(this Target target, Expression p)
+        {
+            var prop = Expression.Property(p, target.Property);
+            var ptype = (prop.Member as PropertyInfo).PropertyType;
+
+            Expression exp = Expression.Constant(true);
+            var fExpVal = Expression.Constant(typeof(LucentExtensions).GetMethods()
+                                            .Single(m => m.IsGenericMethod && m.Name == "CastTo").MakeGenericMethod(ptype.IsArray ? ptype.GetElementType() : ptype).Invoke(null, new object[] { target.Value }));
+
+            var fValsExp = Expression.Constant(typeof(LucentExtensions).GetMethods()
+                                            .Single(m => m.IsGenericMethod && m.Name == "CastArrayTo").MakeGenericMethod(ptype.IsArray ? ptype.GetElementType() : ptype).Invoke(null, new object[] { target.Values }));
+            switch (target.TargetType)
+            {
+                case FilterType.NEQ:
+                    exp = Expression.NotEqual(prop, fExpVal);
+                    break;
+                case FilterType.GT:
+                    exp = Expression.GreaterThan(prop, fExpVal);
+                    break;
+                case FilterType.GTE:
+                    exp = Expression.GreaterThanOrEqual(prop, fExpVal);
+                    break;
+                case FilterType.LT:
+                    exp = Expression.LessThan(prop, fExpVal);
+                    break;
+                case FilterType.LTE:
+                    exp = Expression.LessThanOrEqual(prop, fExpVal);
+                    break;
+                case FilterType.HASVALUE:
+                    exp = Expression.Not(Expression.Call(null, typeof(LucentExtensions).GetMethods().Single(m => m.Name.Equals("IsNullOrDefault") && m.IsGenericMethod && m.GetParameters().Length == 1).MakeGenericMethod(ptype), prop));
+                    break;
+                case FilterType.IN:
+                case FilterType.NOTIN:
+                    if (ptype.IsArray)
+                    {
+                        if (target.Values != null)
+                        {
+                            // Hahahaha...this is ugly
+                            exp = Expression.Call(null,
+                                typeof(Enumerable).GetMethods().Single(m => m.Name.Equals("Intersect") && m.IsGenericMethod && m.GetParameters().Length == 2)
+                                    .MakeGenericMethod(ptype.GetElementType()),
+                                        prop,
+                                        fValsExp);
+
+                            var m1 = typeof(Enumerable).GetMethods().Single(m => m.Name.Equals("Count") && m.IsGenericMethod && m.GetParameters().Length == 1).MakeGenericMethod(ptype.GetElementType());
+                            exp = Expression.GreaterThan(Expression.Call(null, m1, exp), Expression.Constant(0));
+                        }
+                        else if (target.Value != null)
+                        {
+                            exp = Expression.Call(null,
+                                typeof(Enumerable).GetMethods().Single(m => m.Name.Equals("Contains") && m.IsGenericMethod && m.GetParameters().Length == 2)
+                                    .MakeGenericMethod(ptype.GetElementType()), prop,
+                                        Expression.Convert(fExpVal, ptype.GetElementType()));
+                        }
+                    }
+                    else if (ptype.IsAssignableFrom(typeof(string)))
+                    {
+                        if (target.Values != null)
+                        {
+                            var lamRet = Expression.Label(typeof(bool));
+                            var lamParam = Expression.Parameter(typeof(string), "s");
+                            var expList = new List<Expression>();
+                            expList.Add(Expression.IfThen(Expression.Call(prop, typeof(string).GetMethods().First(m => m.Name == "Contains" && m.GetParameters().Length == 2 && m.GetParameters().First().ParameterType == typeof(string)), lamParam, Expression.Constant(StringComparison.InvariantCultureIgnoreCase)), Expression.Return(lamRet, Expression.Constant(true))));
+
+                            expList.Add(Expression.Label(lamRet, Expression.Constant(false)));
+
+                            var final = Expression.Block(expList);
+                            var ftype = typeof(Func<,>).MakeGenericType(typeof(string), typeof(bool));
+
+                            exp = Expression.Call(null, typeof(Enumerable).GetMethods().Single(m => m.Name.Equals("Any") && m.IsGenericMethod && m.GetParameters().Length == 2).MakeGenericMethod(typeof(string)), fValsExp, Expression.Lambda(final, false, new ParameterExpression[] { lamParam }));
+
+                        }
+                        else if (target.Value != null)
+                        {
+                            exp = Expression.Call(prop, typeof(string).GetMethods().First(m => m.Name == "Contains" && m.GetParameters().Length == 2 && m.GetParameters().First().ParameterType == typeof(string)), fExpVal, Expression.Constant(StringComparison.InvariantCultureIgnoreCase));
+                        }
+                    }
+                    else if (ptype.GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>)) != null)
+                    {
+                        // This never gets used right now, depends on definition
+                        if (target.Values != null)
+                        {
+                            // Hahahaha...this is ugly
+                            exp = Expression.Call(null,
+                                typeof(Enumerable).GetMethods().Single(m => m.Name.Equals("Intersect") && m.IsGenericMethod && m.GetParameters().Length == 2)
+                                    .MakeGenericMethod(ptype.GetGenericArguments()[0]),
+                                        prop,
+                                        fValsExp);
+
+                            var m1 = typeof(Enumerable).GetMethods().Single(m => m.Name.Equals("Count") && m.IsGenericMethod && m.GetParameters().Length == 1).MakeGenericMethod(ptype.GetGenericArguments()[0]);
+                            exp = Expression.GreaterThan(Expression.Call(null, m1, exp), Expression.Constant(0));
+                        }
+                        else if (target.Value != null)
+                        {
+                            exp = Expression.Call(null,
+                                typeof(Enumerable).GetMethods().Single(m => m.Name.Equals("Contains") && m.IsGenericMethod && m.GetParameters().Length == 2)
+                                    .MakeGenericMethod(ptype.GetElementType()), prop,
+                                        Expression.Convert(fExpVal, ptype.GetElementType()));
+                        }
+                    }
+                    else
+                        return exp; // Don't evaluate the not in
+
+                    // Not in is just assert in != true
+                    if (target.TargetType == FilterType.NOTIN)
+                        exp = Expression.NotEqual(exp, Expression.Constant(true));
+                    break;
+                default:
+                    exp = Expression.Equal(prop, fExpVal);
+                    break;
+            }
+
+            return Expression.AndAlso(Expression.NotEqual(prop, Expression.Constant(ptype.IsValueType ? Activator.CreateInstance(ptype) : null)), exp);
         }
 
         /// <summary>
@@ -145,10 +539,10 @@ namespace Lucent.Common
 
             Expression exp = Expression.Constant(true);
             var fExpVal = Expression.Constant(typeof(LucentExtensions).GetMethods()
-                                            .Single(m => m.IsGenericMethod && m.Name == "CastTo").MakeGenericMethod(ptype.IsArray ? ptype.GetElementType() : ptype).Invoke(null, new object[] { filter.Value }));
+                                            .Single(m => m.IsGenericMethod && m.Name == "CastFilterTo").MakeGenericMethod(ptype.IsArray ? ptype.GetElementType() : ptype).Invoke(null, new object[] { filter.Value }));
 
             var fValsExp = Expression.Constant(typeof(LucentExtensions).GetMethods()
-                                            .Single(m => m.IsGenericMethod && m.Name == "CastArrayTo").MakeGenericMethod(ptype.IsArray ? ptype.GetElementType() : ptype).Invoke(null, new object[] { filter.Values }));
+                                            .Single(m => m.IsGenericMethod && m.Name == "CastFilterArrayTo").MakeGenericMethod(ptype.IsArray ? ptype.GetElementType() : ptype).Invoke(null, new object[] { filter.Values }));
             switch (filter.FilterType)
             {
                 case FilterType.NEQ:
@@ -200,7 +594,7 @@ namespace Lucent.Common
                             var lamRet = Expression.Label(typeof(bool));
                             var lamParam = Expression.Parameter(typeof(string), "s");
                             var expList = new List<Expression>();
-                            expList.Add(Expression.IfThen(Expression.Call(prop, typeof(string).GetMethods().First(m => m.Name == "Contains" && m.GetParameters().Length == 1 && m.GetParameters().First().ParameterType == typeof(string)), lamParam), Expression.Return(lamRet, Expression.Constant(true))));
+                            expList.Add(Expression.IfThen(Expression.Call(prop, typeof(string).GetMethods().First(m => m.Name == "Contains" && m.GetParameters().Length == 2 && m.GetParameters().First().ParameterType == typeof(string)), lamParam, Expression.Constant(StringComparison.InvariantCultureIgnoreCase)), Expression.Return(lamRet, Expression.Constant(true))));
 
                             expList.Add(Expression.Label(lamRet, Expression.Constant(false)));
 
@@ -212,7 +606,7 @@ namespace Lucent.Common
                         }
                         else if (filter.Value != null)
                         {
-                            exp = Expression.Call(prop, typeof(string).GetMethods().First(m => m.Name == "Contains" && m.GetParameters().Length == 1 && m.GetParameters().First().ParameterType == typeof(string)), fExpVal);
+                            exp = Expression.Call(prop, typeof(string).GetMethods().First(m => m.Name == "Contains" && m.GetParameters().Length == 2 && m.GetParameters().First().ParameterType == typeof(string)), fExpVal, Expression.Constant(StringComparison.InvariantCultureIgnoreCase));
                         }
                     }
                     else if (ptype.GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>)) != null)
@@ -263,7 +657,7 @@ namespace Lucent.Common
         {
             Expression exp = null;
 
-            foreach (var filter in filters)
+            foreach (var filter in filters ?? new Filter[] { })
             {
                 var e = filter.CreateExpression(target);
 
@@ -276,13 +670,37 @@ namespace Lucent.Common
             return exp;
         }
 
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="targets"></param>
+        /// <param name="target"></param>
+        /// <returns></returns>
+        public static Expression CombineTargets(this ICollection<Target> targets, Expression target)
+        {
+            Expression exp = null;
+
+            foreach (var t in targets ?? new List<Target>())
+            {
+                var e = t.CreateExpression(target);
+
+                if (exp == null)
+                    exp = e;
+                else
+                    exp = Expression.AndAlso(exp, e);
+            }
+
+            return exp;
+        }
+
         /// <summary>
         /// Cast the object array to the correct type
         /// </summary>
         /// <param name="original"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public static T[] CastArrayTo<T>(FilterValue[] original)
+        public static T[] CastArrayTo<T>(TargetValue[] original)
         {
             if (original == null)
                 return new T[0];
@@ -301,7 +719,45 @@ namespace Lucent.Common
         /// <param name="filter"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public static T CastTo<T>(FilterValue filter)
+        public static T CastTo<T>(TargetValue filter)
+        {
+            if (filter == null)
+                return default(T);
+
+            if (typeof(T) == typeof(string))
+                return (T)(object)(string)filter;
+            else if (typeof(T) == typeof(int))
+                return (T)(object)(int)filter;
+
+            return default(T);
+        }
+
+        /// <summary>
+        /// Cast the object array to the correct type
+        /// </summary>
+        /// <param name="original"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public static T[] CastFilterArrayTo<T>(FilterValue[] original)
+        {
+            if (original == null)
+                return new T[0];
+
+            if (typeof(T) == typeof(string))
+                return original.Select(o => (T)(object)o.SValue).ToArray();
+            else if (typeof(T) == typeof(int))
+                return original.Select(o => (T)(object)o.IValue).ToArray();
+
+            return new T[0];
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="filter"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public static T CastFilterTo<T>(FilterValue filter)
         {
             if (filter == null)
                 return default(T);

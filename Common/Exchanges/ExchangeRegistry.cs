@@ -47,7 +47,7 @@ namespace Lucent.Common.Exchanges
 
         async Task WatchExchanges(EntityEventMessage message)
         {
-            _log.LogInformation("New message {0} ({1} {2})", message.MessageId ?? "none", message.Body.EventType, message.Body.EntityType);
+            _log.LogInformation("New message {0} ({1} {2})", message.Body.EntityId, message.Body.EventType, message.Body.EntityType);
             var evt = message.Body;
 
             if (evt.EntityType != EntityType.Exchange) return;
@@ -59,10 +59,16 @@ namespace Lucent.Common.Exchanges
                     Guid id;
                     if (!Guid.TryParse(evt.EntityId, out id)) return;
                     var entity = await _storageRepository.Get(new GuidStorageKey(id));
-                    if(entity == null) return;
+                    if (entity == null)
+                    {
+                        _log.LogWarning("No exchange found for {0}", id);
+                        return;
+                    }
 
                     if (entity.Code != null)
                         await entity.LoadExchange(_serviceProvider);
+                    else
+                        _log.LogWarning("No code found for {0}", id);
 
                     if (entity.Instance != null)
                     {
@@ -72,7 +78,7 @@ namespace Lucent.Common.Exchanges
                     break;
                 case EventType.EntityDelete:
                     var exchg = (AdExchange)null;
-                    if(_exchangeMap.TryGetValue(evt.EntityId, out exchg))
+                    if (_exchangeMap.TryGetValue(evt.EntityId, out exchg))
                     {
                         _exchangeMap.Remove(evt.EntityId);
                         _log.LogInformation("Unloaded : {0}", evt.EntityId);

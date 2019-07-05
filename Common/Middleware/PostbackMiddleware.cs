@@ -174,6 +174,7 @@ namespace Lucent.Common.Middleware
                                     stats.Conversions.Inc(1);
                                     BidCounters.CampaignConversions.WithLabels(campaign.Name).Inc();
                                     BidCounters.CampaignRevenue.WithLabels(campaign.Name).Inc(postbackAction.Payout);
+                                    await _ledger.TryRecordEntry(campaign.Id, new BidEntry { RequestId = bidContext.RequestId, Cost = postbackAction.Payout, IsRevenue = true });
                                     LocalBudget.Get(campaign.Id).ActionLimit.Inc(1);
                                 }
                                 else

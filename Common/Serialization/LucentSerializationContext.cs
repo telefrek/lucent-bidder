@@ -143,6 +143,7 @@ namespace Lucent.Common.Serialization
             using (var ms = new MemoryStream())
             {
                 await WriteTo(instance, ms, true, format);
+                ms.Flush();
                 return ms.ToArray();
             }
         }

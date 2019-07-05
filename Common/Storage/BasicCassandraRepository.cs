@@ -86,7 +86,7 @@ namespace Lucent.Common.Storage
         /// <inheritdoc/>
         public async Task<T> Get(StorageKey key)
         {
-            _log.LogInformation("Getting {0}", key.RawValue().First());
+            _log.LogInformation("[{1}] Getting {0}", key.RawValue().First(), typeof(T).Name);
             try
             {
                 var rowSet = await ExecuteAsync(_getStatement.Bind(key.RawValue()), "get_" + _tableName);

@@ -165,9 +165,9 @@ namespace Lucent.Common.Caching
                     if (res != null)
                         return res.GetInt(bin) / 10000d;
                 }
-                catch (Exception e)
+                catch (AerospikeException e)
                 {
-                    StorageCounters.ErrorCounter.WithLabels("aerospike", "lucent", e.GetType().Name).Inc();
+                    StorageCounters.ErrorCounter.WithLabels("aerospike", "lucent", "inc", e.Result.ToString()).Inc();
                     _log.LogError(e, "Error during increment");
                 }
 
@@ -177,6 +177,7 @@ namespace Lucent.Common.Caching
         /// <inheritdoc/>
         public async Task<bool> TryUpdateBudget(string key, double inc, double max, TimeSpan expiration, string bin)
         {
+            var op = "get";
             try
             {
                 Record res = null;
@@ -185,6 +186,7 @@ namespace Lucent.Common.Caching
 
                 if (res == null)
                 {
+                    op = "update";
                     using (var ctx = StorageCounters.LatencyHistogram.CreateContext("aerospike", "budget", "update"))
                         res = await Aerospike.INSTANCE.Operate(new WritePolicy(Aerospike.INSTANCE.writePolicyDefault) { expiration = (int)expiration.TotalSeconds },
                         default(CancellationToken), new Key("lucent", "budget", key),
@@ -203,9 +205,9 @@ namespace Lucent.Common.Caching
                     return res != null;
                 }
             }
-            catch (Exception e)
+            catch (AerospikeException e)
             {
-                StorageCounters.ErrorCounter.WithLabels("aerospike", "budget", e.GetType().Name).Inc();
+                StorageCounters.ErrorCounter.WithLabels("aerospike", "budget", op, e.Result.ToString()).Inc();
                 _log.LogError(e, "Error during budget update");
             }
 
@@ -224,9 +226,9 @@ namespace Lucent.Common.Caching
                         return res.GetInt(bin) / 10000d;
                 }
             }
-            catch (Exception e)
+            catch (AerospikeException e)
             {
-                StorageCounters.ErrorCounter.WithLabels("aerospike", "lucent", e.GetType().Name).Inc();
+                StorageCounters.ErrorCounter.WithLabels("aerospike", "lucent", "get", e.Result.ToString()).Inc();
                 _log.LogError(e, "Error during increment");
             }
 
@@ -254,9 +256,9 @@ namespace Lucent.Common.Caching
                         return true;
                     }
                 }
-                catch (Exception e)
+                catch (AerospikeException e)
                 {
-                    StorageCounters.ErrorCounter.WithLabels("aerospike", "lucent", e.GetType().Name).Inc();
+                    StorageCounters.ErrorCounter.WithLabels("aerospike", "lucent", "update", e.Result.ToString()).Inc();
                     _log.LogError(e, "Error during tryUpdate");
 
                 }

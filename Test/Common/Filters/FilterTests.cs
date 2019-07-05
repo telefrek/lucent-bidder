@@ -58,18 +58,71 @@ namespace Lucent.Common.Storage.Test
             var req = new BidRequest
             {
                 Impressions = new Impression[] { new Impression { ImpressionId = "test" } },
-                User = new User { Gender = "M" }
+                User = new User { Gender = "M", Geo = new Geo { Country = "CAN"} }
             };
 
             var bFilter = new BidFilter
             {
                 ImpressionFilters = new[] { new Filter { Property = "BidCurrency", Value = "CAN" } },
                 UserFilters = new[] { new Filter { Property = "Gender", Value = "U" } },
-                GeoFilters = new[] { new Filter { FilterType = FilterType.EQ, Property = "Country", Value = "CAN" } }
+                GeoFilters = new[] { new Filter { FilterType = FilterType.IN, Property = "Country", Value = "usa" } }
             };
 
 
-            var f = bFilter.GenerateCode();
+            var f = bFilter.GenerateFilter();
+
+            Assert.IsFalse(f.Invoke(req), "Filter should not have matched");
+
+            req.User.Geo = new Geo { Country = "USA" };
+
+            Assert.IsTrue(f.Invoke(req), "Filter should have matched");
+        }
+
+        [TestMethod]
+        public void TestTargets()
+        {
+            var req = new BidRequest
+            {
+                Impressions = new Impression[] { new Impression { ImpressionId = "test",  } },
+                User = new User { Gender = "M" },
+            };
+
+            var bFilter = new BidTargets
+            {
+                ImpressionTargets = new[] { new Target { Property = "BidCurrency", Value = "USD" }, new Target { Property = "Banner", TargetType = FilterType.HASVALUE } },
+                GeoTargets = new[] { new Target { TargetType = FilterType.EQ, Property = "Country", Value = "CAN" } }
+            };
+
+            var f = bFilter.GenerateTargets();
+
+            Assert.IsFalse(f.Invoke(req), "Filter should not have matched");
+
+            req.User.Geo = new Geo { Country = "CAN" };
+
+            Assert.IsFalse(f.Invoke(req), "Filter should not have matched");
+
+            req.Impressions.First().Banner = new Banner();
+
+            Assert.IsTrue(f.Invoke(req), "Filter should have matched");
+        }
+
+        [TestMethod]
+        public void TestDoubleFilters()
+        {
+            var req = new BidRequest
+            {
+                Impressions = new Impression[] { new Impression { ImpressionId = "test" } },
+                User = new User { Gender = "M" },
+            };
+
+            var bFilter = new BidFilter
+            {
+                ImpressionFilters = new[] { new Filter { Property = "BidCurrency", Value = "CAN" }, new Filter { Property = "Banner", FilterType = FilterType.HASVALUE } },
+                UserFilters = new[] { new Filter { Property = "Gender", Value = "U" } },
+                GeoFilters = new[] { new Filter { FilterType = FilterType.EQ, Property = "Country", Value = "CAN" } }
+            };
+
+            var f = bFilter.GenerateFilter();
 
             Assert.IsFalse(f.Invoke(req), "Filter should not have matched");
 
@@ -77,6 +130,7 @@ namespace Lucent.Common.Storage.Test
 
             Assert.IsTrue(f.Invoke(req), "Filter should have matched");
         }
+
 
         [TestMethod]
         public void TestHasValueFilter()
@@ -95,7 +149,7 @@ namespace Lucent.Common.Storage.Test
             };
 
 
-            var f = bFilter.GenerateCode();
+            var f = bFilter.GenerateFilter();
 
             Assert.IsFalse(f.Invoke(req), "Filter should not have matched");
 
@@ -121,7 +175,7 @@ namespace Lucent.Common.Storage.Test
                     new Filter { FilterType = FilterType.IN, Property = "SiteCategories", Value = "BCAT3" }, new Filter { FilterType = FilterType.IN, Property = "Domain", Values = new FilterValue[]{"telefrek.com", "telefrek.co", "bad" }} },
             };
 
-            var f = bFilter.GenerateCode();
+            var f = bFilter.GenerateFilter();
 
             Assert.IsTrue(f.Invoke(req), "Bid should have been filtered");
 

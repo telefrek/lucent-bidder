@@ -11,7 +11,7 @@ namespace Lucent.Common
 {
     public static partial class LucentExtensions
     {
-        static readonly Regex _bidTokenizer = new Regex(@"{([^{}]*)", RegexOptions.Compiled);
+        static readonly Regex _bidTokenizer = new Regex(@"{([^{}]*)}", RegexOptions.Compiled);
 
         /// <summary>
         /// Replaces the macros in the landing page with the correct information
@@ -25,98 +25,102 @@ namespace Lucent.Common
 
             var device = bidContext.Request.Device ?? new Device { Geo = new Geo() };
 
-            for (var i = 0; i < tokens.Count; ++i)
-                switch (tokens[i].Value)
+            foreach (var token in tokens)
+            {
+                switch (token.ToString().ToLower())
                 {
-                    case "adv_id":
-                        s = s.Replace("{" + tokens[i] + "}", "");
+                    case "{adv_id}":
+                        s = s.Replace(token.ToString(), "");
                         break;
-                    case "click_id":
-                        s = s.Replace("{" + tokens[i] + "}", "");
+                    case "{click_id}":
+                        s = s.Replace(token.ToString(), "");
                         break;
-                    case "pub_id":
-                        s = s.Replace("{pub_id}", bidContext.Request.App != null ? bidContext.Request.App.Name ?? bidContext.Request.App.Id ?? "" : bidContext.Request.Site != null ? bidContext.Request.Site.Name ?? bidContext.Request.Site.Id ?? "" : "");
+                    case "{pub_id}":
+                        s = s.Replace(token.ToString(), bidContext.Request.App != null ? bidContext.Request.App.Name ?? bidContext.Request.App.Id ?? "" : bidContext.Request.Site != null ? bidContext.Request.Site.Name ?? bidContext.Request.Site.Id ?? "" : "");
                         break;
-                    case "exc_id":
-                        s = s.Replace("{exc_id}", bidContext.ExchangeId.EncodeGuid());
+                    case "{exc_id}":
+                        s = s.Replace(token.ToString(), bidContext.ExchangeId.EncodeGuid());
                         break;
-                    case "city":
-                        s = s.Replace("{city}", device.Geo.City ?? "");
+                    case "{city}":
+                        s = s.Replace(token.ToString(), device.Geo.City ?? "");
                         break;
-                    case "country_code":
-                        s = s.Replace("{" + tokens[i] + "}", "");
+                    case "{country_code}":
+                        s = s.Replace(token.ToString(), "");
                         break;
-                    case "currency":
-                        s = s.Replace("{currency}", "USD");
+                    case "{currency}":
+                        s = s.Replace(token.ToString(), "USD");
                         break;
-                    case "date":
-                        s = s.Replace("{date}", DateTime.UtcNow.ToString("yyyy-MM-dd"));
+                    case "{date}":
+                        s = s.Replace(token.ToString(), DateTime.UtcNow.ToString("yyyy-MM-dd"));
                         break;
-                    case "datetime":
-                        s = s.Replace("{datetime}", DateTime.UtcNow.ToString("o"));
+                    case "{datetime}":
+                        s = s.Replace(token.ToString(), DateTime.UtcNow.ToString("o"));
                         break;
-                    case "time":
-                        s = s.Replace("{time}", DateTime.UtcNow.ToString("hh:mm:ss"));
+                    case "{time}":
+                        s = s.Replace(token.ToString(), DateTime.UtcNow.ToString("hh:mm:ss"));
                         break;
-                    case "ip":
-                        s = s.Replace("{ip}", device.Ipv4 ?? "");
+                    case "{ip}":
+                        s = s.Replace(token.ToString(), device.Ipv4 ?? "");
                         break;
-                    case "carrier":
-                        s = s.Replace("{carrier}", device.Carrier ?? "");
+                    case "{carrier}":
+                        s = s.Replace(token.ToString(), device.Carrier ?? "");
                         break;
-                    case "payout":
-                        s = s.Replace("{" + tokens[i] + "}", "");
+                    case "{payout}":
+                        s = s.Replace(token.ToString(), "");
                         break;
-                    case "purchase":
-                        s = s.Replace("{" + tokens[i] + "}", "");
+                    case "{purchase}":
+                        s = s.Replace(token.ToString(), "");
                         break;
-                    case "conversion_id":
-                        s = s.Replace("{" + tokens[i] + "}", "");
+                    case "{conversion_id}":
+                        s = s.Replace(token.ToString(), "");
                         break;
-                    case "event":
-                        s = s.Replace("{" + tokens[i] + "}", "");
+                    case "{event}":
+                        s = s.Replace(token.ToString(), "");
                         break;
-                    case "device_brand":
+                    case "{device_brand}":
                         // TODO: Figure out how to do this
-                        s = s.Replace("{device_brand}", "");
+                        s = s.Replace(token.ToString(), "");
                         break;
-                    case "device_model":
-                        s = s.Replace("{device_model}", device.Model ?? "");
+                    case "{device_model}":
+                        s = s.Replace(token.ToString(), device.Model ?? "");
                         break;
-                    case "device_os":
-                        s = s.Replace("{device_os}", device.OS ?? "");
+                    case "{device_os}":
+                        s = s.Replace(token.ToString(), device.OS ?? "");
                         break;
-                    case "device_os_version":
-                        s = s.Replace("{device_os_version}", device.OSVersion ?? "");
+                    case "{device_os_version}":
+                        s = s.Replace(token.ToString(), device.OSVersion ?? "");
                         break;
-                    case "google_aid":
-                        s = s.Replace("{" + tokens[i] + "}", "");
+                    case "{google_aid}":
+                        s = s.Replace(token.ToString(), "");
                         break;
-                    case "android_id":
-                        s = s.Replace("{" + tokens[i] + "}", "");
+                    case "{android_id}":
+                        s = s.Replace(token.ToString(), "");
                         break;
-                    case "idfa":
-                        s = s.Replace("{" + tokens[i] + "}", "");
+                    case "{idfa}":
+                        s = s.Replace(token.ToString(), device.Id ?? "");
                         break;
-                    case "unid":
-                        s = s.Replace("{" + tokens[i] + "}", "");
+                    case "{unid}":
+                        s = s.Replace(token.ToString(), "");
                         break;
-                    case "user_id":
-                        s = s.Replace("{" + tokens[i] + "}", "");
+                    case "{user_id}":
+                        s = s.Replace(token.ToString(), "");
                         break;
-                    case "creative_id":
-                        // TODO: Figure out if this or content id...
-                        s = s.Replace("{creative_id}", bidContext.Creative.Id);
+                    case "{creative_id}":
+                        s = s.Replace(token.ToString(), bidContext.Content.Id.ToString());
                         break;
-                    case "creative_group":
-                        s = s.Replace("{" + tokens[i] + "}", "");
+                    case "{creative_group}":
+                        s = s.Replace(token.ToString(), bidContext.Creative.Id);
+                        break;
+                    case "{" + QueryParameters.LUCENT_BID_CONTEXT_PARAMETER + "}":
+                        s = s.Replace(token.ToString(), bidContext.GetOperationString(BidOperation.Action));
                         break;
                     default:
-                        s = s.Replace("{" + tokens[i] + "}", "");
+                        s = s.Replace(token.ToString(), "");
                         break;
                 }
+            }
 
-            return s.Replace(QueryParameters.LUCENT_REDIRECT_PARAMETER, bidContext.GetOperationString(BidOperation.Clicked));
+            return s;
         }
 
         /// <summary>

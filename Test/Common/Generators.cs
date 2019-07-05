@@ -29,11 +29,11 @@ namespace Lucent.Common.Test
                         Payout = _rng.NextDouble() * 5,
                     }
                 },
-                BidFilter = new BidFilter
+                BidTargets = new BidTargets
                 {
-                    GeoFilters = new Filters.Filter[]
+                    GeoTargets = new Filters.Target[]
                     {
-                        typeof(Geo).CreateFilter(FilterType.IN, "Country", "USA"),
+                        typeof(Geo).CreateTarget(FilterType.IN, "Country", "USA"),
                     }
                 },
                 Schedule = new CampaignSchedule

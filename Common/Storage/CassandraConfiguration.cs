@@ -35,6 +35,6 @@ namespace Lucent.Common.Storage
         /// The default serialization format to use
         /// </summary>
         /// <value></value>
-        public SerializationFormat Format { get; set; } = SerializationFormat.PROTOBUF;
+        public SerializationFormat Format { get; set; } = SerializationFormat.JSON;
     }
 }

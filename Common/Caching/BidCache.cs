@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Aerospike.Client;
@@ -41,14 +42,14 @@ namespace Lucent.Common.Caching
                 {
                     res = await Aerospike.INSTANCE.Get(null, default(CancellationToken), new Key("lucent", "bids", id), "entry");
                 }
-                catch (Exception e)
+                catch (AerospikeException e)
                 {
-                    StorageCounters.ErrorCounter.WithLabels("aerospike", "bids", e.GetType().Name).Inc();
+                    StorageCounters.ErrorCounter.WithLabels("aerospike", "bids", "get", e.Result.ToString()).Inc();
                     _log.LogError(e, "Error during get");
                 }
 
             if (res != null)
-                return await _serializationContext.ReadFrom<BidResponse>(new MemoryStream((byte[])res.GetValue("entry")), false, SerializationFormat.PROTOBUF);
+                return await _serializationContext.ReadFrom<BidResponse>(new MemoryStream((byte[])Encoding.UTF8.GetBytes((string)res.GetValue("entry"))), false, SerializationFormat.JSON);
 
             return null;
         }
@@ -56,16 +57,16 @@ namespace Lucent.Common.Caching
         /// <inheritdoc/>
         public async Task saveEntries(BidResponse response)
         {
-            var contents = await _serializationContext.AsBytes(response, SerializationFormat.PROTOBUF);
+            var contents = Encoding.UTF8.GetString(await _serializationContext.AsBytes(response, SerializationFormat.JSON));
             using (var ctx = StorageCounters.LatencyHistogram.CreateContext("aerospike", "bids", "save"))
                 try
                 {
                     var bin = new Bin("entry", contents);
                     await Aerospike.INSTANCE.Add(new WritePolicy(Aerospike.INSTANCE.writePolicyDefault) { expiration = 300, }, default(CancellationToken), new Key("lucent", "bids", response.Id), bin);
                 }
-                catch (Exception e)
+                catch (AerospikeException e)
                 {
-                    StorageCounters.ErrorCounter.WithLabels("aerospike", "save", e.GetType().Name).Inc();
+                    StorageCounters.ErrorCounter.WithLabels("aerospike", "bids", "save", e.Result.ToString()).Inc();
                     _log.LogError(e, "Error during save");
                 }
         }

@@ -57,14 +57,14 @@ namespace Lucent.Common.Entities
         /// <value></value>
         [Display(Name = "Schedule")]
         [SerializationProperty(4, "schedule")]
-        public CampaignSchedule Schedule { get; set; } = new CampaignSchedule { };
+        public CampaignSchedule Schedule { get; set; }
 
         /// <summary>
         /// 
         /// </summary>
         /// <value></value>
         [SerializationProperty(5, "filters")]
-        public BidFilter BidFilter { get; set; } = new BidFilter { GeoFilters = new Filters.Filter[] { new Filters.Filter { Property = "Country", PropertyType = typeof(string), Value = "USA", FilterType = Filters.FilterType.EQ } } };
+        public BidFilter BidFilter { get; set; }
 
         /// <summary>
         /// 
@@ -147,8 +147,21 @@ namespace Lucent.Common.Entities
         /// <summary>
         /// 
         /// </summary>
+        /// <value></value>
+        [SerializationProperty(16, "targetting")]
+        public BidTargets BidTargets { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
         /// <returns></returns>
         public Func<BidRequest, bool> IsFiltered { get; set; } = (br) => false;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public Func<BidRequest, bool> IsTargetted { get; set; } = (br) => true;
 
         /// <summary>
         /// 

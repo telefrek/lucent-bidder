@@ -13,7 +13,7 @@ namespace Lucent.Common.Storage
         /// <value></value>
         public static Counter ErrorCounter = Metrics.CreateCounter("storage_errors", "Storage error information", new CounterConfiguration
         {
-            LabelNames = new string[] { "system", "keyspace", "error" }
+            LabelNames = new string[] { "system", "keyspace", "query", "error" }
         });
 
         /// <summary>

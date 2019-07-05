@@ -45,7 +45,7 @@ data:
         "user": "{{ default "test" .Values.cassandra.user }}",
         "credentials": "{{ default "test" .Values.cassandra.password }}",
         "keyspace": "{{ default "portal" .Values.cassandra.keyspace }}",
-        "format": "{{ default "PROTOBUF" .Values.cassandra.format }}"
+        "format": "{{ default "JSON" .Values.cassandra.format }}"
       },
       "exchanges" : {
         "exchangelocation": "/etc/exchanges"

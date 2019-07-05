@@ -116,7 +116,7 @@ namespace Lucent.Common.Storage
             catch (DriverException e)
             {
                 _log.LogError(e, "Failed to execute query {0}", queryName);
-                StorageCounters.ErrorCounter.WithLabels("cassandra", _session.Keyspace, e.GetType().Name).Inc();
+                StorageCounters.ErrorCounter.WithLabels("cassandra", _session.Keyspace, queryName, "driver").Inc();
             }
 
             // No Results
@@ -155,7 +155,7 @@ namespace Lucent.Common.Storage
             catch (DriverException e)
             {
                 _log.LogError(e, "Failed to prepare statement : {0}", statement);
-                StorageCounters.ErrorCounter.WithLabels("cassandra", _session.Keyspace, e.GetType().Name).Inc();
+                StorageCounters.ErrorCounter.WithLabels("cassandra", _session.Keyspace, "prepare", "driver").Inc();
             }
 
             return null;

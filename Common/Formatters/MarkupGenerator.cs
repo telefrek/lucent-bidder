@@ -14,17 +14,17 @@ namespace Lucent.Common.Formatters
         /// </summary>
         /// <param name="bidContext">The context used for the bid</param>
         /// <returns></returns>
-        public virtual string GenerateMarkup(BidContext bidContext)
+        public virtual void GenerateMarkup(BidContext bidContext)
         {
             switch (bidContext.Content.ContentType)
             {
                 case ContentType.Banner:
-                    return bidContext.ToImageLinkMarkup(bidContext.BaseUri.Uri);
+                    bidContext.Bid.AdMarkup = bidContext.ToImageLinkMarkup();
+                    break;
                 case ContentType.Video:
-                    return bidContext.ToVast();
+                    bidContext.Bid.AdMarkup = bidContext.ToVast();
+                    break;
             }
-
-            return null;
         }
     }
 }

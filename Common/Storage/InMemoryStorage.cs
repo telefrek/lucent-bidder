@@ -96,7 +96,7 @@ namespace Lucent.Common.Storage
             /// <inheritdoc />
             public async Task<bool> TryInsert(T obj)
             {
-                obj.ETag = await _provider.GetRequiredService<ISerializationContext>().CalculateETag(obj, SerializationFormat.PROTOBUF);
+                obj.ETag = await _provider.GetRequiredService<ISerializationContext>().CalculateETag(obj, SerializationFormat.JSON);
                 _log.LogInformation("Inserting {0} ({1})", obj.Key, typeof(T).Name);
                 if (!Entities.Exists(e => e.Key.Equals(obj.Key)))
                 {

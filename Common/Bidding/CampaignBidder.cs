@@ -52,7 +52,9 @@ namespace Lucent.Common.Bidding
 
             // Ensure filter is hydrated
             if (_campaign.BidFilter != null)
-                _campaign.IsFiltered = _campaign.BidFilter.GenerateCode();
+                _campaign.IsFiltered = _campaign.BidFilter.GenerateFilter();
+            if(_campaign.BidTargets != null)
+                _campaign.IsTargetted = _campaign.BidTargets.GenerateTargets();
 
             _log = logger;
             _scoringService = scoringService;
@@ -107,10 +109,28 @@ namespace Lucent.Common.Bidding
                     return NO_MATCHES;
                 }
 
+                if(_campaign.Schedule == null)
+                {
+                    BidCounters.NoBidReason.WithLabels("no_campaign_schedule").Inc();
+                    return NO_MATCHES;
+                }
+
+                if(DateTime.UtcNow < _campaign.Schedule.StartDate)
+                {
+                    BidCounters.NoBidReason.WithLabels("campaign_not_started").Inc();
+                    return NO_MATCHES;
+                }
+
                 // Apply campaign filters and check budget
                 if (_campaign.IsFiltered(request))
                 {
                     BidCounters.NoBidReason.WithLabels("campaign_filtered").Inc();
+                    return NO_MATCHES;
+                }
+
+                if(!_campaign.IsTargetted(request))
+                {
+                    BidCounters.NoBidReason.WithLabels("campaign_target_failed").Inc();
                     return NO_MATCHES;
                 }
 

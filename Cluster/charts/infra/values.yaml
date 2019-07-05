@@ -52,5 +52,6 @@ aerospike:
     namespace lucent {
         replication-factor 2
         memory-size 2G
+        single-bin false
         storage-engine memory
     }
