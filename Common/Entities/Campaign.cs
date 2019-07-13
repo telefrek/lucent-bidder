@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Lucent.Common.Budget;
+using Lucent.Common.Filters;
+using Lucent.Common.Middleware;
 using Lucent.Common.OpenRTB;
 using Lucent.Common.Serialization;
 using Lucent.Common.Storage;
@@ -151,13 +153,26 @@ namespace Lucent.Common.Entities
         [SerializationProperty(16, "targetting")]
         public BidTargets BidTargets { get; set; }
 
-
         /// <summary>
         /// 
         /// </summary>
         /// <value></value>
         [SerializationProperty(17, "offset")]
         public int Offset { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
+        [SerializationProperty(18, "filtering")]
+        public JsonFilter[] JsonFilters { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
+        [SerializationProperty(19, "targets")]
+        public JsonFilter[] JsonTargets { get; set; }
 
         /// <summary>
         /// 
@@ -185,6 +200,37 @@ namespace Lucent.Common.Entities
 
         /// <inheritdoc/>
         public EntityType EntityType { get; set; } = EntityType.Campaign;
+    }
+
+    public class JsonFilter
+    {
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
+        [SerializationProperty(1, "operation")]
+        public string Operation { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
+        [SerializationProperty(2, "entity")]
+        public string Entity { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
+        [SerializationProperty(3, "property")]
+        public string Property { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
+        [SerializationProperty(4, "values")]
+        public FilterValue[] Values { get; set; }
     }
 
     /// <summary>

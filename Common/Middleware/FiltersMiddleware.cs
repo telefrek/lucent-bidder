@@ -52,7 +52,7 @@ namespace Lucent.Common.Middleware
                 var segments = httpContext.Request.Path.Value.Split("/", StringSplitOptions.RemoveEmptyEntries);
 
                 var body = await new StreamReader(httpContext.Request.Body).ReadToEndAsync();
-                var jsonArr = new JsonSerializer().Deserialize<JsonFilter[]>(new JsonTextReader(new StringReader(body)));
+                var jsonArr = await _serializationContext.ReadArrayFrom<JsonFilter>(httpContext.Request.Body, false, SerializationFormat.JSON);// new JsonSerializer().Deserialize<JsonFilter[]>(new JsonTextReader(new StringReader(body)));
 
                 _logger.LogInformation("Body : {0}", body);
 
@@ -62,15 +62,15 @@ namespace Lucent.Common.Middleware
                 {
                     var filter = new Filter
                     {
-                        FilterType = Enum.Parse<FilterType>(jsonObj.operation, true),
-                        Value = jsonObj.values.Length == 1 ? FilterValue.Cast(jsonObj.values.Last(), _logger) : null,
-                        Values = jsonObj.values.Length > 1 ? jsonObj.values.Select(v => FilterValue.Cast(v, _logger)).ToArray() : null,
+                        FilterType = Enum.Parse<FilterType>(jsonObj.Operation, true),
+                        Value = jsonObj.Values.Length == 1 ? jsonObj.Values.Last() : null,
+                        Values = jsonObj.Values.Length > 1 ? jsonObj.Values : null,
                     };
 
                     if (campaign.BidFilter == null)
                         campaign.BidFilter = new BidFilter();
 
-                    switch (jsonObj.entity)
+                    switch (jsonObj.Entity)
                     {
                         case "geo":
                             if (TryParseProperty<Geo>(filter, jsonObj))
@@ -146,7 +146,7 @@ namespace Lucent.Common.Middleware
 
         bool TryParseProperty<T>(Filter filter, JsonFilter jsonObj)
         {
-            var property = jsonObj.property;
+            var property = jsonObj.Property;
             switch (property.ToLower())
             {
                 case "ispaid":
@@ -174,7 +174,7 @@ namespace Lucent.Common.Middleware
                     property = "geotype";
                     break;
             }
-            _logger.LogInformation("Parsing {0} ({1})", property, jsonObj.property);
+            _logger.LogInformation("Parsing {0} ({1})", property, jsonObj.Property);
 
             var prop = typeof(T).GetProperty(property, BindingFlags.Instance | BindingFlags.IgnoreCase | BindingFlags.Public);
             if (prop != null)
@@ -188,13 +188,5 @@ namespace Lucent.Common.Middleware
 
             return false;
         }
-    }
-
-    class JsonFilter
-    {
-        public string operation { get; set; }
-        public string entity { get; set; }
-        public string property { get; set; }
-        public object[] values { get; set; }
     }
 }

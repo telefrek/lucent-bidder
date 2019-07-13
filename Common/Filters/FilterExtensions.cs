@@ -234,6 +234,265 @@ namespace Lucent.Common
         /// <summary>
         /// 
         /// </summary>
+        /// <param name="jsonFilters"></param>
+        /// <param name="original"></param>
+        /// <returns></returns>
+        public static BidFilter MergeFilter(this JsonFilter[] jsonFilters, BidFilter original)
+        {
+            original = original ?? new BidFilter();
+            foreach (var jsonObj in jsonFilters)
+            {
+                var filter = new Filter
+                {
+                    FilterType = Enum.Parse<FilterType>(jsonObj.Operation, true),
+                    Value = jsonObj.Values.Length == 1 ? jsonObj.Values.Last() : null,
+                    Values = jsonObj.Values.Length > 1 ? jsonObj.Values : null,
+                };
+
+                switch (jsonObj.Entity)
+                {
+                    case "geo":
+                        if (TryParseProperty<Geo>(filter, jsonObj))
+                        {
+                            var filters = original.GeoFilters ?? new Filter[0];
+                            Array.Resize(ref filters, filters.Length + 1);
+                            filters[filters.Length - 1] = filter;
+                            original.GeoFilters = filters;
+                        }
+                        break;
+                    case "device":
+                        if (TryParseProperty<Device>(filter, jsonObj))
+                        {
+                            var filters = original.DeviceFilters ?? new Filter[0];
+                            Array.Resize(ref filters, filters.Length + 1);
+                            filters[filters.Length - 1] = filter;
+                            original.DeviceFilters = filters;
+                        }
+                        break;
+                    case "app":
+                        if (TryParseProperty<App>(filter, jsonObj))
+                        {
+                            var filters = original.AppFilters ?? new Filter[0];
+                            Array.Resize(ref filters, filters.Length + 1);
+                            filters[filters.Length - 1] = filter;
+                            original.AppFilters = filters;
+                        }
+                        break;
+                    case "site":
+                        if (TryParseProperty<Site>(filter, jsonObj))
+                        {
+                            var filters = original.SiteFilters ?? new Filter[0];
+                            Array.Resize(ref filters, filters.Length + 1);
+                            filters[filters.Length - 1] = filter;
+                            original.SiteFilters = filters;
+                        }
+                        break;
+                    case "impression":
+                        if (TryParseProperty<Impression>(filter, jsonObj))
+                        {
+                            var filters = original.ImpressionFilters ?? new Filter[0];
+                            Array.Resize(ref filters, filters.Length + 1);
+                            filters[filters.Length - 1] = filter;
+                            original.ImpressionFilters = filters;
+                        }
+                        break;
+                    case "user":
+                        if (TryParseProperty<User>(filter, jsonObj))
+                        {
+                            var filters = original.UserFilters ?? new Filter[0];
+                            Array.Resize(ref filters, filters.Length + 1);
+                            filters[filters.Length - 1] = filter;
+                            original.UserFilters = filters;
+                        }
+                        break;
+                }
+            }
+
+            return original;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="jsonFilters"></param>
+        /// <param name="original"></param>
+        /// <returns></returns>
+        public static BidFilter MergeTarget(this JsonFilter[] jsonFilters, BidTargets original)
+        {
+            original = original ?? new BidTargets();
+            foreach (var jsonObj in jsonFilters)
+            {
+                var filter = new Target
+                {
+                    TargetType = Enum.Parse<FilterType>(jsonObj.Operation, true),
+                    Value = jsonObj.Values.Length == 1 ? jsonObj.Values.Last() : null,
+                    Values = jsonObj.Values.Length > 1 ? jsonObj.Values : null,
+                };
+
+                switch (jsonObj.Entity)
+                {
+                    case "geo":
+                        if (TryParseProperty<Geo>(filter, jsonObj))
+                        {
+                            var filters = original.GeoTargets ?? new Target[0];
+                            Array.Resize(ref filters, filters.Length + 1);
+                            filters[filters.Length - 1] = filter;
+                            original.GeoTargets = filters;
+                        }
+                        break;
+                    case "device":
+                        if (TryParseProperty<Device>(filter, jsonObj))
+                        {
+                            var filters = original.DeviceTargets ?? new Target[0];
+                            Array.Resize(ref filters, filters.Length + 1);
+                            filters[filters.Length - 1] = filter;
+                            original.DeviceTargets = filters;
+                        }
+                        break;
+                    case "app":
+                        if (TryParseProperty<App>(filter, jsonObj))
+                        {
+                            var filters = original.AppTargets ?? new Target[0];
+                            Array.Resize(ref filters, filters.Length + 1);
+                            filters[filters.Length - 1] = filter;
+                            original.AppTargets = filters;
+                        }
+                        break;
+                    case "site":
+                        if (TryParseProperty<Site>(filter, jsonObj))
+                        {
+                            var filters = original.SiteTargets ?? new Target[0];
+                            Array.Resize(ref filters, filters.Length + 1);
+                            filters[filters.Length - 1] = filter;
+                            original.SiteTargets = filters;
+                        }
+                        break;
+                    case "impression":
+                        if (TryParseProperty<Impression>(filter, jsonObj))
+                        {
+                            var filters = original.ImpressionTargets ?? new Target[0];
+                            Array.Resize(ref filters, filters.Length + 1);
+                            filters[filters.Length - 1] = filter;
+                            original.ImpressionTargets = filters;
+                        }
+                        break;
+                    case "user":
+                        if (TryParseProperty<User>(filter, jsonObj))
+                        {
+                            var filters = original.UserFilters ?? new Filter[0];
+                            Array.Resize(ref filters, filters.Length + 1);
+                            filters[filters.Length - 1] = filter;
+                            original.UserFilters = filters;
+                        }
+                        break;
+                }
+            }
+            
+            return original;
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="filter"></param>
+        /// <param name="jsonObj"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        static bool TryParseProperty<T>(Filter filter, JsonFilter jsonObj)
+        {
+            var property = jsonObj.Property;
+            switch (property.ToLower())
+            {
+                case "ispaid":
+                    property = "ispaidversion";
+                    break;
+                case "appcategory":
+                    property = "appcategories";
+                    break;
+                case "sectioncategory":
+                    property = "sectioncategories";
+                    break;
+                case "pagecategory":
+                    property = "pagecategories";
+                    break;
+                case "sitecategory":
+                    property = "sitecategories";
+                    break;
+                case "issecure":
+                    property = "IsHttpsRequired";
+                    break;
+                case "os_version":
+                    property = "osversion";
+                    break;
+                case "type":
+                    property = "geotype";
+                    break;
+            }
+
+            var prop = typeof(T).GetProperty(property, BindingFlags.Instance | BindingFlags.IgnoreCase | BindingFlags.Public);
+            if (prop != null)
+            {
+                filter.Property = prop.Name;
+                filter.PropertyType = prop.PropertyType;
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="filter"></param>
+        /// <param name="jsonObj"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        static bool TryParseProperty<T>(Target filter, JsonFilter jsonObj)
+        {
+            var property = jsonObj.Property;
+            switch (property.ToLower())
+            {
+                case "ispaid":
+                    property = "ispaidversion";
+                    break;
+                case "appcategory":
+                    property = "appcategories";
+                    break;
+                case "sectioncategory":
+                    property = "sectioncategories";
+                    break;
+                case "pagecategory":
+                    property = "pagecategories";
+                    break;
+                case "sitecategory":
+                    property = "sitecategories";
+                    break;
+                case "issecure":
+                    property = "IsHttpsRequired";
+                    break;
+                case "os_version":
+                    property = "osversion";
+                    break;
+                case "type":
+                    property = "geotype";
+                    break;
+            }
+
+            var prop = typeof(T).GetProperty(property, BindingFlags.Instance | BindingFlags.IgnoreCase | BindingFlags.Public);
+            if (prop != null)
+            {
+                filter.Property = prop.Name;
+                filter.PropertyType = prop.PropertyType;
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
         /// <param name="bidFilter"></param>
         /// <returns></returns>
         public static Func<BidRequest, bool> GenerateFilter(this BidFilter bidFilter)
