@@ -90,7 +90,7 @@ namespace Lucent.Common.Test
                 {
                     Geo = new Geo
                     {
-                        Country = _rng.NextDouble() < .1 ? "CAN" : "USA",
+                        Country = "USA",
                     }
                 }
             };

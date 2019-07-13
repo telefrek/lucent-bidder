@@ -35,6 +35,8 @@ namespace Lucent.Common.Bootstrap
         /// <param name="env"></param>
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
+            app.UseCors("localhostPolicy");
+
             app.UseMetricServer();
             app.UseMiddleware<MonitoringMiddleware>();
             app.ConfigureHealth();
@@ -55,7 +57,7 @@ namespace Lucent.Common.Bootstrap
                 a.UseMiddleware<ExchangeOrchestrator>();
             });
 
-            app.Map("/api/filters/campaigns", (a)=>
+            app.Map("/api/filters/campaigns", (a) =>
             {
                 a.UseMiddleware<FiltersMiddleware>();
             });

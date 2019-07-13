@@ -116,7 +116,7 @@ namespace Lucent.Common.Serialization.Json
         /// <inheritdoc/>
         public async Task WriteAsync(PropertyId property, DateTime value)
         {
-            if (!value.IsNullOrDefault())
+            if (!value.IsNullOrDefault() && !value.ToFileTimeUtc().IsNullOrDefault())
             {
                 await _jsonWriter.WritePropertyNameAsync(property.Name);
                 await _jsonWriter.WriteValueAsync(value.ToFileTimeUtc());

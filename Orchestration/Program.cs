@@ -42,6 +42,18 @@ namespace Orchestration
                 })
                 .ConfigureServices((hostingContext, services) =>
                 {
+                    services.AddCors(options =>
+                    {
+                        options.AddPolicy("localhostPolicy",
+                        builder =>
+                        {
+                            builder.AllowAnyOrigin()
+                                .AllowAnyHeader()
+                                .WithExposedHeaders("X-LUCENT-ETAG")
+                                .AllowAnyMethod()
+                                .AllowCredentials();
+                        });
+                    });
                     services.Configure<FormOptions>(options =>
                     {
                         options.MultipartBodyLengthLimit = long.MaxValue;
@@ -57,7 +69,7 @@ namespace Orchestration
                                 ValidateAudience = true,
                                 ValidateLifetime = true,
                                 ValidateIssuerSigningKey = true,
-                    
+
                                 ValidIssuer = "https://lucentbid.com",
                                 ValidAudience = "https://lucentbid.com",
                                 IssuerSigningKey = new JwtTokenGenerator().GetKey(),

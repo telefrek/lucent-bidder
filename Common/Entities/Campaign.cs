@@ -229,6 +229,6 @@ namespace Lucent.Common.Entities
         [DataType(DataType.Date)]
         [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
         [SerializationProperty(2, "end")]
-        public DateTime EndDate { get; set; } = DateTime.Now;
+        public DateTime EndDate { get; set; }
     }
 }

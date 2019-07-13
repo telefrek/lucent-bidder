@@ -26,11 +26,25 @@ namespace Lucent.Common.Test
             {
                 logBuilder.AddConsole();
             })
+            
             .UseStartup(typeof(TStartup))
             .UseSockets()
             .ConfigureServices(services =>
             {
                 if (typeof(TStartup) == typeof(OrchestrationStartup))
+                {
+                    
+                    services.AddCors(options =>
+                    {
+                        options.AddPolicy("localhostPolicy",
+                        bld =>
+                        {
+                            bld.AllowAnyOrigin()
+                                .AllowAnyHeader()
+                                .AllowAnyMethod()
+                                .AllowCredentials();
+                        });
+                    });
 
                     services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                         .AddJwtBearer(options =>
@@ -47,6 +61,7 @@ namespace Lucent.Common.Test
                                 IssuerSigningKey = new JwtTokenGenerator().GetKey(),
                             };
                         });
+                }
                 // Add ALL the services muhahahaha
                 services.AddLucentServices(new ConfigurationBuilder()
                 .AddEnvironmentVariables()
