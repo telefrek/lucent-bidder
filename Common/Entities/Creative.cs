@@ -26,11 +26,11 @@ namespace Lucent.Common.Entities
             }
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <value></value>
+        /// <inheritdoc/>
         public StorageKey Key { get; set; } = new StringStorageKey();
+
+        /// <inheritdoc/>
+        public int Version { get; set; }
 
         /// <summary>
         /// 

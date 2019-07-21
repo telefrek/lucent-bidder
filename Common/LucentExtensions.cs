@@ -87,7 +87,7 @@ public static partial class LucentExtensions
     /// <param name="property"></param>
     /// <param name="value"></param>
     /// <returns></returns>
-    public static Target CreateTarget(this Type type, FilterType filterType, string property, TargetValue value) => new Target
+    public static Target CreateTarget(this Type type, FilterType filterType, string property, FilterValue value) => new Target
     {
         TargetType = filterType,
         Property = property,

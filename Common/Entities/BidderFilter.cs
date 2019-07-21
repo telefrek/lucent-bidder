@@ -9,10 +9,7 @@ namespace Lucent.Common.Entities
     /// </summary>
     public class BidderFilter : IStorageEntity
     {
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <value></value>
+        /// <inheritdoc/>
         [SerializationProperty(1, "id")]
         public string Id
         {
@@ -23,11 +20,11 @@ namespace Lucent.Common.Entities
             }
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <value></value>
+        /// <inheritdoc/>
         public StorageKey Key { get; set; } = new StringStorageKey();
+
+        /// <inheritdoc/>
+        public int Version {get;set;}
 
         /// <summary>
         /// Filters for incoming bids before exchange evaluation
@@ -36,16 +33,10 @@ namespace Lucent.Common.Entities
         [SerializationProperty(2, "bidfilter")]
         public BidFilter BidFilter { get; set; }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <value></value>
+        /// <inheritdoc/>
         public string ETag { get; set; }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <value></value>
+        /// <inheritdoc/>
         public DateTime Updated { get; set; }
 
 

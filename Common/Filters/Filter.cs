@@ -166,8 +166,7 @@ namespace Lucent.Common.Filters
         /// 
         /// </summary>
         /// <param name="o"></param>
-        /// <param name="log"></param>
-        public static FilterValue Cast(object o, ILogger log)
+        public static FilterValue Cast(object o)
         {
             switch (Type.GetTypeCode(o.GetType()))
             {

@@ -180,15 +180,18 @@ namespace Lucent.Common.Middleware
                         }
                         break;
                     case "post":
+                        _log.LogInformation("POST {0}: Reading entity", typeof(T).Name);
                         entity = await ReadEntity(httpContext);
                         if (entity != null)
                         {
+                            _log.LogInformation("POST {0}: Inserting entity", typeof(T).Name);
                             if (await _storageCache.TryInsert(entity))
                             {
                                 httpContext.Response.StatusCode = 201;
                                 evt.EventType = EventType.EntityAdd;
                                 evt.EntityId = entity.Key.ToString();
                                 httpContext.Response.Headers.Add("X-LUCENT-ETAG", entity.ETag);
+                                _log.LogInformation("Sending response");
                                 await _serializationContext.WriteTo(httpContext, entity);
                             }
                             else

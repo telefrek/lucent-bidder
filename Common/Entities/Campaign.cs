@@ -30,11 +30,12 @@ namespace Lucent.Common.Entities
             }
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <value></value>
+        /// <inheritdoc/>
         public StorageKey Key { get; set; } = new StringStorageKey();
+
+
+        /// <inheritdoc/>
+        public int Version { get; set; }
 
         /// <summary>
         /// 
@@ -164,14 +165,14 @@ namespace Lucent.Common.Entities
         /// 
         /// </summary>
         /// <value></value>
-        [SerializationProperty(18, "filtering")]
+        [SerializationProperty(18, "jsonFilters")]
         public JsonFilter[] JsonFilters { get; set; }
 
         /// <summary>
         /// 
         /// </summary>
         /// <value></value>
-        [SerializationProperty(19, "targets")]
+        [SerializationProperty(19, "jsonTargets")]
         public JsonFilter[] JsonTargets { get; set; }
 
         /// <summary>
@@ -186,22 +187,19 @@ namespace Lucent.Common.Entities
         /// <returns></returns>
         public Func<BidRequest, bool> IsTargetted { get; set; } = (br) => true;
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <value></value>
+        /// <inheritdoc/>
         public string ETag { get; set; }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <value></value>
+        /// <inheritdoc/>
         public DateTime Updated { get; set; }
 
         /// <inheritdoc/>
         public EntityType EntityType { get; set; } = EntityType.Campaign;
     }
 
+    /// <summary>
+    /// JSON based filter
+    /// </summary>
     public class JsonFilter
     {
         /// <summary>

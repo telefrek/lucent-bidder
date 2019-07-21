@@ -31,5 +31,11 @@ namespace Lucent.Common.Storage
         /// </summary>
         /// <value></value>
         EntityType EntityType { get; set; }
+
+        /// <summary>
+        /// The current entity version
+        /// </summary>
+        /// <value></value>
+        int Version { get; set; }
     }
 }

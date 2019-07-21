@@ -240,7 +240,7 @@ namespace Lucent.Common
         public static BidFilter MergeFilter(this JsonFilter[] jsonFilters, BidFilter original)
         {
             original = original ?? new BidFilter();
-            foreach (var jsonObj in jsonFilters)
+            foreach (var jsonObj in jsonFilters ?? new JsonFilter[0])
             {
                 var filter = new Filter
                 {
@@ -317,10 +317,10 @@ namespace Lucent.Common
         /// <param name="jsonFilters"></param>
         /// <param name="original"></param>
         /// <returns></returns>
-        public static BidFilter MergeTarget(this JsonFilter[] jsonFilters, BidTargets original)
+        public static BidTargets MergeTarget(this JsonFilter[] jsonFilters, BidTargets original)
         {
             original = original ?? new BidTargets();
-            foreach (var jsonObj in jsonFilters)
+            foreach (var jsonObj in jsonFilters ?? new JsonFilter[0])
             {
                 var filter = new Target
                 {
@@ -379,10 +379,10 @@ namespace Lucent.Common
                     case "user":
                         if (TryParseProperty<User>(filter, jsonObj))
                         {
-                            var filters = original.UserFilters ?? new Filter[0];
+                            var filters = original.UserTargets ?? new Target[0];
                             Array.Resize(ref filters, filters.Length + 1);
                             filters[filters.Length - 1] = filter;
-                            original.UserFilters = filters;
+                            original.UserTargets = filters;
                         }
                         break;
                 }
@@ -798,10 +798,10 @@ namespace Lucent.Common
 
             Expression exp = Expression.Constant(true);
             var fExpVal = Expression.Constant(typeof(LucentExtensions).GetMethods()
-                                            .Single(m => m.IsGenericMethod && m.Name == "CastFilterTo").MakeGenericMethod(ptype.IsArray ? ptype.GetElementType() : ptype).Invoke(null, new object[] { filter.Value }));
+                                            .Single(m => m.IsGenericMethod && m.Name == "CastTo").MakeGenericMethod(ptype.IsArray ? ptype.GetElementType() : ptype).Invoke(null, new object[] { filter.Value }));
 
             var fValsExp = Expression.Constant(typeof(LucentExtensions).GetMethods()
-                                            .Single(m => m.IsGenericMethod && m.Name == "CastFilterArrayTo").MakeGenericMethod(ptype.IsArray ? ptype.GetElementType() : ptype).Invoke(null, new object[] { filter.Values }));
+                                            .Single(m => m.IsGenericMethod && m.Name == "CastArrayTo").MakeGenericMethod(ptype.IsArray ? ptype.GetElementType() : ptype).Invoke(null, new object[] { filter.Values }));
             switch (filter.FilterType)
             {
                 case FilterType.NEQ:
@@ -959,7 +959,7 @@ namespace Lucent.Common
         /// <param name="original"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public static T[] CastArrayTo<T>(TargetValue[] original)
+        public static T[] CastArrayTo<T>(FilterValue[] original)
         {
             if (original == null)
                 return new T[0];
@@ -978,45 +978,7 @@ namespace Lucent.Common
         /// <param name="filter"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public static T CastTo<T>(TargetValue filter)
-        {
-            if (filter == null)
-                return default(T);
-
-            if (typeof(T) == typeof(string))
-                return (T)(object)(string)filter;
-            else if (typeof(T) == typeof(int))
-                return (T)(object)(int)filter;
-
-            return default(T);
-        }
-
-        /// <summary>
-        /// Cast the object array to the correct type
-        /// </summary>
-        /// <param name="original"></param>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        public static T[] CastFilterArrayTo<T>(FilterValue[] original)
-        {
-            if (original == null)
-                return new T[0];
-
-            if (typeof(T) == typeof(string))
-                return original.Select(o => (T)(object)o.SValue).ToArray();
-            else if (typeof(T) == typeof(int))
-                return original.Select(o => (T)(object)o.IValue).ToArray();
-
-            return new T[0];
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="filter"></param>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        public static T CastFilterTo<T>(FilterValue filter)
+        public static T CastTo<T>(FilterValue filter)
         {
             if (filter == null)
                 return default(T);

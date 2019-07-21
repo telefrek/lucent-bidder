@@ -23,11 +23,11 @@ namespace Lucent.Common.Entities
             }
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <value></value>
+        /// <inheritdoc/>
         public StorageKey Key { get; set; } = new GuidStorageKey(SequentialGuid.NextGuid());
+
+        /// <inheritdoc/>
+        public int Version { get; set; }
 
         /// <inheritdoc/>
         public string ETag { get; set; }

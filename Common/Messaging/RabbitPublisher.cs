@@ -17,6 +17,7 @@ namespace Lucent.Common.Messaging
         readonly IMessageFactory _factory;
         readonly IConnectionFactory _connectionFactory;
         readonly ILogger _log;
+        readonly bool _broadcastEnabled;
 
         /// <inheritdoc/>
         public string Topic { get; set; }
@@ -28,11 +29,13 @@ namespace Lucent.Common.Messaging
         /// <param name="log"></param>
         /// <param name="connectionFactory"></param>
         /// <param name="topic"></param>
-        public RabbitPublisher(IMessageFactory factory, ILogger log, IConnectionFactory connectionFactory, string topic)
+        /// <param name="broadcastEnabled"></param>
+        public RabbitPublisher(IMessageFactory factory, ILogger log, IConnectionFactory connectionFactory, string topic, bool broadcastEnabled = false)
         {
             _connectionFactory = connectionFactory;
             _factory = factory;
             _log = log;
+            _broadcastEnabled = broadcastEnabled;
             Topic = topic;
             Setup();
         }
@@ -111,19 +114,20 @@ namespace Lucent.Common.Messaging
         /// <inheritdoc/>
         public async Task<bool> TryBroadcast(IMessage message)
         {
-            using (var ctx = MessageCounters.LatencyHistogram.CreateContext(Topic, "broadcast"))
-                try
-                {
-                    var res = true;
-                    foreach (var cluster in _factory.GetClusters())
-                        res &= await _factory.CreatePublisher(cluster, Topic).TryPublish(message);
-                    return res;
-                }
-                catch (Exception e)
-                {
-                    _log.LogWarning(e, "Failed to publish message on {0}", Topic);
-                    MessageCounters.ErrorCounter.WithLabels(Topic, e.GetType().Name).Inc();
-                }
+            if(_broadcastEnabled)
+                using (var ctx = MessageCounters.LatencyHistogram.CreateContext(Topic, "broadcast"))
+                    try
+                    {
+                        var res = true;
+                        foreach (var cluster in _factory.GetClusters())
+                            res &= await _factory.CreatePublisher(cluster, Topic).TryPublish(message);
+                        return res;
+                    }
+                    catch (Exception e)
+                    {
+                        _log.LogWarning(e, "Failed to publish message on {0}", Topic);
+                        MessageCounters.ErrorCounter.WithLabels(Topic, e.GetType().Name).Inc();
+                    }
 
             return false;
         }

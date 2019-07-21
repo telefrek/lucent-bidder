@@ -52,9 +52,9 @@ namespace Lucent.Common.Bidding
 
             // Ensure filter is hydrated
             if (_campaign.BidFilter != null)
-                _campaign.IsFiltered = _campaign.BidFilter.GenerateFilter();
-            if(_campaign.BidTargets != null)
-                _campaign.IsTargetted = _campaign.BidTargets.GenerateTargets();
+                _campaign.IsFiltered = _campaign.JsonFilters.MergeFilter(_campaign.BidFilter).GenerateFilter();
+            if (_campaign.BidTargets != null)
+                _campaign.IsTargetted = _campaign.JsonTargets.MergeTarget(_campaign.BidTargets).GenerateTargets();
 
             _log = logger;
             _scoringService = scoringService;
@@ -102,7 +102,7 @@ namespace Lucent.Common.Bidding
         {
             using (var histogram = _bidderLatency.CreateContext())
             {
-                if(_campaign.Status != CampaignStatus.Active)
+                if (_campaign.Status != CampaignStatus.Active)
                 {
                     BidCounters.NoBidReason.WithLabels("campaign_inactive").Inc();
                     return NO_MATCHES;
@@ -115,19 +115,19 @@ namespace Lucent.Common.Bidding
                     return NO_MATCHES;
                 }
 
-                if(_campaign.Schedule == null)
+                if (_campaign.Schedule == null)
                 {
                     BidCounters.NoBidReason.WithLabels("no_campaign_schedule").Inc();
                     return NO_MATCHES;
                 }
 
-                if(DateTime.UtcNow < _campaign.Schedule.StartDate)
+                if (DateTime.UtcNow < _campaign.Schedule.StartDate)
                 {
                     BidCounters.NoBidReason.WithLabels("campaign_not_started").Inc();
                     return NO_MATCHES;
                 }
 
-                if(_campaign.Schedule.EndDate != null && DateTime.UtcNow > _campaign.Schedule.EndDate)
+                if (_campaign.Schedule.EndDate != null && DateTime.UtcNow > _campaign.Schedule.EndDate)
                 {
                     BidCounters.NoBidReason.WithLabels("campaign_ended").Inc();
                     return NO_MATCHES;
@@ -140,7 +140,7 @@ namespace Lucent.Common.Bidding
                     return NO_MATCHES;
                 }
 
-                if(!_campaign.IsTargetted(request))
+                if (!_campaign.IsTargetted(request))
                 {
                     BidCounters.NoBidReason.WithLabels("campaign_target_failed").Inc();
                     return NO_MATCHES;

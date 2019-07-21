@@ -14,7 +14,7 @@ namespace Lucent.Common.Test
         static Random _rng = new Random();
         public static Campaign GenerateCampaign()
         {
-            
+
             return new Campaign
             {
                 Id = SequentialGuid.NextGuid().ToString(),
@@ -29,11 +29,13 @@ namespace Lucent.Common.Test
                         Payout = _rng.NextDouble() * 5,
                     }
                 },
-                BidTargets = new BidTargets
-                {
-                    GeoTargets = new Filters.Target[]
+                JsonTargets = new JsonFilter[]{
+                    new JsonFilter
                     {
-                        typeof(Geo).CreateTarget(FilterType.IN, "Country", "USA"),
+                        Operation = "in",
+                        Property = "country",
+                        Entity = "geo",
+                        Values = new FilterValue[]{FilterValue.Cast("USA")}
                     }
                 },
                 Schedule = new CampaignSchedule
