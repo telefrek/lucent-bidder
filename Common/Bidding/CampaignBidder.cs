@@ -52,9 +52,9 @@ namespace Lucent.Common.Bidding
 
             // Ensure filter is hydrated
             if (_campaign.BidFilter != null)
-                _campaign.IsFiltered = _campaign.JsonFilters.MergeFilter(_campaign.BidFilter).GenerateFilter();
+                _campaign.IsFiltered = (_campaign.JsonFilters ?? new JsonFilter[0]).MergeFilter(_campaign.BidFilter).GenerateFilter();
             if (_campaign.BidTargets != null)
-                _campaign.IsTargetted = _campaign.JsonTargets.MergeTarget(_campaign.BidTargets).GenerateTargets();
+                _campaign.IsTargetted = (_campaign.JsonTargets ?? new JsonFilter[0]).MergeTarget(_campaign.BidTargets).GenerateTargets();
 
             _log = logger;
             _scoringService = scoringService;
