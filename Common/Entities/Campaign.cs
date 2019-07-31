@@ -175,6 +175,14 @@ namespace Lucent.Common.Entities
         [SerializationProperty(19, "jsonTargets")]
         public JsonFilter[] JsonTargets { get; set; }
 
+
+        /// <summary>
+        /// The maximum CPM to spend on this campaign
+        /// </summary>
+        /// <value></value>
+        [SerializationProperty(20, "targetCPM")]
+        public double TargetCPM { get; set; }
+
         /// <summary>
         /// 
         /// </summary>

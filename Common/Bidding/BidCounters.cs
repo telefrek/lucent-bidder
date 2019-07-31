@@ -74,7 +74,14 @@ namespace Lucent.Common.Bidding
         /// Track campaign spend
         /// </summary>
         /// <value></value>
-        public static Counter   CampaignSpend = Metrics.CreateCounter("campaign_spend", "Amount of spend per campaign", new CounterConfiguration { LabelNames = new string[] { "campaign" } });
+        public static Counter CampaignSpend = Metrics.CreateCounter("campaign_spend", "Amount of spend per campaign", new CounterConfiguration { LabelNames = new string[] { "campaign" } });
+
+
+        /// <summary>
+        /// Track campaign spend
+        /// </summary>
+        /// <value></value>
+        public static Counter CampaignCPM = Metrics.CreateCounter("campaign_cpm", "Amount of spend per campaign", new CounterConfiguration { LabelNames = new string[] { "campaign" } });
 
         /// <summary>
         /// Track campaign revenue

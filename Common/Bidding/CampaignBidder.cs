@@ -91,6 +91,7 @@ namespace Lucent.Common.Bidding
         public Campaign Campaign => _campaign;
 
         static BidContext[] NO_MATCHES = new BidContext[0];
+        static Random _rng = new Random();
 
         /// <summary>
         /// Filters the bid request to get the set of Impressions that can be bid on
@@ -127,7 +128,7 @@ namespace Lucent.Common.Bidding
                     return NO_MATCHES;
                 }
 
-                if (_campaign.Schedule.EndDate != null && DateTime.UtcNow > _campaign.Schedule.EndDate)
+                if (!_campaign.Schedule.EndDate.IsNullOrDefault() && DateTime.UtcNow > _campaign.Schedule.EndDate)
                 {
                     BidCounters.NoBidReason.WithLabels("campaign_ended").Inc();
                     return NO_MATCHES;
@@ -184,7 +185,7 @@ namespace Lucent.Common.Bidding
                 // Need some uri building
                 var baseUri = new UriBuilder
                 {
-                    Scheme = httpContext.Request.Scheme,
+                    Scheme = "https",
                     Host = httpContext.Request.Host.Value,
                 };
 
@@ -195,16 +196,22 @@ namespace Lucent.Common.Bidding
                 {
                     var cpm = Math.Round(Campaign.Actions.First().Payout * stats.CTR * 1000 * .85, 4);
                     if (cpm == 0 || cpm > Campaign.MaxCPM) cpm = Campaign.MaxCPM;
+                    if (Campaign.TargetCPM < cpm && Campaign.TargetCPM >= bidContext.Impression.BidFloor)
+                    {
+                        cpm = (cpm - Campaign.TargetCPM) * _rng.NextDouble() + Campaign.TargetCPM;
+                        cpm = Math.Max(cpm, bidContext.Impression.BidFloor);
+                    }
 
                     if (cpm >= bidContext.Impression.BidFloor)
                     {
                         bidContext.BaseUri = baseUri;
+                        bidContext.BidDate = DateTime.UtcNow;
                         bidContext.Bid = new Bid
                         {
                             ImpressionId = bidContext.Impression.ImpressionId,
                             Id = bidContext.BidId.ToString(),
                             CPM = cpm,
-                            WinUrl = new Uri(baseUri.Uri, "/v1/postback?" + QueryParameters.LUCENT_BID_CONTEXT_PARAMETER + "=" + bidContext.GetOperationString(BidOperation.Win) + "&cpm=${AUCTION_PRICE}").AbsoluteUri,
+                            WinUrl = new Uri(baseUri.Uri, "/v1/postback?" + QueryParameters.LUCENT_BID_CONTEXT_PARAMETER + "=" + bidContext.GetOperationString(BidOperation.Win)).AbsoluteUri + "&cpm=${AUCTION_PRICE}",
                             LossUrl = new Uri(baseUri.Uri, "/v1/postback?" + QueryParameters.LUCENT_BID_CONTEXT_PARAMETER + "=" + bidContext.GetOperationString(BidOperation.Loss)).AbsoluteUri,
                             BillingUrl = new Uri(baseUri.Uri, "/v1/postback?" + QueryParameters.LUCENT_BID_CONTEXT_PARAMETER + "=" + bidContext.GetOperationString(BidOperation.Impression)).AbsoluteUri,
                             H = bidContext.Content.H,
@@ -218,6 +225,7 @@ namespace Lucent.Common.Bidding
                             CreativeId = bidContext.Creative.Id + "." + bidContext.Content.Id,
                             CampaignId = bidContext.Campaign.Id,
                         };
+                        bidContext.CPM = cpm;
 
                         return bidContext;
                     }

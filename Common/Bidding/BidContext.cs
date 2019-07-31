@@ -52,13 +52,10 @@ namespace Lucent.Common.Bidding
 
             // Get the other packed values as a protobuf stream
             var packed = Convert.FromBase64String(decoded.Substring(66));
-            using (var protoReader = new ProtobufReader(new MemoryStream(packed)))
-            {
-                context.CPM = protoReader.ReadDouble();
-                context.BidDate = DateTime.FromFileTimeUtc(protoReader.ReadInt64());
-                context.Operation = (BidOperation)protoReader.ReadInt32();
-                context.RequestId = protoReader.ReadString();
-            }
+            context.CPM = BitConverter.ToDouble(packed, 0);
+            context.BidDate = DateTime.FromFileTimeUtc(BitConverter.ToInt64(packed, 8));
+            context.Operation = (BidOperation)BitConverter.ToInt32(packed, 16);
+            context.RequestId = Encoding.UTF8.GetString(packed, 20, packed.Length - 20);
 
             return context;
         }
@@ -182,14 +179,11 @@ namespace Lucent.Common.Bidding
             // Wre the additional values using protobuf
             using (var ms = new MemoryStream())
             {
-                using (var protoWriter = new ProtobufWriter(ms, true))
-                {
-                    protoWriter.Write(CPM);
-                    protoWriter.Write(BidDate.ToFileTimeUtc());
-                    protoWriter.Write((int)Operation);
-                    protoWriter.Write(RequestId);
-                    protoWriter.Flush();
-                }
+                ms.Write(BitConverter.GetBytes(CPM));
+                ms.Write(BitConverter.GetBytes(BidDate.ToFileTimeUtc()));
+                ms.Write(BitConverter.GetBytes((int)Operation));
+                ms.Write(Encoding.UTF8.GetBytes(RequestId));
+                ms.Flush();
 
                 sb.Append(Convert.ToBase64String(ms.ToArray()));
             }

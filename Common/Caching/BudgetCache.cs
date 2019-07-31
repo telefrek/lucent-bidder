@@ -102,7 +102,7 @@ namespace Lucent.Common.Caching
             if (record.bins.ContainsKey("daily"))
                 status.LastDailyRollover = DateTime.FromFileTimeUtc(record.GetLong("daily"));
             else
-                status.LastDailyRollover = status.LastUpdate;
+                status.LastDailyRollover = status.LastHourlyRollover;
 
             return status;
         }

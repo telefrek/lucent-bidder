@@ -92,48 +92,51 @@ namespace Lucent.Common.Middleware
 
                         var schedule = (BudgetSchedule)null;
                         var entityName = (string)null;
-                        var endDate = DateTime.Now.AddDays(1).Date;
-
-                        switch (request.EntityType)
-                        {
-                            case EntityType.Campaign:
-                                var camp = await _storageCache.Get<Campaign>(new StringStorageKey(request.EntityId), true);
-                                if (camp != null)
-                                {
-                                    schedule = camp.BudgetSchedule;
-                                    entityName = camp.Name;
-                                    endDate = endDate.AddHours(camp.Offset);
-                                }
-                                break;
-                            case EntityType.Exchange:
-                                var exchange = await _storageCache.Get<Exchange>(new GuidStorageKey(Guid.Parse(request.EntityId)), true);
-                                if (exchange != null)
-                                {
-                                    schedule = exchange.BudgetSchedule;
-                                    entityName = exchange.Name;
-                                    endDate = endDate.AddHours(exchange.Offset);
-                                }
-                                break;
-                            default:
-                                break;
-                        }
-
-                        if (schedule == null)
-                        {
-                            httpContext.Response.StatusCode = 400;
-                            return;
-                        }
-
 
                         var status = await _budgetCache.TryGetRemaining(request.EntityId);
                         if (status.Successful)
                         {
                             var elapsed = DateTime.UtcNow.Subtract(status.LastUpdate).TotalMinutes;
+
+
+                            var endDate = status.LastDailyRollover;
+
+                            switch (request.EntityType)
+                            {
+                                case EntityType.Campaign:
+                                    var camp = await _storageCache.Get<Campaign>(new StringStorageKey(request.EntityId), true);
+                                    if (camp != null)
+                                    {
+                                        schedule = camp.BudgetSchedule;
+                                        entityName = camp.Name;
+                                        endDate = endDate.AddHours(camp.Offset);
+                                    }
+                                    break;
+                                case EntityType.Exchange:
+                                    var exchange = await _storageCache.Get<Exchange>(new GuidStorageKey(Guid.Parse(request.EntityId)), true);
+                                    if (exchange != null)
+                                    {
+                                        schedule = exchange.BudgetSchedule;
+                                        entityName = exchange.Name;
+                                        endDate = endDate.AddHours(exchange.Offset);
+                                    }
+                                    break;
+                                default:
+                                    break;
+                            }
+
+                            if (schedule == null)
+                            {
+                                httpContext.Response.StatusCode = 400;
+                                return;
+                            }
+
                             _logger.LogInformation("Budget Elapsed: ({0} - {1} = {2}) [{3},{4},{5},{6}]", DateTime.UtcNow, status.LastUpdate, elapsed, status.Spend, status.TotalSpend, schedule.HourlyCap, schedule.DailyCap);
+
                             var allocation = new BudgetAllocation
                             {
                                 Key = request.EntityId,
-                                ResetSpend = DateTime.UtcNow.Hour > status.LastHourlyRollover.Hour,
+                                ResetSpend = DateTime.UtcNow.Hour > status.LastHourlyRollover.Hour || elapsed >= 60,
                                 ResetDaily = DateTime.Now >= endDate,
                             };
 

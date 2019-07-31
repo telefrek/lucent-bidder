@@ -101,6 +101,7 @@ namespace Lucent.Common.Middleware
                         var cpm = 0d;
                         if (!TryGetCPM(context, out cpm))
                             cpm = bidContext.CPM;
+                        _log.LogInformation("{0} won {1} cpm ({2})", bidContext.CampaignId, cpm, context.Request.QueryString);
                         // Update the exchange and campaign amounts
                         // TODO: handle errors
                         var acpm = Math.Round(cpm / 1000d, 4);
@@ -123,6 +124,7 @@ namespace Lucent.Common.Middleware
                             return;
                         }
 
+                        BidCounters.CampaignCPM.WithLabels(campaign.Name).Inc(cpm);
                         BidCounters.CampaignSpend.WithLabels(campaign.Name).Inc(acpm);
                         BidCounters.CampaignWins.WithLabels(campaign.Name).Inc();
 
@@ -154,13 +156,12 @@ namespace Lucent.Common.Middleware
                         context.Response.StatusCode = StatusCodes.Status200OK;
                         break;
                     case BidOperation.Impression:
+                        context.Response.StatusCode = StatusCodes.Status200OK;
                         BidCounters.CampaignImpressions.WithLabels(campaign.Name).Inc();
                         context.Response.Headers.Add("Content-Type", "image/png");
                         context.Response.Headers.ContentLength = PIXEL_BYTES.Length;
-                        _log.LogInformation("Writing {0} bytes", PIXEL_BYTES.Length);
                         await context.Response.Body.WriteAsync(PIXEL_BYTES, 0, PIXEL_BYTES.Length);
                         await context.Response.Body.FlushAsync();
-                        context.Response.StatusCode = StatusCodes.Status200OK;
                         break;
                     case BidOperation.Action:
                         var action = "";
@@ -204,7 +205,7 @@ namespace Lucent.Common.Middleware
         /// <summary>
         /// Attempt to extract the cpm value from the context
         /// </summary>
-        /// <param name="context"></param>
+        /// <   param name="context"></param>
         /// <param name="cpm"></param>
         /// <returns>True if it exists</returns>
         bool TryGetCPM(HttpContext context, out double cpm)
