@@ -102,6 +102,10 @@ namespace Lucent.Common.Middleware
                 }
                 else if (!_bidFilters.Any(f => f.Invoke(request)))
                 {
+                    BidCounters.Bids.Inc();
+                    if (request.Device != null)
+                        BidCounters.DeviceOS.WithLabels(request.Device.OS ?? "unknown").Inc();
+
                     // Validate we can find a matching exchange
                     var exchange = _exchangeRegistry.GetExchange(httpContext);
                     if (exchange == null)

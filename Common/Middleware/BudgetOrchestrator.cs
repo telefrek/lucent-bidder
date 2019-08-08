@@ -12,6 +12,7 @@ using Lucent.Common.Entities;
 using Lucent.Common.Entities.Events;
 using Lucent.Common.Events;
 using Lucent.Common.Messaging;
+using Lucent.Common.Scheduling;
 using Lucent.Common.Serialization;
 using Lucent.Common.Storage;
 using Microsoft.AspNetCore.Http;
@@ -35,6 +36,12 @@ namespace Lucent.Common.Middleware
         readonly IMessagePublisher _budgetPublisher;
         readonly SemaphoreSlim _budgetLock = new SemaphoreSlim(1);
         StorageCache _storageCache;
+
+        // East coast hardcoded for now, 8am-10pm
+        SchedulingTable _schedule = new SchedulingTable(new bool[] {
+            false, false, false, false, false, false, false, false, true, true, true, true,
+            true, true, true, true, true, true, true, true, true, true, true, false,
+        }, DateTime.UtcNow, 4);
 
         static Gauge _budgetValue = Metrics.CreateGauge("current_budget", "The current budget for an item", new GaugeConfiguration
         {
@@ -60,6 +67,7 @@ namespace Lucent.Common.Middleware
             _budgetPublisher = _messageFactory.CreatePublisher(Topics.BUDGET);
             _aerospikeCache = aerospikeCache;
             _storageCache = storageCache;
+            _logger.LogInformation("DateTimeOffset: {0}", DateTimeOffset.Now);
         }
 
         /// <summary>
@@ -89,103 +97,125 @@ namespace Lucent.Common.Middleware
                         BidCounters.BudgetRequests.WithLabels("recieved").Inc();
 
                         await _budgetLock.WaitAsync();
-
-                        var schedule = (BudgetSchedule)null;
-                        var entityName = (string)null;
-
-                        var status = await _budgetCache.TryGetRemaining(request.EntityId);
-                        if (status.Successful)
+                        try
                         {
-                            var elapsed = DateTime.UtcNow.Subtract(status.LastUpdate).TotalMinutes;
 
+                            var schedule = (BudgetSchedule)null;
+                            var entityName = (string)null;
 
-                            var endDate = status.LastDailyRollover;
+                            _schedule.Advance();
+                            var scheduleTable = _schedule.Clone();
 
-                            switch (request.EntityType)
+                            if (scheduleTable.IsSchedulable)
                             {
-                                case EntityType.Campaign:
-                                    var camp = await _storageCache.Get<Campaign>(new StringStorageKey(request.EntityId), true);
-                                    if (camp != null)
-                                    {
-                                        schedule = camp.BudgetSchedule;
-                                        entityName = camp.Name;
-                                        endDate = endDate.AddHours(camp.Offset);
-                                    }
-                                    break;
-                                case EntityType.Exchange:
-                                    var exchange = await _storageCache.Get<Exchange>(new GuidStorageKey(Guid.Parse(request.EntityId)), true);
-                                    if (exchange != null)
-                                    {
-                                        schedule = exchange.BudgetSchedule;
-                                        entityName = exchange.Name;
-                                        endDate = endDate.AddHours(exchange.Offset);
-                                    }
-                                    break;
-                                default:
-                                    break;
-                            }
-
-                            if (schedule == null)
-                            {
-                                httpContext.Response.StatusCode = 400;
-                                return;
-                            }
-
-                            _logger.LogInformation("Budget Elapsed: ({0} - {1} = {2}) [{3},{4},{5},{6}]", DateTime.UtcNow, status.LastUpdate, elapsed, status.Spend, status.TotalSpend, schedule.HourlyCap, schedule.DailyCap);
-
-                            var allocation = new BudgetAllocation
-                            {
-                                Key = request.EntityId,
-                                ResetSpend = DateTime.UtcNow.Hour > status.LastHourlyRollover.Hour || elapsed >= 60,
-                                ResetDaily = DateTime.Now >= endDate,
-                            };
-
-                            // Reset everything
-                            if (allocation.ResetDaily)
-                            {
-                                allocation.ResetSpend = true;
-                                var rem = schedule.HourlyCap;
-
-                                if (schedule.ScheduleType == ScheduleType.Even)
-                                    rem = Math.Min(schedule.HourlyCap / 12, rem);
-
-                                allocation.Amount = rem;
-                            }
-                            else if (schedule.DailyCap > status.TotalSpend)
-                            {
-                                // Check for hourly rollover
-                                if (allocation.ResetSpend)
+                                switch (request.EntityType)
                                 {
-                                    var rem = Math.Min(schedule.HourlyCap, schedule.DailyCap - status.TotalSpend);
-
-                                    if (schedule.ScheduleType == ScheduleType.Even)
-                                        rem = elapsed >= 5 ? Math.Min(schedule.HourlyCap / 12, rem) : 0;
-
-                                    allocation.Amount = rem;
+                                    case EntityType.Campaign:
+                                        var camp = await _storageCache.Get<Campaign>(new StringStorageKey(request.EntityId), true);
+                                        if (camp != null)
+                                        {
+                                            schedule = camp.BudgetSchedule;
+                                            entityName = camp.Name;
+                                            scheduleTable = scheduleTable.Clone();
+                                        }
+                                        break;
+                                    case EntityType.Exchange:
+                                        var exchange = await _storageCache.Get<Exchange>(new GuidStorageKey(Guid.Parse(request.EntityId)), true);
+                                        if (exchange != null)
+                                        {
+                                            schedule = exchange.BudgetSchedule;
+                                            entityName = exchange.Name;
+                                            scheduleTable = scheduleTable.Clone();
+                                        }
+                                        break;
+                                    default:
+                                        break;
                                 }
-                                else
+
+                                var status = await _budgetCache.TryGetRemaining(request.EntityId);
+                                if (status.Successful)
                                 {
-                                    // Min of remaining hourly or daily for edge cases
-                                    var rem = Math.Min(schedule.HourlyCap - status.Spend, schedule.DailyCap - status.TotalSpend);
+                                    var elapsed = DateTime.UtcNow.Subtract(status.LastUpdate).TotalMinutes;
+                                    scheduleTable.Current = status.LastUpdate;
 
-                                    if (schedule.ScheduleType == ScheduleType.Even)
-                                        rem = elapsed >= 5 ? Math.Min(schedule.HourlyCap / 12, rem) : 0;
+                                    _logger.LogInformation("ScheduleTable: {0}:{1} {2}:{3} {4}", scheduleTable.Day, scheduleTable.IsNextDay, scheduleTable.Hour, scheduleTable.IsNextHour, scheduleTable.Current);
 
-                                    allocation.Amount = rem;
+                                    if (schedule == null)
+                                    {
+                                        httpContext.Response.StatusCode = 400;
+                                        return;
+                                    }
+
+                                    _logger.LogInformation("Budget Elapsed: ({0} - {1} = {2}) [{3},{4},{5},{6},{7}]", DateTime.UtcNow, status.LastUpdate, elapsed, status.Spend, status.TotalSpend, schedule.HourlyCap, schedule.DailyCap, scheduleTable.Hour);
+
+                                    if (status.TotalSpend < schedule.DailyCap || scheduleTable.IsNextDay)
+                                    {
+                                        var allocation = new BudgetAllocation
+                                        {
+                                            Key = request.EntityId,
+                                            ResetSpend = scheduleTable.IsNextHour,
+                                            ResetDaily = scheduleTable.IsNextDay,
+                                        };
+
+                                        // Reset everything
+                                        if (allocation.ResetDaily)
+                                        {
+                                            allocation.ResetSpend = true;
+                                            var rem = schedule.HourlyCap;
+
+                                            if (schedule.ScheduleType == ScheduleType.Even)
+                                                rem = Math.Min(schedule.HourlyCap / 12, rem);
+
+                                            allocation.Amount = rem;
+                                        }
+                                        else if (schedule.DailyCap > status.TotalSpend)
+                                        {
+                                            // Check for hourly rollover
+                                            if (allocation.ResetSpend)
+                                            {
+                                                var rem = Math.Min(schedule.HourlyCap, schedule.DailyCap - status.TotalSpend);
+
+                                                if (schedule.ScheduleType == ScheduleType.Even)
+                                                    rem = elapsed >= 5 ? Math.Min(schedule.HourlyCap / 12, rem) : 0;
+
+                                                allocation.Amount = rem;
+                                            }
+                                            else
+                                            {
+                                                // Min of remaining hourly or daily for edge cases
+                                                var rem = Math.Min(schedule.HourlyCap - status.Spend, schedule.DailyCap - status.TotalSpend);
+
+                                                if (schedule.ScheduleType == ScheduleType.Even)
+                                                    rem = elapsed >= 5 ? Math.Min(schedule.HourlyCap / 12, rem) : 0;
+
+                                                allocation.Amount = rem;
+                                            }
+                                        }
+
+                                        if (allocation.Amount > 0)
+                                            status = await _budgetCache.TryUpdateBudget(allocation);
+                                    }
                                 }
                             }
+                            else
+                                _logger.LogInformation("Scheduling not possible at hour {0}", scheduleTable.Hour);
 
-                            if (allocation.Amount > 0)
-                                status = await _budgetCache.TryUpdateBudget(allocation);
+
+                            var msg = _messageFactory.CreateMessage<BudgetEventMessage>();
+                            msg.Body = new BudgetEvent { EntityId = request.EntityId };
+                            await _budgetPublisher.TryPublish(msg);
+
+                            httpContext.Response.StatusCode = 202;
                         }
-
-                        _budgetLock.Release();
-
-                        var msg = _messageFactory.CreateMessage<BudgetEventMessage>();
-                        msg.Body = new BudgetEvent { EntityId = request.EntityId };
-                        await _budgetPublisher.TryPublish(msg);
-
-                        httpContext.Response.StatusCode = 202;
+                        catch (Exception e)
+                        {
+                            _logger.LogError(e, "Failed to update budget");
+                            httpContext.Response.StatusCode = 400;
+                        }
+                        finally
+                        {
+                            _budgetLock.Release();
+                        }
                         break;
                     case "get":
                     case "put":

@@ -247,8 +247,7 @@ namespace Lucent.Common.Bidding
             }
         }
 
-
-        [TestMethod]
+        //[TestMethod]
         public async Task TestSuccessfulBid()
         {
             await SetupBidderFilters(_orchestrationClient, _orchestrationHost.Provider);

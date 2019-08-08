@@ -196,6 +196,7 @@ namespace Lucent.Common.Bidding
                 {
                     var cpm = Math.Round(Campaign.Actions.First().Payout * stats.CTR * 1000 * .85, 4);
                     if (cpm == 0 || cpm > Campaign.MaxCPM) cpm = Campaign.MaxCPM;
+
                     if (Campaign.TargetCPM < cpm && Campaign.TargetCPM >= bidContext.Impression.BidFloor)
                     {
                         cpm = (cpm - Campaign.TargetCPM) * _rng.NextDouble() + Campaign.TargetCPM;

@@ -88,5 +88,18 @@ namespace Lucent.Common.Bidding
         /// </summary>
         /// <value></value>
         public static Counter CampaignRevenue = Metrics.CreateCounter("campaign_revenue", "Amount of spend per campaign", new CounterConfiguration { LabelNames = new string[] { "campaign" } });
+
+        /// <summary>
+        /// Track device os
+        /// </summary>
+        /// <value></value>
+        public static Counter DeviceOS = Metrics.CreateCounter("device_os", "Device OS", new CounterConfiguration { LabelNames = new string[] { "os" } });
+
+
+        /// <summary>
+        /// Track total bids
+        /// </summary>
+        /// <value></value>
+        public static Counter Bids = Metrics.CreateCounter("total_bids", "Total Bids", new CounterConfiguration { });
     }
 }

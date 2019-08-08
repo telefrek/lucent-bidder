@@ -79,7 +79,7 @@ namespace Lucent.Common.Bidding
 
         async Task<Campaign> FillCampaign(Campaign campaign)
         {
-            foreach (var creativeId in campaign.CreativeIds)
+            foreach (var creativeId in campaign.CreativeIds ?? new string[0])
             {
                 var cr = await _storageCache.Get<Creative>(new StringStorageKey(creativeId), true);
                 foreach (var content in cr.Contents ?? new CreativeContent[0])
@@ -166,7 +166,7 @@ namespace Lucent.Common.Bidding
         async Task UpdateCampaigns()
         {
             // Remove missing campaigns
-            foreach (var removedId in Bidders.Select(b => b.Campaign.Id).Where(id => !(_exchange.CampaignIds ?? new string[0]).Contains(id)))
+            foreach (var removedId in Bidders.ToArray().Select(b => b.Campaign.Id).Where(id => !(_exchange.CampaignIds ?? new string[0]).Contains(id)))
                 Bidders.RemoveAll(b => b.Campaign.Id.Equals(removedId));
 
             // Update the rest

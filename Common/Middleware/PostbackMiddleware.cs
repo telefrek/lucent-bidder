@@ -205,7 +205,7 @@ namespace Lucent.Common.Middleware
         /// <summary>
         /// Attempt to extract the cpm value from the context
         /// </summary>
-        /// <   param name="context"></param>
+        /// <param name="context"></param>
         /// <param name="cpm"></param>
         /// <returns>True if it exists</returns>
         bool TryGetCPM(HttpContext context, out double cpm)

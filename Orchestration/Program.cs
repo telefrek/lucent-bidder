@@ -47,7 +47,7 @@ namespace Orchestration
                         options.AddPolicy("localhostPolicy",
                         builder =>
                         {
-                            builder.AllowAnyOrigin()
+                            builder.WithOrigins("http://localhost:3000", "orchestration.lucentbid.com", "orchestrator.lucent.svc")
                                 .AllowAnyHeader()
                                 .WithExposedHeaders("X-LUCENT-ETAG")
                                 .AllowAnyMethod()
