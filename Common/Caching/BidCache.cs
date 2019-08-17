@@ -62,7 +62,7 @@ namespace Lucent.Common.Caching
                 try
                 {
                     var bin = new Bin("entry", contents);
-                    await Aerospike.INSTANCE.Add(new WritePolicy(Aerospike.INSTANCE.writePolicyDefault) { expiration = 300, }, default(CancellationToken), new Key("lucent", "bids", response.Id), bin);
+                    await Aerospike.INSTANCE.Add(new WritePolicy(Aerospike.INSTANCE.writePolicyDefault) { expiration = 600, }, default(CancellationToken), new Key("lucent", "bids", response.Id), bin);
                 }
                 catch (AerospikeException e)
                 {

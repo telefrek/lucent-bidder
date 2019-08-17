@@ -194,16 +194,21 @@ namespace Lucent.Common.Bidding
 
                 var ret = impList.Select(bidContext =>
                 {
-                    var cpm = Math.Round(Campaign.Actions.First().Payout * stats.CTR * 1000 * .85, 4);
-                    if (cpm == 0 || cpm > Campaign.MaxCPM) cpm = Campaign.MaxCPM;
+                    var cpm = Campaign.TargetCPM;
+                    if (cpm == 0)
+                        cpm = Campaign.MaxCPM / 2;
 
-                    if (Campaign.TargetCPM < cpm && Campaign.TargetCPM >= bidContext.Impression.BidFloor)
-                    {
-                        cpm = (cpm - Campaign.TargetCPM) * _rng.NextDouble() + Campaign.TargetCPM;
-                        cpm = Math.Max(cpm, bidContext.Impression.BidFloor);
-                    }
+                    // Score the request to figure out if the user is better or worse
+                    cpm += cpm * Score(request);
 
-                    if (cpm >= bidContext.Impression.BidFloor)
+                    // Cap the cpm at the max
+                    cpm = Math.Round(Math.Min(Campaign.MaxCPM, cpm), 4);
+
+                    // Track the bidder cpm
+                    BidCounters.CampaignBidCPM.WithLabels(Campaign.Name).Observe(cpm);
+
+                    // Verify the limits on cpm
+                    if (cpm >= bidContext.Impression.BidFloor && cpm <= Campaign.MaxCPM)
                     {
                         bidContext.BaseUri = baseUri;
                         bidContext.BidDate = DateTime.UtcNow;
@@ -230,6 +235,7 @@ namespace Lucent.Common.Bidding
 
                         return bidContext;
                     }
+
                     return null;
                 }).Where(b => b != null).ToArray();
 
@@ -239,5 +245,12 @@ namespace Lucent.Common.Bidding
                 return ret;
             }
         }
+
+        /// <summary>
+        /// Shim method for scoring requests against the campaign
+        /// </summary>
+        /// <param name="request">The request to score</param>
+        /// <returns>A number between -1 and 1</returns>
+        double Score(BidRequest request) => _rng.NextDouble() * 2 - 1.0;
     }
 }

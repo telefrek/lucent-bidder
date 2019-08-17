@@ -84,6 +84,18 @@ namespace Lucent.Common.Bidding
         public static Counter CampaignCPM = Metrics.CreateCounter("campaign_cpm", "Amount of spend per campaign", new CounterConfiguration { LabelNames = new string[] { "campaign" } });
 
         /// <summary>
+        /// Track campaign spend
+        /// </summary>
+        /// <value></value>
+        public static Histogram CampaignBidCPM = Metrics.CreateHistogram("campaign_bid_cpm", "Projection of spend per campaign", new HistogramConfiguration
+        {
+            LabelNames = new string[] { "campaign" },
+            Buckets = new[]{
+                0.1, 0.2, 0.3, 0.4, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3, 4, 5
+            }
+        });
+
+        /// <summary>
         /// Track campaign revenue
         /// </summary>
         /// <value></value>

@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Lucent.Common.Bidding;
 using Lucent.Common.Client;
@@ -73,15 +74,24 @@ namespace Lucent.Common.Budget
                 await _serializationContext.WriteTo(req, ms, true, SerializationFormat.JSON);
                 ms.Seek(0, SeekOrigin.Begin);
 
-                using (var content = new StreamContent(ms, 4092))
+                try
                 {
-                    content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                    var res = await _clientManager.OrchestrationClient.PostAsync("/api/budget/request", content);
+                    using (var content = new StreamContent(ms, 4092))
+                    {
+                        content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+                        var cts = new CancellationTokenSource(500);
+                        var res = await _clientManager.OrchestrationClient.PostAsync("/api/budget/request", content, cts.Token);
 
-                    if (res.StatusCode != HttpStatusCode.Accepted)
-                        _log.LogWarning("Failed to retrieve budget for {0} : {1}", entityId, res.StatusCode);
+                        if (res.StatusCode != HttpStatusCode.Accepted)
+                            _log.LogWarning("Failed to retrieve budget for {0} : {1}", entityId, res.StatusCode);
 
-                    return res.StatusCode == HttpStatusCode.Accepted;
+                        return res.StatusCode == HttpStatusCode.Accepted;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _log.LogError(ex, "Failed to request budget");
+                    return false;
                 }
             }
         }
