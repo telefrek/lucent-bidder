@@ -5,7 +5,6 @@ using Lucent.Common.Entities;
 using Lucent.Common.Exchanges;
 
 using Lucent.Common.OpenRTB;
-using Lucent.Common.Protobuf;
 using Microsoft.AspNetCore.Http;
 
 namespace Lucent.Common.Bidding

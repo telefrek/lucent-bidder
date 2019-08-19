@@ -17,10 +17,8 @@ namespace Lucent.Common.Storage
     public class CassandraStorageManager : IStorageManager
     {
         IServiceProvider _provider;
-        ICluster _cluster;
-        ISession _session;
+        ISessionManager _sessionManager;
         ISerializationContext _serializationContext;
-        CassandraConfiguration _config;
         ILogger _log;
         static readonly ConcurrentDictionary<Type, object> _registry = new ConcurrentDictionary<Type, object>();
 
@@ -29,24 +27,14 @@ namespace Lucent.Common.Storage
         /// </summary>
         /// <param name="provider"></param>
         /// <param name="serializationContext"></param>
-        /// <param name="options"></param>
-        /// <param name="log"></param>
-        public CassandraStorageManager(IServiceProvider provider, ISerializationContext serializationContext, IOptions<CassandraConfiguration> options, ILogger<CassandraStorageManager> log)
+        /// <param name="sessionManager"></param>
+        /// <param name="logger"></param>
+        public CassandraStorageManager(IServiceProvider provider, ISerializationContext serializationContext, ISessionManager sessionManager, ILogger<CassandraStorageManager> logger)
         {
             _provider = provider;
             _serializationContext = serializationContext;
-            _log = log;
-            _config = options.Value;
-            _cluster = new CassandraConnectionStringBuilder
-            {
-                Username = _config.User,
-                Password = _config.Credentials,
-                Port = 9042,
-                ContactPoints = new string[] { _config.Endpoint }
-            }.MakeClusterBuilder().Build();
-            _session = _cluster.Connect();
-            _session.CreateKeyspaceIfNotExists(_config.Keyspace);
-            _session.ChangeKeyspace(_config.Keyspace);
+            _sessionManager = sessionManager;
+            _log = logger;
         }
 
         /// <inheritdoc/>
@@ -56,7 +44,7 @@ namespace Lucent.Common.Storage
             if (repo == null)
             {
                 _log.LogInformation("Creating repo for {0}", typeof(T).Name);
-                CassandraRepository baseRepo = typeof(CassandraRepository).GetMethods().First(m => m.Name == "CreateRepo" && m.IsStatic).MakeGenericMethod(typeof(BasicCassandraRepository<>).MakeGenericType(typeof(T))).Invoke(null, new object[] { _session, _config.Format, _serializationContext, _log }) as CassandraRepository;
+                CassandraRepository baseRepo = typeof(CassandraRepository).GetMethods().First(m => m.Name == "CreateRepo" && m.IsStatic).MakeGenericMethod(typeof(BasicCassandraRepository<>).MakeGenericType(typeof(T))).Invoke(null, new object[] { _sessionManager.GetSession(), SerializationFormat.JSON, _serializationContext, _log }) as CassandraRepository;
                 if (baseRepo != null)
                     baseRepo.Initialize(_provider).Wait();
 
@@ -71,14 +59,14 @@ namespace Lucent.Common.Storage
         /// Getter for bad design... ugh
         /// </summary>
         /// <value></value>
-        public ISession Session { get => _session; }
+        public ISession Session { get => _sessionManager.GetSession(); }
 
         /// <inheritdoc/>
         public void RegisterRepository<R, T>() where R : IStorageRepository<T> where T : IStorageEntity, new()
         {
             _log.LogInformation("Registerring {0} with {1}", typeof(T).Name, typeof(R).Name);
 
-            var repository = _provider.CreateInstance<R>(_session, _config.Format, _serializationContext, _log);
+            var repository = _provider.CreateInstance<R>(_sessionManager.GetSession(), SerializationFormat.JSON, _serializationContext, _log);
             if (repository == null)
                 _log.LogError("No repo created, failure!");
             else

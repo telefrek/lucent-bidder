@@ -101,17 +101,54 @@ namespace Lucent.Common.Bidding
         /// <value></value>
         public static Counter CampaignRevenue = Metrics.CreateCounter("campaign_revenue", "Amount of spend per campaign", new CounterConfiguration { LabelNames = new string[] { "campaign" } });
 
-        /// <summary>
-        /// Track device os
-        /// </summary>
-        /// <value></value>
-        public static Counter DeviceOS = Metrics.CreateCounter("device_os", "Device OS", new CounterConfiguration { LabelNames = new string[] { "os" } });
-
 
         /// <summary>
         /// Track total bids
         /// </summary>
         /// <value></value>
         public static Counter Bids = Metrics.CreateCounter("total_bids", "Total Bids", new CounterConfiguration { });
+
+        /// <summary>
+        /// Track device os
+        /// </summary>
+        /// <value></value>
+        public static Counter DeviceOS = Metrics.CreateCounter("device_os", "Device OS", new CounterConfiguration { LabelNames = new string[] { "os" } });
+
+        /// <summary>
+        /// Device version
+        /// </summary>
+        /// <returns></returns>
+        public static Counter DeviceVersion = Metrics.CreateCounter("device_version", "Device Version", new CounterConfiguration { LabelNames = new string[] { "version" } });
+        
+        /// <summary>
+        /// Device connection type
+        /// </summary>
+        /// <returns></returns>
+        public static Counter ConnectionType = Metrics.CreateCounter("device_connection", "Device Version", new CounterConfiguration { LabelNames = new string[] { "type" } });
+
+        /// <summary>
+        /// Gender breakdowns
+        /// </summary>
+        /// <returns></returns>
+        public static Counter GenderBreakdown = Metrics.CreateCounter("gender", "Gender", new CounterConfiguration { LabelNames = new string[] { "gender" } });
+
+        /// <summary>
+        /// Banner sies
+        /// </summary>
+        /// <returns></returns>
+        public static Counter BannerSize = Metrics.CreateCounter("banner_size", "Banner Size", new CounterConfiguration { LabelNames = new string[] { "size" } });
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public static Counter AdHost = Metrics.CreateCounter("ad_host", "Bid Floor", new CounterConfiguration { LabelNames = new string[] { "hostType" } });
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public static Histogram BidFloor = Metrics.CreateHistogram("bid_floor", "Bid Floor", new HistogramConfiguration { LabelNames = new string[] { "cpm" } });
+
     }
 }

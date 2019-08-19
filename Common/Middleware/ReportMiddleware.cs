@@ -74,32 +74,26 @@ namespace Lucent.Common.Middleware
                         var qp = new StringValues();
 
                         // Assume start/end for last hour
-                        var start = DateTime.UtcNow.AddHours(-1);
-                        var end = DateTime.UtcNow;
-                        var offset = DateTime.Now.Hour - DateTime.UtcNow.Hour;
+                        var start = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, DateTime.UtcNow.Day);
+                        var end = start.AddHours(24);
+                        var offset = 0;
+                        var format = "csv";
 
                         if (query.ContainsKey("offset") && query.TryGetValue("offset", out qp))
                             offset = int.Parse(qp);
 
-                        // Read query parameters
-                        if (query.ContainsKey("start") && query.TryGetValue("start", out qp))
-                            start = DateTime.Parse(qp).ToUniversalTime();
-                        else
+                        if (query.ContainsKey("day") && query.TryGetValue("day", out qp))
                         {
-                            start = DateTime.Now.AddDays(-1);
-                            start = start.AddHours(-1 * start.Hour);
+                            var dt = DateTime.Parse(qp).ToUniversalTime();
+                            start = new DateTime(dt.Year, dt.Month, dt.Day).AddHours(offset);
+                            end = start.AddHours(24);
                         }
-                        start = start.AddHours(offset);
 
-                        if (query.ContainsKey("end") && query.TryGetValue("end", out qp))
-                        {
-                            end = DateTime.Parse(qp).ToUniversalTime();
-                            end = end.AddHours(offset);
-                        }
-                        else
-                            end = start.AddDays(1);
+                        _log.LogInformation("Report start {0} to {1}", start, end);
 
                         var summaries = new List<HourlyReport>();
+                        var total = 0d;
+                        var bids = 0d;
                         while (start < end)
                         {
                             foreach (var summary in await _ledger.TryGetSummary(ledgerId, start, start.AddHours(1), null))
@@ -110,6 +104,8 @@ namespace Lucent.Common.Middleware
                                     Wins = summary.Bids,
                                     Hour = start.AddHours(-offset).ToString(),
                                 };
+                                total += summary.Amount;
+                                bids += summary.Bids;
                                 if (report.Wins > 0)
                                     report.eCPM = report.Amount * 1000d / report.Wins;
 
@@ -121,10 +117,28 @@ namespace Lucent.Common.Middleware
                         if (summaries.Count > 0)
                         {
                             httpContext.Response.StatusCode = StatusCodes.Status200OK;
-                            httpContext.Response.ContentType = "application/json";
-                            var body = JsonConvert.SerializeObject(new { Id = ledgerId, Hourly = summaries });
-                            await httpContext.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(body), 0, Encoding.UTF8.GetByteCount(body));
-                            // await _serializationContext.WriteTo(summaries, httpContext.Response.Body, false, SerializationFormat.JSON);
+
+                            switch (format)
+                            {
+                                case "csv":
+                                    httpContext.Response.ContentType = "text/csv";
+                                    var sb = new StringBuilder();
+                                    sb.AppendLine("Entity:\t{0}".FormatWith(ledgerId));
+                                    sb.AppendLine("Total:\t{0}".FormatWith(total));
+                                    sb.AppendLine("Wins:\t{0}".FormatWith(bids));
+                                    sb.AppendLine("");
+                                    sb.AppendLine("Hour\tAmount\tWins\teCPM");
+                                    foreach (var entry in summaries)
+                                        sb.AppendLine("{0}\t{1}\t{2}\t{3}".FormatWith(DateTime.Parse(entry.Hour).Hour, entry.Amount, entry.Wins, entry.eCPM));
+                                    await httpContext.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(sb.ToString()), 0, sb.Length);
+                                    break;
+                                case "json":
+                                default:
+                                    httpContext.Response.ContentType = "application/json";
+                                    var body = JsonConvert.SerializeObject(new { Id = ledgerId, Total = new { Amount = total, Bids = bids }, Hourly = summaries });
+                                    await httpContext.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(body), 0, Encoding.UTF8.GetByteCount(body));
+                                    break;
+                            }
                         }
                         else
                             httpContext.Response.StatusCode = StatusCodes.Status204NoContent;

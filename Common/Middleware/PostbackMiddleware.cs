@@ -101,7 +101,6 @@ namespace Lucent.Common.Middleware
                         var cpm = 0d;
                         if (!TryGetCPM(context, out cpm))
                             cpm = bidContext.CPM;
-                        _log.LogInformation("{0} won {1} cpm ({2})", bidContext.CampaignId, cpm, context.Request.QueryString);
                         // Update the exchange and campaign amounts
                         // TODO: handle errors
                         var acpm = Math.Round(cpm / 1000d, 4);

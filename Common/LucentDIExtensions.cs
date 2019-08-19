@@ -81,6 +81,7 @@ namespace Lucent.Common
 
                 // Setup storage
                 services.Configure<CassandraConfiguration>(configuration.GetSection("cassandra"))
+                    .AddSingleton<ISessionManager, SessionManager>()
                     .AddSingleton<IStorageManager, CassandraStorageManager>();
 
                 var storageManager = services.BuildServiceProvider().GetRequiredService<IStorageManager>();

@@ -99,12 +99,40 @@ namespace Lucent.Common.Middleware
                 {
                     BidCounters.NoBidReason.WithLabels("deserialization_failure").Inc();
                     httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+                    return;
                 }
-                else if (!_bidFilters.Any(f => f.Invoke(request)))
+
+                // Track ad hosting
+                BidCounters.AdHost.WithLabels(request.App != null ? "app" : request.Site != null ? "site" : "unknown").Inc();
+
+                // Track some basic device metrics
+                if (request.Device != null)
+                {
+                    BidCounters.DeviceOS.WithLabels(request.Device.OS ?? "unknown").Inc();
+                    BidCounters.DeviceVersion.WithLabels(request.Device.OSVersion ?? "unknown").Inc();
+                    BidCounters.ConnectionType.WithLabels(request.Device.NetworkConnection.ToString()).Inc();
+                }
+
+                // Track some basic impression metrics
+                foreach (var imp in request.Impressions)
+                {
+                    if (imp.Banner != null)
+                        BidCounters.BannerSize.WithLabels(String.Format("{0}x{1}", imp.Banner.H, imp.Banner.W)).Inc();
+
+                    BidCounters.BidFloor.WithLabels("cpm").Observe(imp.BidFloor);
+                }
+
+                // Track some user metrics
+                if (request.User != null)
+                {
+                    BidCounters.GenderBreakdown.WithLabels(request.User.Gender ?? "null").Inc();
+                }
+
+                // TODO: Store metrics in something we can dump to pivot tables/data marts
+
+                if (!_bidFilters.Any(f => f.Invoke(request)))
                 {
                     BidCounters.Bids.Inc();
-                    if (request.Device != null)
-                        BidCounters.DeviceOS.WithLabels(request.Device.OS ?? "unknown").Inc();
 
                     // Validate we can find a matching exchange
                     var exchange = _exchangeRegistry.GetExchange(httpContext);

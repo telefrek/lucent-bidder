@@ -37,7 +37,7 @@ namespace Lucent.Common.Budget
         }
 
         /// <inheritdoc/>
-        public override async Task CreateTableAsync() => await ExecuteAsync("CREATE TABLE IF NOT EXISTS {0} (id text, ledgerDate timeuuid, format text, updated timestamp, amount double, contents blob, PRIMARY KEY(id, ledgerDate) ) WITH CLUSTERING ORDER BY (ledgerDate DESC) AND compaction={{'compaction_window_size': '7', 'compaction_window_unit': 'DAYS', 'class': 'org.apache.cassandra.db.compaction.TimeWindowCompactionStrategy'}};".FormatWith(_tableName), "create_ledger");
+        public override async Task CreateTableAsync() => await ExecuteAsync("CREATE TABLE IF NOT EXISTS {0} (id text, ledgerDate timeuuid, format text, updated timestamp, amount double, contents blob, PRIMARY KEY(id, ledgerDate) ) WITH CLUSTERING ORDER BY (ledgerDate DESC) AND default_time_to_live=1209600 AND gc_grace_seconds = 60 AND caching = {{'keys':'ALL', 'rows_per_partition':'NONE'}} AND compaction={{'compaction_window_size': '1', 'compaction_window_unit': 'HOURS', 'class': 'org.apache.cassandra.db.compaction.TimeWindowCompactionStrategy'}};".FormatWith(_tableName), "create_ledger");
 
 
         /// <inheritdoc/>
@@ -54,7 +54,7 @@ namespace Lucent.Common.Budget
         {
             try
             {
-                var contents = await _serializationContext.AsBytes(source, _serializationFormat);
+                var contents = (byte[])null;// await _serializationContext.AsBytes(source, _serializationFormat);
 
                 var rowSet = await ExecuteAsync(_insertStatement.Bind(ledgerId, TimeUuid.NewId(DateTime.UtcNow), _serializationFormat.ToString(), DateTime.UtcNow, source.Cost, contents), "insert_" + _tableName);
 
@@ -76,6 +76,7 @@ namespace Lucent.Common.Budget
         /// <inheritdoc/>
         public async Task<ICollection<LedgerSummary>> TryGetSummary(string entityId, DateTime start, DateTime end, int? numSegments)
         {
+            _log.LogInformation("Getting summary for {0} at : {1}->{2}", entityId, start, end);
             var segments = new List<LedgerSummary>();
 
             if (numSegments == null) numSegments = 1;
