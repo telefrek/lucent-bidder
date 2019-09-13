@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using Cassandra;
 using Lucent.Common.Entities;
@@ -9,6 +10,7 @@ using Lucent.Common.OpenRTB;
 using Lucent.Common.Serialization;
 using Lucent.Common.Storage;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Lucent.Common.Budget
 {
@@ -20,6 +22,7 @@ namespace Lucent.Common.Budget
         static readonly string _tableName = "ledger";
 
         PreparedStatement _getRangeStatement;
+        PreparedStatement _getDetailedRangeStatement;
         PreparedStatement _insertStatement;
 
         /// <summary>
@@ -46,15 +49,31 @@ namespace Lucent.Common.Budget
             _log.LogInformation("Initializing ledger queries");
             await CreateTableAsync();
             _getRangeStatement = await PrepareAsync("SELECT amount FROM {0} WHERE id=? AND ledgerDate >= ? AND ledgerDate < ?".FormatWith(_tableName));
+            _getDetailedRangeStatement = await PrepareAsync("SELECT amount, contents FROM {0} WHERE id=? AND ledgerDate >= ? AND ledgerDate < ?".FormatWith(_tableName));
             _insertStatement = await PrepareAsync("INSERT INTO {0} (id, ledgerDate, format, updated, amount, contents) VALUES (?, ?, ?, ?, ?, ?)".FormatWith(_tableName));
         }
 
         /// <inheritdoc/>
-        public async Task<bool> TryRecordEntry(string ledgerId, BidEntry source)
+        public async Task<bool> TryRecordEntry(string ledgerId, BidEntry source, Dictionary<string, object> metadata)
         {
             try
             {
-                var contents = (byte[])null;// await _serializationContext.AsBytes(source, _serializationFormat);
+                if (source.IsRevenue)
+                {
+                    metadata = metadata ?? new Dictionary<string, object>();
+                    metadata.Add("revenue", source.Cost);
+                }
+
+                var contents = (byte[])null;
+
+                try
+                {
+                    contents = metadata != null ? Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(metadata, Formatting.None)) : null;
+                }
+                catch (Exception e)
+                {
+                    _log.LogError(e, "Failed to serialize metadata");
+                }
 
                 var rowSet = await ExecuteAsync(_insertStatement.Bind(ledgerId, TimeUuid.NewId(DateTime.UtcNow), _serializationFormat.ToString(), DateTime.UtcNow, source.Cost, contents), "insert_" + _tableName);
 
@@ -74,7 +93,7 @@ namespace Lucent.Common.Budget
         }
 
         /// <inheritdoc/>
-        public async Task<ICollection<LedgerSummary>> TryGetSummary(string entityId, DateTime start, DateTime end, int? numSegments)
+        public async Task<ICollection<LedgerSummary>> TryGetSummary(string entityId, DateTime start, DateTime end, int? numSegments, bool? detailed)
         {
             _log.LogInformation("Getting summary for {0} at : {1}->{2}", entityId, start, end);
             var segments = new List<LedgerSummary>();
@@ -95,12 +114,34 @@ namespace Lucent.Common.Budget
                     End = next,
                     Amount = 0,
                     Bids = 0,
+                    Metadata = new Dictionary<string, int>(),
                 };
 
-                foreach (var row in await ExecuteAsync(_getRangeStatement.Bind(entityId, TimeUuid.Min(begin), TimeUuid.Max(next)), "get_ledger_range"))
+                foreach (var row in await ExecuteAsync((detailed ?? false ? _getDetailedRangeStatement : _getRangeStatement).Bind(entityId, TimeUuid.Min(begin), TimeUuid.Max(next)), "get_ledger_range"))
                 {
                     summary.Amount += row.GetValue<double>("amount");
                     summary.Bids++;
+                    if (detailed ?? false && row.GetColumn("contents") != null)
+                    {
+                        try
+                        {
+                            var data = row.GetValue<byte[]>("contents");
+                            if (data != null)
+                            {
+                                var obj = JsonConvert.DeserializeObject<Dictionary<string, int>>(Encoding.UTF8.GetString(data));
+                                foreach (var key in obj.Keys)
+                                {
+                                    if (!summary.Metadata.ContainsKey(key))
+                                        summary.Metadata.Add(key, 0);
+                                    summary.Metadata[key] += obj[key];
+                                }
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            // ......very disappointed with this solution....
+                        }
+                    }
                 }
 
                 segments.Add(summary);

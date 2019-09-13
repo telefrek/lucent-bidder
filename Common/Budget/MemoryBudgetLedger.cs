@@ -15,7 +15,7 @@ namespace Lucent.Common.Budget
         ConcurrentDictionary<string, List<BidEntry>> _ledgers = new ConcurrentDictionary<string, List<BidEntry>>();
 
         /// <inheritdoc/>
-        public Task<ICollection<LedgerSummary>> TryGetSummary(string entityId, DateTime start, DateTime end, int? numSegments)
+        public Task<ICollection<LedgerSummary>> TryGetSummary(string entityId, DateTime start, DateTime end, int? numSegments, bool? detailed)
         {
             // This doesn't really work lol
             var entries = new List<BidEntry>();
@@ -35,7 +35,7 @@ namespace Lucent.Common.Budget
         }
 
         /// <inheritdoc/>
-        public Task<bool> TryRecordEntry(string ledgerId, BidEntry source)
+        public Task<bool> TryRecordEntry(string ledgerId, BidEntry source, Dictionary<string, object> metadata)
         {
             _ledgers.AddOrUpdate(ledgerId, new List<BidEntry>(), (i, l) => l).Add(source);
             return Task.FromResult(true);

@@ -161,7 +161,15 @@ namespace Lucent.Common.Middleware
 
                             httpContext.Response.StatusCode = StatusCodes.Status200OK;
                             await _serializationContext.WriteTo(httpContext, response);
-                            await _bidCache.saveEntries(response);
+
+                            try
+                            {
+                                await _bidCache.saveEntries(request.GetMetadata(), response.Id);
+                            }
+                            catch (Exception e)
+                            {
+                                _log.LogError(e, "failed to save metadata");
+                            }
                         }
                         else
                         {

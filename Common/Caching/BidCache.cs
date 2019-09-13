@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -11,6 +12,7 @@ using Lucent.Common.Serialization;
 using Lucent.Common.Storage;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Lucent.Common.Caching
 {
@@ -34,7 +36,7 @@ namespace Lucent.Common.Caching
         }
 
         /// <inheritdoc/>
-        public async Task<BidResponse> getEntryAsync(string id)
+        public async Task<Dictionary<string, int>> getEntryAsync(string id)
         {
             var res = (Record)null;
             using (var ctx = StorageCounters.LatencyHistogram.CreateContext("aerospike", "bids", "get"))
@@ -49,25 +51,25 @@ namespace Lucent.Common.Caching
                 }
 
             if (res != null)
-                return await _serializationContext.ReadFrom<BidResponse>(new MemoryStream((byte[])Encoding.UTF8.GetBytes((string)res.GetValue("entry"))), false, SerializationFormat.JSON);
+                return JsonConvert.DeserializeObject<Dictionary<string, int>>((string)res.GetValue("entry"));
 
             return null;
         }
 
         /// <inheritdoc/>
-        public async Task saveEntries(BidResponse response)
+        public async Task saveEntries(Dictionary<string, int> response, string id)
         {
-            var contents = Encoding.UTF8.GetString(await _serializationContext.AsBytes(response, SerializationFormat.JSON));
+            var contents = JsonConvert.SerializeObject(response);
             using (var ctx = StorageCounters.LatencyHistogram.CreateContext("aerospike", "bids", "save"))
                 try
                 {
                     var bin = new Bin("entry", contents);
-                    await Aerospike.INSTANCE.Add(new WritePolicy(Aerospike.INSTANCE.writePolicyDefault) { expiration = 600, }, default(CancellationToken), new Key("lucent", "bids", response.Id), bin);
+                    await Aerospike.INSTANCE.Add(new WritePolicy(Aerospike.INSTANCE.writePolicyDefault) { expiration = 600, }, default(CancellationToken), new Key("lucent", "bids", id), bin);
                 }
                 catch (AerospikeException e)
                 {
                     StorageCounters.ErrorCounter.WithLabels("aerospike", "bids", "save", e.Result.ToString()).Inc();
-                    _log.LogError(e, "Error during save: {0} ({1})", response.Id, contents.Length);
+                    _log.LogError(e, "Error during save: {0} ({1})", id, contents.Length);
                 }
         }
     }
@@ -81,12 +83,12 @@ namespace Lucent.Common.Caching
         static readonly IMemoryCache _memcache = new MemoryCache(new MemoryCacheOptions { ExpirationScanFrequency = TimeSpan.FromSeconds(15), SizeLimit = 100 });
 
         /// <inheritdoc/>
-        public Task<BidResponse> getEntryAsync(string id) => Task.FromResult((BidResponse)_memcache.Get(id));
+        public Task<Dictionary<string, int>> getEntryAsync(string id) => Task.FromResult((Dictionary<string, int>)_memcache.Get(id));
 
         /// <inheritdoc/>
-        public Task saveEntries(BidResponse response)
+        public Task saveEntries(Dictionary<string, int> response, string id)
         {
-            _memcache.Set(response.Id, response, new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5), Size = 1 });
+            _memcache.Set(id, response, new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5), Size = 1 });
             return Task.CompletedTask;
         }
     }

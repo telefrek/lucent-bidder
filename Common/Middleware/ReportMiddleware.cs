@@ -43,6 +43,7 @@ namespace Lucent.Common.Middleware
             public double Amount { get; set; }
             public double eCPM { get; set; }
             public double eCPA { get; set; }
+            public Dictionary<string, int> Details { get; set; } = new Dictionary<string, int>();
         }
 
         /// <summary>
@@ -78,9 +79,16 @@ namespace Lucent.Common.Middleware
                         var end = start.AddHours(24);
                         var offset = 0;
                         var format = "csv";
+                        var detailed = false;
 
                         if (query.ContainsKey("offset") && query.TryGetValue("offset", out qp))
                             offset = int.Parse(qp);
+
+                        if (query.ContainsKey("detailed") && query.TryGetValue("detailed", out qp))
+                            detailed = bool.Parse(qp);
+
+                        if (query.ContainsKey("format") && query.TryGetValue("format", out qp))
+                            format = qp;
 
                         if (query.ContainsKey("day") && query.TryGetValue("day", out qp))
                         {
@@ -96,13 +104,14 @@ namespace Lucent.Common.Middleware
                         var bids = 0d;
                         while (start < end)
                         {
-                            foreach (var summary in await _ledger.TryGetSummary(ledgerId, start, start.AddHours(1), null))
+                            foreach (var summary in await _ledger.TryGetSummary(ledgerId, start, start.AddHours(1), null, detailed))
                             {
                                 var report = new HourlyReport()
                                 {
                                     Amount = summary.Amount,
                                     Wins = summary.Bids,
                                     Hour = start.AddHours(-offset).ToString(),
+                                    Details = summary.Metadata ?? new Dictionary<string, int>(),
                                 };
                                 total += summary.Amount;
                                 bids += summary.Bids;
@@ -122,14 +131,24 @@ namespace Lucent.Common.Middleware
                             {
                                 case "csv":
                                     httpContext.Response.ContentType = "text/csv";
+                                    var columns = new HashSet<string>();
+                                    foreach (var entry in summaries)
+                                        foreach (var key in entry.Details.Keys)
+                                            columns.Add(key);
                                     var sb = new StringBuilder();
                                     sb.AppendLine("Entity:\t{0}".FormatWith(ledgerId));
                                     sb.AppendLine("Total:\t{0}".FormatWith(total));
                                     sb.AppendLine("Wins:\t{0}".FormatWith(bids));
                                     sb.AppendLine("");
-                                    sb.AppendLine("Hour\tAmount\tWins\teCPM");
+                                    sb.AppendLine("Hour\tAmount\tWins\teCPM{0}".FormatWith(columns.Count > 0 ? "\t" + string.Join("\t", columns.ToArray()) : ""));
+
                                     foreach (var entry in summaries)
-                                        sb.AppendLine("{0}\t{1}\t{2}\t{3}".FormatWith(DateTime.Parse(entry.Hour).Hour, entry.Amount, entry.Wins, entry.eCPM));
+                                    {
+                                        sb.Append("{0}\t{1}\t{2}\t{3}".FormatWith(DateTime.Parse(entry.Hour).Hour, entry.Amount, entry.Wins, entry.eCPM));
+                                        foreach(var key in columns.ToArray())
+                                            sb.Append("\t{0}".FormatWith(entry.Details.GetValueOrDefault(key, 0)));
+                                        sb.AppendLine();
+                                    }
                                     await httpContext.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(sb.ToString()), 0, sb.Length);
                                     break;
                                 case "json":

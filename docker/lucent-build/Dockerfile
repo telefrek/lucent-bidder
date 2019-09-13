@@ -1,4 +1,4 @@
-FROM microsoft/dotnet:2.2-sdk
+FROM mcr.microsoft.com/dotnet/core/sdk:3.0
 WORKDIR /opt/ffmpeg
 RUN apt-get update && \
   apt-get -y --no-install-recommends install \
@@ -24,9 +24,9 @@ RUN apt-get update && \
   zlib1g-dev && \
   mkdir bin && \
   mkdir build && \
-  wget https://www.nasm.us/pub/nasm/releasebuilds/2.13.03/nasm-2.13.03.tar.bz2 && \
-  tar xjvf nasm-2.13.03.tar.bz2 && \
-  cd nasm-2.13.03 && \
+  wget https://www.nasm.us/pub/nasm/releasebuilds/2.14.02/nasm-2.14.02.tar.bz2 && \
+  tar xjvf nasm-2.14.02.tar.bz2 && \
+  cd nasm-2.14.02 && \
   ./autogen.sh && \
   PATH="/opt/ffmpeg/bin:$PATH" ./configure --prefix="/opt/ffmpeg/build" --bindir="/opt/ffmpeg/bin" && \
   make && \
@@ -95,7 +95,7 @@ RUN apt-get update && \
   zlib1g-dev && \
   rm -rf /var/lib/apt/lists/*
 
-FROM microsoft/dotnet:2.2-sdk
+FROM mcr.microsoft.com/dotnet/core/sdk:3.0
 RUN mkdir -p /opt/ffmpeg/bin && mkdir -p /opt/ffmpeg/build
 COPY --from=0 /opt/ffmpeg/bin/ /opt/ffmpeg/bin/
 COPY --from=0 /opt/ffmpeg/build/ /opt/ffmpeg/build/
@@ -112,9 +112,9 @@ RUN rm -rf /opt/ffmpeg/build/share && \
   libasound2 \
   libSDL2-2.0 \
   libxv1 \
-  libva1 \
-  libva-drm1 \
-  libva-x11-1 \
+  # libva1 \
+  # libva-drm1 \
+  # libva-x11-1 \
   libvdpau1 && \
   rm -rf /var/lib/apt/lists/* && \
   chmod a+x /opt/ffmpeg/bin/*

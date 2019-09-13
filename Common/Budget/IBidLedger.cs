@@ -13,9 +13,13 @@ namespace Lucent.Common.Budget
     public interface IBidLedger
     {
         /// <summary>
-        /// Tries to record an entry with the source and amount
+        /// Tries to record an entry and the source + metadata
         /// </summary>
-        Task<bool> TryRecordEntry(string ledgerId, BidEntry source);
+        /// <param name="ledgerId"></param>
+        /// <param name="source"></param>
+        /// <param name="metadata"></param>
+        /// <returns></returns>
+        Task<bool> TryRecordEntry(string ledgerId, BidEntry source, Dictionary<string, object> metadata);
 
         /// <summary>
         /// Get the summary over the given start and end dates for the entity, divided into the specified number of segments
@@ -24,8 +28,9 @@ namespace Lucent.Common.Budget
         /// <param name="start">The start time (inclusive)</param>
         /// <param name="end">The end time (exclusive)</param>
         /// <param name="numSegments">The optional number of segments (Default = 1)</param>
+        /// <param name="detailed">Option for including details</param>
         /// <returns></returns>
-        Task<ICollection<LedgerSummary>> TryGetSummary(string entityId, DateTime start, DateTime end, int? numSegments);
+        Task<ICollection<LedgerSummary>> TryGetSummary(string entityId, DateTime start, DateTime end, int? numSegments, bool? detailed);
     }
 
     /// <summary>
@@ -60,5 +65,11 @@ namespace Lucent.Common.Budget
         /// <value></value>
         [SerializationProperty(4, "bids")]
         public int Bids { get; set; }
+
+        /// <summary>
+        /// Metadata
+        /// </summary>
+        /// <returns></returns>
+        public Dictionary<string, int> Metadata { get; set; } = new Dictionary<string, int>();
     }
 }

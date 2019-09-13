@@ -74,7 +74,7 @@ namespace Lucent.Common.Middleware
                         if(query.ContainsKey("segments") && query.TryGetValue("segments", out qp))
                             numSegments = int.Parse(qp);
 
-                        var summaries = await _ledger.TryGetSummary(ledgerId, start, end, numSegments);
+                        var summaries = await _ledger.TryGetSummary(ledgerId, start, end, numSegments, false);
                         if (summaries.Count > 0)
                         {
                             httpContext.Response.StatusCode = StatusCodes.Status200OK;
