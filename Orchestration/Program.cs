@@ -42,12 +42,14 @@ namespace Orchestration
                 })
                 .ConfigureServices((hostingContext, services) =>
                 {
+                    var config = hostingContext.Configuration.GetSection("cors");
+                    var origins = config != null ? config.GetValue<string[]>("origins", new string[] { }) : new string[] { };
                     services.AddCors(options =>
                     {
                         options.AddPolicy("localhostPolicy",
                         builder =>
                         {
-                            builder.WithOrigins("http://localhost:3000", "orchestration.lucentbid.com", "orchestrator.lucent.svc")
+                            builder.WithOrigins(origins)
                                 .AllowAnyHeader()
                                 .WithExposedHeaders("X-LUCENT-ETAG")
                                 .AllowAnyMethod()

@@ -140,12 +140,12 @@ namespace Lucent.Common.Middleware
                                     sb.AppendLine("Total:\t{0}".FormatWith(total));
                                     sb.AppendLine("Wins:\t{0}".FormatWith(bids));
                                     sb.AppendLine("");
-                                    sb.AppendLine("Hour\tAmount\tWins\teCPM{0}".FormatWith(columns.Count > 0 ? "\t" + string.Join("\t", columns.ToArray()) : ""));
+                                    sb.AppendLine("Hour\tAmount\tWins\teCPM{0}".FormatWith(columns.Count > 0 ? "\t" + string.Join("\t", columns.OrderBy(s => s).ToArray()) : ""));
 
                                     foreach (var entry in summaries)
                                     {
                                         sb.Append("{0}\t{1}\t{2}\t{3}".FormatWith(DateTime.Parse(entry.Hour).Hour, entry.Amount, entry.Wins, entry.eCPM));
-                                        foreach(var key in columns.ToArray())
+                                        foreach (var key in columns.OrderBy(s => s).ToArray())
                                             sb.Append("\t{0}".FormatWith(entry.Details.GetValueOrDefault(key, 0)));
                                         sb.AppendLine();
                                     }

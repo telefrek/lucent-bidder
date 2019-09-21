@@ -85,8 +85,8 @@ namespace Lucent.Common.Middleware
                                         File.Delete(tempFile);
 
                                         content.ContentLocation = filePath;
-                                        content.CreativeUri = _config.GetValue("rawUri", "https://east-cdn.lucentbid.com") + "/creatives/" + creative.Id + "/" + fileName;
-                                        content.RawUri = _config.GetValue("cacheUri", "https://east-cache.lucentbid.com") + "/" + creative.Id + "/" + fileName;
+                                        content.CreativeUri = _config.GetValue("rawUri", "https://east-cdn.lucentbid.com") + creative.Id + "/" + fileName;
+                                        content.RawUri = _config.GetValue("cacheUri", "https://east-cache.lucentbid.com") + "/creatives/" + "/" + creative.Id + "/" + fileName;
                                         var contents = creative.Contents ?? new CreativeContent[0];
                                         Array.Resize(ref contents, contents.Length + 1);
                                         contents[contents.Length - 1] = content;

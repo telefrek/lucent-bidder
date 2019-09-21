@@ -6,6 +6,7 @@ using Lucent.Common.Entities;
 using Lucent.Common.Serialization;
 using Lucent.Common.Test;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Lucent.Common.Storage.Test

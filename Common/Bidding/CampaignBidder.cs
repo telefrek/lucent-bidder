@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Lucent.Common.Budget;
 using Lucent.Common.Caching;
@@ -105,45 +106,45 @@ namespace Lucent.Common.Bidding
             {
                 if (_campaign.Status != CampaignStatus.Active)
                 {
-                    BidCounters.NoBidReason.WithLabels("campaign_inactive").Inc();
+                    BidCounters.NoBidReason.WithLabels("campaign_inactive", Campaign.Name).Inc();
                     return NO_MATCHES;
                 }
 
                 if (_isBudgetExhausted = _campaignBudget.Budget.GetDouble() <= 0)
                 {
-                    BidCounters.NoBidReason.WithLabels("campaign_suspended").Inc();
+                    BidCounters.NoBidReason.WithLabels("campaign_budget_exhausted", Campaign.Name).Inc();
                     await _budgetManager.RequestAdditional(_campaign.Id, EntityType.Campaign);
                     return NO_MATCHES;
                 }
 
                 if (_campaign.Schedule == null)
                 {
-                    BidCounters.NoBidReason.WithLabels("no_campaign_schedule").Inc();
+                    BidCounters.NoBidReason.WithLabels("no_campaign_schedule", Campaign.Name).Inc();
                     return NO_MATCHES;
                 }
 
                 if (DateTime.UtcNow < _campaign.Schedule.StartDate)
                 {
-                    BidCounters.NoBidReason.WithLabels("campaign_not_started").Inc();
+                    BidCounters.NoBidReason.WithLabels("campaign_not_started", Campaign.Name, Campaign.Name).Inc();
                     return NO_MATCHES;
                 }
 
                 if (!_campaign.Schedule.EndDate.IsNullOrDefault() && DateTime.UtcNow > _campaign.Schedule.EndDate)
                 {
-                    BidCounters.NoBidReason.WithLabels("campaign_ended").Inc();
+                    BidCounters.NoBidReason.WithLabels("campaign_ended", Campaign.Name).Inc();
                     return NO_MATCHES;
                 }
 
                 // Apply campaign filters and check budget
                 if (_campaign.IsFiltered(request))
                 {
-                    BidCounters.NoBidReason.WithLabels("campaign_filtered").Inc();
+                    BidCounters.NoBidReason.WithLabels("campaign_filtered", Campaign.Name).Inc();
                     return NO_MATCHES;
                 }
 
                 if (!_campaign.IsTargetted(request))
                 {
-                    BidCounters.NoBidReason.WithLabels("campaign_target_failed").Inc();
+                    BidCounters.NoBidReason.WithLabels("campaign_target_failed", Campaign.Name).Inc();
                     return NO_MATCHES;
                 }
 
@@ -178,7 +179,7 @@ namespace Lucent.Common.Bidding
                 // Ensure if sold as a bundle, we have all impressions, otherwise return matched or none
                 if (request.AllImpressions && !allMatched)
                 {
-                    BidCounters.NoBidReason.WithLabels("not_all_matched").Inc();
+                    BidCounters.NoBidReason.WithLabels("not_all_matched", Campaign.Name).Inc();
                     return NO_MATCHES;
                 }
 
@@ -191,6 +192,7 @@ namespace Lucent.Common.Bidding
 
                 // Get the current stats
                 var stats = CampaignStats.Get(_campaignId);
+                var chk = 0L;
 
                 var ret = impList.Select(bidContext =>
                 {
@@ -226,7 +228,7 @@ namespace Lucent.Common.Bidding
                             BidExpiresSeconds = 300,
                             Bundle = bidContext.Campaign.BundleId,
                             ContentCategories = bidContext.Content.Categories,
-                            ImageUrl = bidContext.Content.CreativeUri,
+                            ImageUrl = bidContext.Content.RawUri,
                             AdId = bidContext.Creative.Id,
                             CreativeId = bidContext.Creative.Id + "." + bidContext.Content.Id,
                             CampaignId = bidContext.Campaign.Id,
@@ -236,11 +238,15 @@ namespace Lucent.Common.Bidding
                         return bidContext;
                     }
 
+                    Interlocked.Increment(ref chk);
+
                     return null;
                 }).Where(b => b != null).ToArray();
 
-                if (ret.Length == 0)
-                    BidCounters.NoBidReason.WithLabels("no_creative_match").Inc();
+                if (chk == 0 && ret.Length == 0)
+                    BidCounters.NoBidReason.WithLabels("no_creative_match", Campaign.Name).Inc();
+                else
+                    BidCounters.NoBidReason.WithLabels("bid_too_low", Campaign.Name).Inc();
 
                 return ret;
             }

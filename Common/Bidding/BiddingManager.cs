@@ -186,7 +186,7 @@ namespace Lucent.Common.Bidding
         {
             if (_isBudgetExhausted = LocalBudget.Get(_exchangeId).Budget.GetDouble() <= 0)
             {
-                BidCounters.NoBidReason.WithLabels("no_exchange_budget").Inc();
+                BidCounters.NoBidReason.WithLabels("no_exchange_budget", _exchange.Name).Inc();
                 await _budgetManager.RequestAdditional(_exchangeId, EntityType.Exchange);
                 return false;
             }
