@@ -45,6 +45,13 @@ namespace Lucent.Common.Filters
         public Type PropertyType { get; set; }
 
         /// <summary>
+        /// Modifier for the CPM value
+        /// </summary>
+        /// <value></value>
+        [SerializationProperty(6, "modifier")]
+        public double Modifier { get; set; }
+
+        /// <summary>
         /// 
         /// </summary>
         /// <value></value>

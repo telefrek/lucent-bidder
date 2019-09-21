@@ -60,22 +60,21 @@ namespace Lucent.Common
         /// </summary>
         /// <param name="bidTarget"></param>
         /// <returns></returns>
-        public static Func<BidRequest, bool> GenerateTargets(this BidTargets bidTarget)
+        public static Func<BidRequest, double> GenerateTargets(this BidTargets bidTarget)
         {
             // Need our input parameter :)
             var bidParam = Expression.Parameter(typeof(BidRequest), "bid");
 
             // Need a variable to track the complex filtering
-            var fValue = Expression.Variable(typeof(bool), "isTargetted");
-            var gValue = Expression.Variable(typeof(int), "geoMatch");
+            var fModifier = Expression.Variable(typeof(double), "modifier");
 
             // Keep track of all the expressions in this chain
             var expList = new List<Expression> { };
-            expList.Add(Expression.Assign(gValue, Expression.Constant(2)));
+            expList.Add(Expression.Assign(fModifier, Expression.Constant(0d)));
 
             // Need a sentinal value for breaking in loops
             var loopBreak = Expression.Label();
-            var ret = Expression.Label(typeof(bool)); // We're going to return a bool
+            var ret = Expression.Label(typeof(double)); // We're going to return a bool
 
             // Process the impressions filters
             if (bidTarget.ImpressionTargets != null)
@@ -86,149 +85,121 @@ namespace Lucent.Common
 
                 // Create a loop parameter and the filter
                 var impParam = Expression.Parameter(impType, "imp");
-                var impTest = CombineTargets(bidTarget.ImpressionTargets, impParam);
 
-                // Create the loop and add it to this block
+                // Create the checks for the modifier
+                // If prop1 == x modifier += v
+                var bodyExp = new List<Expression>();
+                foreach (var impTarget in bidTarget.ImpressionTargets)
+                    bodyExp.Add(Expression.IfThen(impTarget.CreateExpression(impParam),
+                        Expression.AddAssign(fModifier, Expression.Constant(impTarget.Modifier))));
+
+                // Run the modifier on each impression
+                // foreach(var imp in impressions) { if(imp != null) { bodyExp }}
                 expList.Add(
-                    Expression.IfThenElse(
+                    Expression.IfThen(
                         Expression.NotEqual(impProp, Expression.Constant(null)),
                         ForEach(impProp, impParam,
                             Expression.IfThen(
-                                Expression.OrElse(
-                                    Expression.Equal(impParam, Expression.Constant(null)),
-                                    Expression.Not(impTest)),
-                                    Expression.Return(ret, Expression.Constant(false)))),
-                        Expression.Return(ret, Expression.Constant(false))));
+                                Expression.NotEqual(impParam, Expression.Constant(null)),
+                                Expression.Block(bodyExp)))));
             }
 
             // Process the user filters
             if (bidTarget.DeviceTargets != null || bidTarget.GeoTargets != null)
             {
-                // Get the user property and filters
-                var deviceProp = Expression.Property(bidParam, "Device");
-                var deviceFilter = CombineTargets(bidTarget.DeviceTargets, deviceProp);
+                // Get the device modifiers
+                var devProp = Expression.Property(bidParam, "Device");
 
-                // Get the geographical filter and property
-                var geoProp = Expression.Property(deviceProp, "Geo");
-                var geoFilter = (Expression)Expression.Constant(bidTarget.GeoTargets == null);
+                if (bidTarget.DeviceTargets != null)
+                {
+                    var bodyExp = new List<Expression>();
+                    foreach (var devTarget in bidTarget.DeviceTargets)
+                        bodyExp.Add(Expression.IfThen(devTarget.CreateExpression(devProp),
+                            Expression.AddAssign(fModifier, Expression.Constant(devTarget.Modifier))));
+
+                    expList.Add(Expression.IfThen(Expression.NotEqual(devProp, Expression.Constant(null)), Expression.Block(bodyExp)));
+                }
+
+                // Get the site modifiers
+                var geoProp = Expression.Property(devProp, "Geo");
+
                 if (bidTarget.GeoTargets != null)
-                    geoFilter = CombineTargets(bidTarget.GeoTargets, geoProp);
+                {
+                    var geoExp = new List<Expression>();
+                    foreach (var geoTarget in bidTarget.GeoTargets)
+                        geoExp.Add(Expression.IfThen(geoTarget.CreateExpression(geoProp),
+                            Expression.AddAssign(fModifier, Expression.Constant(geoTarget.Modifier))));
 
-                if (deviceFilter != null)
-                    expList.Add(
-                        Expression.IfThen(
-                            Expression.OrElse(
-                                Expression.Equal(deviceProp, Expression.Constant(null)),
-                                Expression.Not(deviceFilter)
-                            ),
-                            Expression.Return(ret, Expression.Constant(false))
-                        )
-                    );
-
-                if (geoFilter != null)
-                    expList.Add(
-                        Expression.IfThen(
-                            Expression.OrElse(
-                                Expression.OrElse(
-                                    Expression.Equal(deviceProp, Expression.Constant(null)),
-                                    Expression.Equal(geoProp, Expression.Constant(null))),
-                                Expression.Not(geoFilter)
-                            ),
-                            Expression.Assign(gValue, Expression.Decrement(gValue))
-                        )
-                    );
+                    expList.Add(Expression.IfThen(Expression.AndAlso(Expression.NotEqual(devProp, Expression.Constant(null)), Expression.NotEqual(geoProp, Expression.Constant(null))), Expression.Block(geoExp)));
+                }
             }
 
             // Process the user filters
             if (bidTarget.UserTargets != null || bidTarget.GeoTargets != null)
             {
-                // Get the user property and filters
+                // Get the user modifiers
                 var userProp = Expression.Property(bidParam, "User");
-                var userFilter = CombineTargets(bidTarget.UserTargets, userProp);
 
-                // Get the geographical filter and property
+                if (bidTarget.UserTargets != null)
+                {
+                    var bodyExp = new List<Expression>();
+                    foreach (var userTarget in bidTarget.UserTargets)
+                        bodyExp.Add(Expression.IfThen(userTarget.CreateExpression(userProp),
+                            Expression.AddAssign(fModifier, Expression.Constant(userTarget.Modifier))));
+
+                    expList.Add(Expression.IfThen(Expression.NotEqual(userProp, Expression.Constant(null)), Expression.Block(bodyExp)));
+                }
+
+                // Get the site modifiers
                 var geoProp = Expression.Property(userProp, "Geo");
-                var geoFilter = (Expression)Expression.Constant(bidTarget.GeoTargets == null);
+
                 if (bidTarget.GeoTargets != null)
-                    geoFilter = CombineTargets(bidTarget.GeoTargets, geoProp);
+                {
+                    var geoExp = new List<Expression>();
+                    foreach (var geoTarget in bidTarget.GeoTargets)
+                        geoExp.Add(Expression.IfThen(geoTarget.CreateExpression(geoProp),
+                            Expression.AddAssign(fModifier, Expression.Constant(geoTarget.Modifier))));
 
-                if (userFilter != null)
-                    expList.Add(
-                        Expression.IfThen(
-                            Expression.OrElse(
-                                Expression.Equal(userProp, Expression.Constant(null)),
-                                Expression.Not(userFilter)
-                            ),
-                            Expression.Return(ret, Expression.Constant(false))
-                        )
-                    );
-
-                if (geoFilter != null)
-                    expList.Add(
-                        Expression.IfThen(
-                            Expression.OrElse(
-                                Expression.OrElse(
-                                    Expression.Equal(userProp, Expression.Constant(null)),
-                                    Expression.Equal(geoProp, Expression.Constant(null))),
-                                Expression.Not(geoFilter)
-                            ),
-                            Expression.Assign(gValue, Expression.Decrement(gValue))
-                        )
-                    );
+                    expList.Add(Expression.IfThen(Expression.AndAlso(Expression.NotEqual(userProp, Expression.Constant(null)), Expression.NotEqual(geoProp, Expression.Constant(null))), Expression.Block(geoExp)));
+                }
             }
-
-            // Geo check
-            expList.Add(Expression.IfThen(Expression.Equal(gValue, Expression.Constant(0)),
-                Expression.Return(ret, Expression.Constant(false))));
 
             // Process the site filters
             if (bidTarget.SiteTargets != null)
             {
-                // Get the impressions
+                // Get the site modifiers
                 var siteProp = Expression.Property(bidParam, "Site");
-                var siteTest = CombineTargets(bidTarget.SiteTargets, siteProp);
 
-                // Create the loop and add it to this block
-                if (siteTest != null)
-                    expList.Add(
-                        Expression.IfThen(
-                            Expression.OrElse(
-                                Expression.Equal(siteProp, Expression.Constant(null)),
-                                Expression.Not(siteTest)
-                            ),
-                            Expression.Return(ret, Expression.Constant(false))
-                        )
-                    );
+                var bodyExp = new List<Expression>();
+                foreach (var siteTarget in bidTarget.SiteTargets)
+                    bodyExp.Add(Expression.IfThen(siteTarget.CreateExpression(siteProp),
+                        Expression.AddAssign(fModifier, Expression.Constant(siteTarget.Modifier))));
+
+                expList.Add(Expression.IfThen(Expression.NotEqual(siteProp, Expression.Constant(null)), Expression.Block(bodyExp)));
             }
 
             // Process the app filters
             if (bidTarget.AppTargets != null)
             {
-                // Get the impressions
+                // Get the app modifiers
                 var appProp = Expression.Property(bidParam, "App");
-                var appTest = CombineTargets(bidTarget.SiteTargets, appProp);
 
-                // Create the loop and add it to this block
-                if (appTest != null)
-                    expList.Add(
-                        Expression.IfThen(
-                            Expression.OrElse(
-                                Expression.Equal(appProp, Expression.Constant(null)),
-                                Expression.Not(appTest)
-                            ),
-                            Expression.Return(ret, Expression.Constant(false))
-                        )
-                    );
+                var bodyExp = new List<Expression>();
+                foreach (var appTarget in bidTarget.SiteTargets)
+                    bodyExp.Add(Expression.IfThen(appTarget.CreateExpression(appProp),
+                        Expression.AddAssign(fModifier, Expression.Constant(appTarget.Modifier))));
+
+                expList.Add(Expression.IfThen(Expression.NotEqual(appProp, Expression.Constant(null)), Expression.Block(bodyExp)));
             }
 
-            // If you make it through all targets, you pass
-            expList.Add(Expression.Label(ret, Expression.Constant(true)));
+            // Return the total modifier
+            expList.Add(Expression.Label(ret, fModifier));
 
-            var final = Expression.Block(new ParameterExpression[] { gValue }, expList);
+            var final = Expression.Block(new ParameterExpression[] { fModifier }, expList);
 
-            var ftype = typeof(Func<,>).MakeGenericType(typeof(BidRequest), typeof(bool));
+            var ftype = typeof(Func<,>).MakeGenericType(typeof(BidRequest), typeof(double));
             var comp = makeLambda.MakeGenericMethod(ftype).Invoke(null, new object[] { final, new ParameterExpression[] { bidParam } });
-            return (Func<BidRequest, bool>)comp.GetType().GetMethod("Compile", Type.EmptyTypes).Invoke(comp, new object[] { });
+            return (Func<BidRequest, double>)comp.GetType().GetMethod("Compile", Type.EmptyTypes).Invoke(comp, new object[] { });
         }
 
         /// <summary>
@@ -327,6 +298,7 @@ namespace Lucent.Common
                     TargetType = Enum.Parse<FilterType>(jsonObj.Operation, true),
                     Value = jsonObj.Values.Length == 1 ? jsonObj.Values.Last() : null,
                     Values = jsonObj.Values.Length > 1 ? jsonObj.Values : null,
+                    Modifier = jsonObj.Modifier
                 };
 
                 switch (jsonObj.Entity)
@@ -387,7 +359,7 @@ namespace Lucent.Common
                         break;
                 }
             }
-            
+
             return original;
         }
 

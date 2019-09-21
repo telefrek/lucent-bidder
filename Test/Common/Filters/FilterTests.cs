@@ -58,7 +58,7 @@ namespace Lucent.Common.Storage.Test
             var req = new BidRequest
             {
                 Impressions = new Impression[] { new Impression { ImpressionId = "test" } },
-                User = new User { Gender = "M", Geo = new Geo { Country = "CAN"} }
+                User = new User { Gender = "M", Geo = new Geo { Country = "CAN" } }
             };
 
             var bFilter = new BidFilter
@@ -83,27 +83,32 @@ namespace Lucent.Common.Storage.Test
         {
             var req = new BidRequest
             {
-                Impressions = new Impression[] { new Impression { ImpressionId = "test",  } },
+                Impressions = new Impression[] { new Impression { ImpressionId = "test", } },
                 User = new User { Gender = "M" },
             };
 
             var bFilter = new BidTargets
             {
-                ImpressionTargets = new[] { new Target { Property = "BidCurrency", Value = "USD" }, new Target { Property = "Banner", TargetType = FilterType.HASVALUE } },
-                GeoTargets = new[] { new Target { TargetType = FilterType.EQ, Property = "Country", Value = "CAN" } }
+                ImpressionTargets = new[] { new Target { Property = "BidCurrency", Value = "USD" }, new Target { Property = "Banner", TargetType = FilterType.HASVALUE, Modifier = -1d } },
+                GeoTargets = new[] { new Target { TargetType = FilterType.EQ, Property = "Country", Value = "CAN", Modifier = .2d } },
+                UserTargets = new[]{new Target { TargetType = FilterType.EQ, Property = "Gender", Value="M", Modifier = 0.0001},
+                new Target { TargetType = FilterType.EQ, Property = "Gender", Value="F", Modifier = .3d}}
             };
 
             var f = bFilter.GenerateTargets();
 
-            Assert.IsFalse(f.Invoke(req), "Filter should not have matched");
+            Assert.AreEqual(0d, f.Invoke(req), 0.001d, "No values set");
 
             req.User.Geo = new Geo { Country = "CAN" };
 
-            Assert.IsFalse(f.Invoke(req), "Filter should not have matched");
+            Assert.AreEqual(0.2d, f.Invoke(req), 0.001d, "Value should have been positive");
 
             req.Impressions.First().Banner = new Banner();
 
-            Assert.IsTrue(f.Invoke(req), "Filter should have matched");
+            Assert.AreEqual(-0.8d, f.Invoke(req), 0.001d, "Value should have been negative");
+
+            req.User.Gender = "F";
+            Assert.AreEqual(-0.5d, f.Invoke(req), 0.001d, "Value should have been boosted by gender");
         }
 
         [TestMethod]

@@ -55,7 +55,7 @@ namespace Lucent.Common.Bidding
             if (_campaign.BidFilter != null)
                 _campaign.IsFiltered = (_campaign.JsonFilters ?? new JsonFilter[0]).MergeFilter(_campaign.BidFilter).GenerateFilter();
             if (_campaign.BidTargets != null)
-                _campaign.IsTargetted = (_campaign.JsonTargets ?? new JsonFilter[0]).MergeTarget(_campaign.BidTargets).GenerateTargets();
+                _campaign.GetModifier = (_campaign.JsonTargets ?? new JsonFilter[0]).MergeTarget(_campaign.BidTargets).GenerateTargets();
 
             _log = logger;
             _scoringService = scoringService;
@@ -142,11 +142,7 @@ namespace Lucent.Common.Bidding
                     return NO_MATCHES;
                 }
 
-                if (!_campaign.IsTargetted(request))
-                {
-                    BidCounters.NoBidReason.WithLabels("campaign_target_failed", Campaign.Name).Inc();
-                    return NO_MATCHES;
-                }
+                var modifier = _campaign.GetModifier(request);
 
                 var impList = new List<BidContext>();
                 var allMatched = true;
@@ -201,7 +197,7 @@ namespace Lucent.Common.Bidding
                         cpm = Campaign.MaxCPM / 2;
 
                     // Score the request to figure out if the user is better or worse
-                    cpm += cpm * Score(request);
+                    cpm += modifier;
 
                     // Cap the cpm at the max
                     cpm = Math.Round(Math.Min(Campaign.MaxCPM, cpm), 4);

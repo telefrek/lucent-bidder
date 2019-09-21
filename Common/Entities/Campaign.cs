@@ -193,7 +193,7 @@ namespace Lucent.Common.Entities
         /// 
         /// </summary>
         /// <returns></returns>
-        public Func<BidRequest, bool> IsTargetted { get; set; } = (br) => true;
+        public Func<BidRequest, double> GetModifier { get; set; } = (br) => 0d;
 
         /// <inheritdoc/>
         public string ETag { get; set; }
@@ -237,6 +237,13 @@ namespace Lucent.Common.Entities
         /// <value></value>
         [SerializationProperty(4, "values")]
         public FilterValue[] Values { get; set; }
+
+        /// <summary>
+        /// The modifier for the targets
+        /// </summary>
+        /// <value></value>
+        [SerializationProperty(5, "modifier")]
+        public double Modifier { get; set; }
     }
 
     /// <summary>

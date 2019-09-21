@@ -119,7 +119,7 @@ namespace Lucent.Common.Bidding
         /// </summary>
         /// <returns></returns>
         public static Counter DeviceVersion = Metrics.CreateCounter("device_version", "Device Version", new CounterConfiguration { LabelNames = new string[] { "version" } });
-        
+
         /// <summary>
         /// Device connection type
         /// </summary>
@@ -148,7 +148,11 @@ namespace Lucent.Common.Bidding
         /// 
         /// </summary>
         /// <returns></returns>
-        public static Histogram BidFloor = Metrics.CreateHistogram("bid_floor", "Bid Floor", new HistogramConfiguration { LabelNames = new string[] { "cpm" } });
+        public static Histogram BidFloor = Metrics.CreateHistogram("bid_floor", "Bid Floor", new HistogramConfiguration
+        {
+            LabelNames = new string[] { "cpm" },
+            Buckets = new double[] { 0.1, 0.2, 0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3, 4, 5, 7.5, 10 },
+        });
 
     }
 }
