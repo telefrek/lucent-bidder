@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Cassandra;
+using Lucent.Common.Bidding;
 using Lucent.Common.Entities;
 
 using Lucent.Common.OpenRTB;
@@ -93,7 +94,7 @@ namespace Lucent.Common.Budget
         }
 
         /// <inheritdoc/>
-        public async Task<ICollection<LedgerSummary>> TryGetSummary(string entityId, DateTime start, DateTime end, int? numSegments, bool? detailed)
+        public async Task<ICollection<LedgerSummary>> TryGetSummary(string entityId, DateTime start, DateTime end, int? numSegments, bool? detailed, bool? clickOnly)
         {
             _log.LogInformation("Getting summary for {0} at : {1}->{2}", entityId, start, end);
             var segments = new List<LedgerSummary>();
@@ -119,8 +120,6 @@ namespace Lucent.Common.Budget
 
                 foreach (var row in await ExecuteAsync((detailed ?? false ? _getDetailedRangeStatement : _getRangeStatement).Bind(entityId, TimeUuid.Min(begin), TimeUuid.Max(next)), "get_ledger_range"))
                 {
-                    summary.Amount += row.GetValue<double>("amount");
-                    summary.Bids++;
                     if (detailed ?? false && row.GetColumn("contents") != null)
                     {
                         try
@@ -129,11 +128,30 @@ namespace Lucent.Common.Budget
                             if (data != null)
                             {
                                 var obj = JsonConvert.DeserializeObject<Dictionary<string, int>>(Encoding.UTF8.GetString(data));
-                                foreach (var key in obj.Keys)
+
+                                if ((clickOnly ?? false) && obj.ContainsKey(BidOperation.Clicked.ToString().ToLower()))
                                 {
-                                    if (!summary.Metadata.ContainsKey(key))
-                                        summary.Metadata.Add(key, 0);
-                                    summary.Metadata[key] += obj[key];
+                                    foreach (var key in obj.Keys)
+                                    {
+                                        if (!summary.Metadata.ContainsKey(key))
+                                            summary.Metadata.Add(key, 0);
+                                        summary.Metadata[key] += obj[key];
+                                    }
+
+                                    summary.Amount += row.GetValue<double>("amount");
+                                    summary.Bids++;
+                                }
+                                else if (!(clickOnly ?? false))
+                                {
+                                    foreach (var key in obj.Keys)
+                                    {
+                                        if (!summary.Metadata.ContainsKey(key))
+                                            summary.Metadata.Add(key, 0);
+                                        summary.Metadata[key] += obj[key];
+                                    }
+
+                                    summary.Amount += row.GetValue<double>("amount");
+                                    summary.Bids++;
                                 }
                             }
                         }

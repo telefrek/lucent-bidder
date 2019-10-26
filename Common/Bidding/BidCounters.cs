@@ -11,6 +11,23 @@ namespace Lucent.Common.Bidding
         /// 
         /// </summary>
         /// <value></value>
+        public static Counter Redirects = Metrics.CreateCounter("redirect", "Postback counts", new CounterConfiguration
+        {
+        });
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
+        public static Counter Postbacks = Metrics.CreateCounter("postback", "Postback counts", new CounterConfiguration
+        {
+            LabelNames = new string[] { "operation", "campaign" }
+        });
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
         public static Counter NoBidReason = Metrics.CreateCounter("no_bid_reasons", "Reasons the bidder didn't bid", new CounterConfiguration
         {
             LabelNames = new string[] { "reason", "campaign" }
@@ -59,6 +76,15 @@ namespace Lucent.Common.Bidding
         public static Counter CampaignClicks = Metrics.CreateCounter("campaign_clicks", "Clicks per campaign", new CounterConfiguration
         {
             LabelNames = new string[] { "campaign" }
+        });
+
+        /// <summary>
+        /// Track campaign conversions
+        /// </summary>
+        /// <value></value>
+        public static Counter CampaignAction = Metrics.CreateCounter("campaign_actions", "actions", new CounterConfiguration
+        {
+            LabelNames = new string[] { "campaign", "action" }
         });
 
         /// <summary>

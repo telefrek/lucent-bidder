@@ -15,7 +15,7 @@ namespace Lucent.Common.Budget
         ConcurrentDictionary<string, List<BidEntry>> _ledgers = new ConcurrentDictionary<string, List<BidEntry>>();
 
         /// <inheritdoc/>
-        public Task<ICollection<LedgerSummary>> TryGetSummary(string entityId, DateTime start, DateTime end, int? numSegments, bool? detailed)
+        public Task<ICollection<LedgerSummary>> TryGetSummary(string entityId, DateTime start, DateTime end, int? numSegments, bool? detailed, bool? clickOnly)
         {
             // This doesn't really work lol
             var entries = new List<BidEntry>();

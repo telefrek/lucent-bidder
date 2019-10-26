@@ -39,10 +39,10 @@ namespace Lucent.Common.Serialization._Internal
                     }
                 }
 
-                if (State == Instances.Length)
+                if (!Finished)
                 {
                     var aw = Writer.WriteEnd().GetAwaiter();
-                    State++;
+                    Finished = true;
                     if (!aw.IsCompleted)
                     {
                         AsyncBuilder.AwaitUnsafeOnCompleted(ref aw, ref this);
@@ -50,10 +50,11 @@ namespace Lucent.Common.Serialization._Internal
                     }
                 }
 
-                if (State == Instances.Length + 1)
+                if (!Flushed)
                 {
                     var aw = Writer.Flush().GetAwaiter();
-                    State++;
+                    Flushed = true;
+
                     if (!aw.IsCompleted)
                     {
                         AsyncBuilder.AwaitUnsafeOnCompleted(ref aw, ref this);

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.2</TargetFramework>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
@@ -9,8 +9,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.App" Version="2.2.5" />
-    <PackageReference Include="prometheus-net.AspNetCore" version="3.1.2" />
+    <PackageReference Include="prometheus-net.AspNetCore" version="3.3.0" />
   </ItemGroup>
 
   <ItemGroup>

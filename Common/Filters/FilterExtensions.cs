@@ -7,6 +7,7 @@ using System.Reflection;
 using Lucent.Common.Entities;
 using Lucent.Common.Filters;
 using Lucent.Common.OpenRTB;
+using Microsoft.Extensions.Logging;
 
 // Enumerable
 
@@ -56,11 +57,20 @@ namespace Lucent.Common
         }
 
         /// <summary>
+        /// Hack
+        /// </summary>
+        /// <param name="modifier"></param>
+        /// <returns></returns>
+        public static double SafeModifier(this double modifier) => modifier == 0d ? 1d : modifier;
+
+
+        /// <summary>
         /// 
         /// </summary>
         /// <param name="bidTarget"></param>
+        /// <param name="targetCpm"></param>
         /// <returns></returns>
-        public static Func<BidRequest, double> GenerateTargets(this BidTargets bidTarget)
+        public static Func<BidRequest, double> GenerateTargets(this BidTargets bidTarget, double targetCpm)
         {
             // Need our input parameter :)
             var bidParam = Expression.Parameter(typeof(BidRequest), "bid");
@@ -70,11 +80,11 @@ namespace Lucent.Common
 
             // Keep track of all the expressions in this chain
             var expList = new List<Expression> { };
-            expList.Add(Expression.Assign(fModifier, Expression.Constant(0d)));
+            expList.Add(Expression.Assign(fModifier, Expression.Constant(targetCpm)));
 
             // Need a sentinal value for breaking in loops
             var loopBreak = Expression.Label();
-            var ret = Expression.Label(typeof(double)); // We're going to return a bool
+            var ret = Expression.Label(typeof(double)); // We're going to return a double
 
             // Process the impressions filters
             if (bidTarget.ImpressionTargets != null)
@@ -87,11 +97,11 @@ namespace Lucent.Common
                 var impParam = Expression.Parameter(impType, "imp");
 
                 // Create the checks for the modifier
-                // If prop1 == x modifier += v
+                // If prop1 == x modifier *= v
                 var bodyExp = new List<Expression>();
                 foreach (var impTarget in bidTarget.ImpressionTargets)
                     bodyExp.Add(Expression.IfThen(impTarget.CreateExpression(impParam),
-                        Expression.AddAssign(fModifier, Expression.Constant(impTarget.Modifier))));
+                        Expression.MultiplyAssign(fModifier, Expression.Constant(impTarget.Modifier.SafeModifier()))));
 
                 // Run the modifier on each impression
                 // foreach(var imp in impressions) { if(imp != null) { bodyExp }}
@@ -115,7 +125,7 @@ namespace Lucent.Common
                     var bodyExp = new List<Expression>();
                     foreach (var devTarget in bidTarget.DeviceTargets)
                         bodyExp.Add(Expression.IfThen(devTarget.CreateExpression(devProp),
-                            Expression.AddAssign(fModifier, Expression.Constant(devTarget.Modifier))));
+                            Expression.MultiplyAssign(fModifier, Expression.Constant(devTarget.Modifier.SafeModifier()))));
 
                     expList.Add(Expression.IfThen(Expression.NotEqual(devProp, Expression.Constant(null)), Expression.Block(bodyExp)));
                 }
@@ -128,7 +138,7 @@ namespace Lucent.Common
                     var geoExp = new List<Expression>();
                     foreach (var geoTarget in bidTarget.GeoTargets)
                         geoExp.Add(Expression.IfThen(geoTarget.CreateExpression(geoProp),
-                            Expression.AddAssign(fModifier, Expression.Constant(geoTarget.Modifier))));
+                            Expression.MultiplyAssign(fModifier, Expression.Constant(geoTarget.Modifier.SafeModifier()))));
 
                     expList.Add(Expression.IfThen(Expression.AndAlso(Expression.NotEqual(devProp, Expression.Constant(null)), Expression.NotEqual(geoProp, Expression.Constant(null))), Expression.Block(geoExp)));
                 }
@@ -145,7 +155,7 @@ namespace Lucent.Common
                     var bodyExp = new List<Expression>();
                     foreach (var userTarget in bidTarget.UserTargets)
                         bodyExp.Add(Expression.IfThen(userTarget.CreateExpression(userProp),
-                            Expression.AddAssign(fModifier, Expression.Constant(userTarget.Modifier))));
+                            Expression.MultiplyAssign(fModifier, Expression.Constant(userTarget.Modifier.SafeModifier()))));
 
                     expList.Add(Expression.IfThen(Expression.NotEqual(userProp, Expression.Constant(null)), Expression.Block(bodyExp)));
                 }
@@ -158,7 +168,7 @@ namespace Lucent.Common
                     var geoExp = new List<Expression>();
                     foreach (var geoTarget in bidTarget.GeoTargets)
                         geoExp.Add(Expression.IfThen(geoTarget.CreateExpression(geoProp),
-                            Expression.AddAssign(fModifier, Expression.Constant(geoTarget.Modifier))));
+                            Expression.MultiplyAssign(fModifier, Expression.Constant(geoTarget.Modifier.SafeModifier()))));
 
                     expList.Add(Expression.IfThen(Expression.AndAlso(Expression.NotEqual(userProp, Expression.Constant(null)), Expression.NotEqual(geoProp, Expression.Constant(null))), Expression.Block(geoExp)));
                 }
@@ -173,7 +183,7 @@ namespace Lucent.Common
                 var bodyExp = new List<Expression>();
                 foreach (var siteTarget in bidTarget.SiteTargets)
                     bodyExp.Add(Expression.IfThen(siteTarget.CreateExpression(siteProp),
-                        Expression.AddAssign(fModifier, Expression.Constant(siteTarget.Modifier))));
+                        Expression.MultiplyAssign(fModifier, Expression.Constant(siteTarget.Modifier.SafeModifier()))));
 
                 expList.Add(Expression.IfThen(Expression.NotEqual(siteProp, Expression.Constant(null)), Expression.Block(bodyExp)));
             }
@@ -187,7 +197,7 @@ namespace Lucent.Common
                 var bodyExp = new List<Expression>();
                 foreach (var appTarget in bidTarget.SiteTargets)
                     bodyExp.Add(Expression.IfThen(appTarget.CreateExpression(appProp),
-                        Expression.AddAssign(fModifier, Expression.Constant(appTarget.Modifier))));
+                        Expression.MultiplyAssign(fModifier, Expression.Constant(appTarget.Modifier.SafeModifier()))));
 
                 expList.Add(Expression.IfThen(Expression.NotEqual(appProp, Expression.Constant(null)), Expression.Block(bodyExp)));
             }
@@ -287,76 +297,84 @@ namespace Lucent.Common
         /// </summary>
         /// <param name="jsonFilters"></param>
         /// <param name="original"></param>
+        /// <param name="log"></param>
         /// <returns></returns>
-        public static BidTargets MergeTarget(this JsonFilter[] jsonFilters, BidTargets original)
+        public static BidTargets MergeTarget(this JsonFilter[] jsonFilters, BidTargets original, ILogger log)
         {
             original = original ?? new BidTargets();
             foreach (var jsonObj in jsonFilters ?? new JsonFilter[0])
             {
-                var filter = new Target
+                try
                 {
-                    TargetType = Enum.Parse<FilterType>(jsonObj.Operation, true),
-                    Value = jsonObj.Values.Length == 1 ? jsonObj.Values.Last() : null,
-                    Values = jsonObj.Values.Length > 1 ? jsonObj.Values : null,
-                    Modifier = jsonObj.Modifier
-                };
+                    var filter = new Target
+                    {
+                        TargetType = Enum.Parse<FilterType>(jsonObj.Operation, true),
+                        Value = jsonObj.Values.Length == 1 ? jsonObj.Values.Last() : null,
+                        Values = jsonObj.Values.Length > 1 ? jsonObj.Values : null,
+                        Modifier = jsonObj.Modifier
+                    };
 
-                switch (jsonObj.Entity)
+                    switch (jsonObj.Entity)
+                    {
+                        case "geo":
+                            if (TryParseProperty<Geo>(filter, jsonObj))
+                            {
+                                var filters = original.GeoTargets ?? new Target[0];
+                                Array.Resize(ref filters, filters.Length + 1);
+                                filters[filters.Length - 1] = filter;
+                                original.GeoTargets = filters;
+                            }
+                            break;
+                        case "device":
+                            if (TryParseProperty<Device>(filter, jsonObj))
+                            {
+                                var filters = original.DeviceTargets ?? new Target[0];
+                                Array.Resize(ref filters, filters.Length + 1);
+                                filters[filters.Length - 1] = filter;
+                                original.DeviceTargets = filters;
+                            }
+                            break;
+                        case "app":
+                            if (TryParseProperty<App>(filter, jsonObj))
+                            {
+                                var filters = original.AppTargets ?? new Target[0];
+                                Array.Resize(ref filters, filters.Length + 1);
+                                filters[filters.Length - 1] = filter;
+                                original.AppTargets = filters;
+                            }
+                            break;
+                        case "site":
+                            if (TryParseProperty<Site>(filter, jsonObj))
+                            {
+                                var filters = original.SiteTargets ?? new Target[0];
+                                Array.Resize(ref filters, filters.Length + 1);
+                                filters[filters.Length - 1] = filter;
+                                original.SiteTargets = filters;
+                            }
+                            break;
+                        case "impression":
+                            if (TryParseProperty<Impression>(filter, jsonObj))
+                            {
+                                var filters = original.ImpressionTargets ?? new Target[0];
+                                Array.Resize(ref filters, filters.Length + 1);
+                                filters[filters.Length - 1] = filter;
+                                original.ImpressionTargets = filters;
+                            }
+                            break;
+                        case "user":
+                            if (TryParseProperty<User>(filter, jsonObj))
+                            {
+                                var filters = original.UserTargets ?? new Target[0];
+                                Array.Resize(ref filters, filters.Length + 1);
+                                filters[filters.Length - 1] = filter;
+                                original.UserTargets = filters;
+                            }
+                            break;
+                    }
+                }
+                catch (Exception e)
                 {
-                    case "geo":
-                        if (TryParseProperty<Geo>(filter, jsonObj))
-                        {
-                            var filters = original.GeoTargets ?? new Target[0];
-                            Array.Resize(ref filters, filters.Length + 1);
-                            filters[filters.Length - 1] = filter;
-                            original.GeoTargets = filters;
-                        }
-                        break;
-                    case "device":
-                        if (TryParseProperty<Device>(filter, jsonObj))
-                        {
-                            var filters = original.DeviceTargets ?? new Target[0];
-                            Array.Resize(ref filters, filters.Length + 1);
-                            filters[filters.Length - 1] = filter;
-                            original.DeviceTargets = filters;
-                        }
-                        break;
-                    case "app":
-                        if (TryParseProperty<App>(filter, jsonObj))
-                        {
-                            var filters = original.AppTargets ?? new Target[0];
-                            Array.Resize(ref filters, filters.Length + 1);
-                            filters[filters.Length - 1] = filter;
-                            original.AppTargets = filters;
-                        }
-                        break;
-                    case "site":
-                        if (TryParseProperty<Site>(filter, jsonObj))
-                        {
-                            var filters = original.SiteTargets ?? new Target[0];
-                            Array.Resize(ref filters, filters.Length + 1);
-                            filters[filters.Length - 1] = filter;
-                            original.SiteTargets = filters;
-                        }
-                        break;
-                    case "impression":
-                        if (TryParseProperty<Impression>(filter, jsonObj))
-                        {
-                            var filters = original.ImpressionTargets ?? new Target[0];
-                            Array.Resize(ref filters, filters.Length + 1);
-                            filters[filters.Length - 1] = filter;
-                            original.ImpressionTargets = filters;
-                        }
-                        break;
-                    case "user":
-                        if (TryParseProperty<User>(filter, jsonObj))
-                        {
-                            var filters = original.UserTargets ?? new Target[0];
-                            Array.Resize(ref filters, filters.Length + 1);
-                            filters[filters.Length - 1] = filter;
-                            original.UserTargets = filters;
-                        }
-                        break;
+                    log.LogError(e, "Failed to parse {0}", jsonObj.Operation);
                 }
             }
 

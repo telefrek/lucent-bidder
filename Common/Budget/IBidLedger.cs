@@ -29,8 +29,9 @@ namespace Lucent.Common.Budget
         /// <param name="end">The end time (exclusive)</param>
         /// <param name="numSegments">The optional number of segments (Default = 1)</param>
         /// <param name="detailed">Option for including details</param>
+        /// <param name="clickOnly"></param>
         /// <returns></returns>
-        Task<ICollection<LedgerSummary>> TryGetSummary(string entityId, DateTime start, DateTime end, int? numSegments, bool? detailed);
+        Task<ICollection<LedgerSummary>> TryGetSummary(string entityId, DateTime start, DateTime end, int? numSegments, bool? detailed, bool? clickOnly);
     }
 
     /// <summary>

@@ -215,7 +215,7 @@ namespace Lucent.Common.Entities
         /// </summary>
         /// <value></value>
         [SerializationProperty(1, "operation")]
-        public string Operation { get; set; }
+        public string Operation { get; set; } = "eq";
 
         /// <summary>
         /// 

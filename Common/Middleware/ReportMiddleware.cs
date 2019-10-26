@@ -80,6 +80,7 @@ namespace Lucent.Common.Middleware
                         var offset = 0;
                         var format = "csv";
                         var detailed = false;
+                        var clickOnly = false;
 
                         if (query.ContainsKey("offset") && query.TryGetValue("offset", out qp))
                             offset = int.Parse(qp);
@@ -90,11 +91,27 @@ namespace Lucent.Common.Middleware
                         if (query.ContainsKey("format") && query.TryGetValue("format", out qp))
                             format = qp;
 
+                        if(query.ContainsKey("clicks")) clickOnly = true;
+
                         if (query.ContainsKey("day") && query.TryGetValue("day", out qp))
                         {
                             var dt = DateTime.Parse(qp).ToUniversalTime();
                             start = new DateTime(dt.Year, dt.Month, dt.Day).AddHours(offset);
                             end = start.AddHours(24);
+                        }
+
+                        if (query.ContainsKey("begin") && query.TryGetValue("begin", out qp))
+                        {
+                            var dt = DateTime.Parse(qp).ToUniversalTime();
+                            start = new DateTime(dt.Year, dt.Month, dt.Day).AddHours(offset);
+                            end = start.AddHours(24);
+                        }
+
+                        if (query.ContainsKey("end") && query.TryGetValue("end", out qp))
+                        {
+                            var dt = DateTime.Parse(qp).ToUniversalTime();
+                            end = new DateTime(dt.Year, dt.Month, dt.Day).AddHours(offset);
+                            end = end.AddHours(24);
                         }
 
                         _log.LogInformation("Report start {0} to {1}", start, end);
@@ -104,7 +121,7 @@ namespace Lucent.Common.Middleware
                         var bids = 0d;
                         while (start < end)
                         {
-                            foreach (var summary in await _ledger.TryGetSummary(ledgerId, start, start.AddHours(1), null, detailed))
+                            foreach (var summary in await _ledger.TryGetSummary(ledgerId, start, start.AddHours(1), null, detailed, clickOnly))
                             {
                                 var report = new HourlyReport()
                                 {

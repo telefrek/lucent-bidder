@@ -11,6 +11,8 @@ service:
   type: ClusterIP
   port: 80
 
+cors: []
+
 ingress:
   enabled: false
   annotations:

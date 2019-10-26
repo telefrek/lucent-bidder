@@ -18,6 +18,9 @@ data:
           "System.GC.Concurrent": true
         }
       },
+      "cors": {
+        "origins" : {{ toJson .Values.cors }}
+      },
       "ContentPath":"adcontents",
       "AllowedHosts": "*",
       "rabbit": {

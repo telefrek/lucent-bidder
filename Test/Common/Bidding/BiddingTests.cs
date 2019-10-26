@@ -356,7 +356,7 @@ namespace Lucent.Common.Bidding
 
         async Task<HttpResponseMessage> AdvanceBid(HttpClient biddingClient, ISerializationContext serializationContext, Bid bid, bool win = true, double? amount = null)
         {
-            var uri = new Uri(win ? bid.WinUrl.UrlDecode().Replace("${AUCTION_PRICE}", Math.Round(amount ?? (double)bid.CPM, 4).ToString()) : bid.LossUrl);
+            var uri = new Uri(win ? bid.WinUrl.UrlDecode().Replace("${AUCTION_PRICE}", Math.Round(amount ?? (double)bid.CPM, 5).ToString()) : bid.LossUrl);
 
             return await biddingClient.PostAsync(uri.PathAndQuery, null);
         }

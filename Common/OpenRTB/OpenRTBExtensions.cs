@@ -68,7 +68,6 @@ namespace Lucent.Common.OpenRTB
         /// <summary>
         /// Add to the dictionary if the key and value are not null
         /// </summary>
-        /// <param name="Dictionary<string"></param>
         /// <param name="dict"></param>
         /// <param name="key"></param>
         /// <param name="value"></param>

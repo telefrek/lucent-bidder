@@ -158,11 +158,13 @@ namespace Lucent.Common.Serialization
             {
                 case SerializationFormat.PROTOBUF:
                     using (var aWriter = await new LucentProtoWriter(target, leaveOpen).CreateArrayWriter())
+                    {
                         await aWriter.Write(this, instances.ToArray());
+                        await aWriter.Flush();
+                    }
                     break;
                 default:
-                    using (var writer = new JsonTextWriter(new StreamWriter(target)) { CloseOutput = !leaveOpen })
-                    using (var aWriter = await new LucentJsonWriter(writer).CreateArrayWriter())
+                    using (var aWriter = await target.CreateJsonArrayWriter(leaveOpen))
                         await aWriter.Write(this, instances.ToArray());
                     break;
             }

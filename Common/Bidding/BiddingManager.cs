@@ -71,8 +71,6 @@ namespace Lucent.Common.Bidding
                         _isBudgetExhausted = true;
                         _log.LogWarning("Failed to sync exchange budget for {0}, stopping to be safe", _exchangeId);
                     }
-
-                    _log.LogInformation("Budget change for exchange : {0} ({1})", _exchangeId, _isBudgetExhausted);
                 }
             });
         }

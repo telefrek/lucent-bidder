@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System;
+using System.IO;
 using Lucent.Common;
 using Lucent.Common.Bootstrap;
 using Microsoft.AspNetCore;
@@ -9,6 +10,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
+using System.Linq;
+using Newtonsoft.Json.Linq;
 
 namespace Orchestration
 {
@@ -42,8 +45,8 @@ namespace Orchestration
                 })
                 .ConfigureServices((hostingContext, services) =>
                 {
-                    var config = hostingContext.Configuration.GetSection("cors");
-                    var origins = config != null ? config.GetValue<string[]>("origins", new string[] { }) : new string[] { };
+                    var origins = JObject.Parse(File.ReadAllText("appsettings.json"))["cors"]["origins"].Values<string>().ToArray();
+                    Console.Out.WriteLine("origins: {0}", string.Join(',', origins));
                     services.AddCors(options =>
                     {
                         options.AddPolicy("localhostPolicy",

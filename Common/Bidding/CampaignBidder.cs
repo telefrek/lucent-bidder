@@ -6,11 +6,8 @@ using System.Threading.Tasks;
 using Lucent.Common.Budget;
 using Lucent.Common.Caching;
 using Lucent.Common.Entities;
-using Lucent.Common.Events;
-using Lucent.Common.Exchanges;
 using Lucent.Common.Middleware;
 using Lucent.Common.OpenRTB;
-using Lucent.Common.Scoring;
 using Lucent.Common.Storage;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -28,7 +25,6 @@ namespace Lucent.Common.Bidding
         bool _isBudgetExhausted;
 
         ILogger<CampaignBidder> _log;
-        IScoringService _scoringService;
         IBudgetManager _budgetManager;
         IBudgetCache _budgetCache;
         LocalBudget _campaignBudget;
@@ -42,23 +38,35 @@ namespace Lucent.Common.Bidding
         /// </summary>
         /// <param name="c"></param>
         /// <param name="logger"></param>
-        /// <param name="scoringService"></param>
         /// <param name="budgetManager"></param>
         /// <param name="watcher"></param>
         /// <param name="storageManager"></param>
         /// <param name="budgetCache"></param>
-        public CampaignBidder(Campaign c, ILogger<CampaignBidder> logger, IScoringService scoringService, IBudgetManager budgetManager, IEntityWatcher watcher, IStorageManager storageManager, IBudgetCache budgetCache)
+        public CampaignBidder(Campaign c, ILogger<CampaignBidder> logger, IBudgetManager budgetManager, IEntityWatcher watcher, IStorageManager storageManager, IBudgetCache budgetCache)
         {
             _campaign = c;
+            _log = logger;
 
             // Ensure filter is hydrated
-            if (_campaign.BidFilter != null)
+            try
+            {
                 _campaign.IsFiltered = (_campaign.JsonFilters ?? new JsonFilter[0]).MergeFilter(_campaign.BidFilter).GenerateFilter();
-            if (_campaign.BidTargets != null)
-                _campaign.GetModifier = (_campaign.JsonTargets ?? new JsonFilter[0]).MergeTarget(_campaign.BidTargets).GenerateTargets();
+            }
+            catch (Exception e)
+            {
+                _campaign.IsFiltered = (r) => true;
+                _log.LogError(e, "failed to setup filters for {0}", _campaign.Name);
+            }
 
-            _log = logger;
-            _scoringService = scoringService;
+            try
+            {
+                _campaign.GetModifier = (_campaign.JsonTargets ?? new JsonFilter[0]).MergeTarget(_campaign.BidTargets, _log).GenerateTargets(_campaign.TargetCPM == 0 ? _campaign.MaxCPM / 2 : _campaign.TargetCPM);
+            }
+            catch (Exception e)
+            {
+                _log.LogError(e, "failed to setup targets for {0}", _campaign.Name);
+            }
+
             _budgetManager = budgetManager;
             _campaignId = c.Id;
             _budgetCache = budgetCache;
@@ -144,6 +152,9 @@ namespace Lucent.Common.Bidding
 
                 var modifier = _campaign.GetModifier(request);
 
+                // Track the bidder cpm
+                BidCounters.CampaignBidCPM.WithLabels(Campaign.Name).Observe(modifier);
+
                 var impList = new List<BidContext>();
                 var allMatched = true;
 
@@ -192,18 +203,10 @@ namespace Lucent.Common.Bidding
 
                 var ret = impList.Select(bidContext =>
                 {
-                    var cpm = Campaign.TargetCPM;
-                    if (cpm == 0)
-                        cpm = Campaign.MaxCPM / 2;
+                    var cpm = Math.Round(Math.Min(Campaign.MaxCPM, modifier), 5);
 
-                    // Score the request to figure out if the user is better or worse
-                    cpm += modifier;
-
-                    // Cap the cpm at the max
-                    cpm = Math.Round(Math.Min(Campaign.MaxCPM, cpm), 4);
-
-                    // Track the bidder cpm
-                    BidCounters.CampaignBidCPM.WithLabels(Campaign.Name).Observe(cpm);
+                    if (cpm < bidContext.Impression.BidFloor)
+                        BidCounters.NoBidReason.WithLabels("bid_too_low", Campaign.Name).Inc();
 
                     // Verify the limits on cpm
                     if (cpm >= bidContext.Impression.BidFloor && cpm <= Campaign.MaxCPM)
@@ -241,8 +244,6 @@ namespace Lucent.Common.Bidding
 
                 if (chk == 0 && ret.Length == 0)
                     BidCounters.NoBidReason.WithLabels("no_creative_match", Campaign.Name).Inc();
-                else
-                    BidCounters.NoBidReason.WithLabels("bid_too_low", Campaign.Name).Inc();
 
                 return ret;
             }

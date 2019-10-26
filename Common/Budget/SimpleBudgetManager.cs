@@ -48,7 +48,6 @@ namespace Lucent.Common.Budget
         /// <returns></returns>
         async Task HandleBudgetRequests(BudgetEventMessage budgetEvent)
         {
-            _log.LogInformation("Recieved budget event");
             BidCounters.BudgetRequests.WithLabels("response").Inc();
             var evt = budgetEvent.Body;
             try
@@ -75,8 +74,6 @@ namespace Lucent.Common.Budget
             {
                 if (_memcache.Get(entityId) != null)
                     return;
-
-                _log.LogInformation("Requesting budget for {0}", entityId);
 
                 _memcache.Set(entityId, new object(), new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(15) });
 

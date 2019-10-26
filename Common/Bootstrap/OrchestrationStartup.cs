@@ -33,7 +33,7 @@ namespace Lucent.Common.Bootstrap
         /// </summary>
         /// <param name="app"></param>
         /// <param name="env"></param>
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             app.UseCors("localhostPolicy");
 
@@ -81,6 +81,8 @@ namespace Lucent.Common.Bootstrap
             {
                 a.UseMiddleware<BudgetOrchestrator>();
             });
+
+            app.Map("/api/bidtest", (a) => a.UseMiddleware<BidTestMiddleware>());
 
             var cachePeriod = 600;
             var path = Path.Combine(Directory.GetCurrentDirectory(), Configuration.GetValue("ContentPath", "adcontent"));

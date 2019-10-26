@@ -32,5 +32,17 @@ namespace Lucent.Common.Storage
 
         /// <inheritdoc/>
         public override string ToString() => string.Join(".", RawValue());
+
+        /// <summary>
+        /// Implicitly cast guids to storage keys
+        /// </summary>
+        /// <param name="g"></param>
+        public static implicit operator StorageKey(Guid g) => new GuidStorageKey(g);
+
+        /// <summary>
+        /// Implicitly cast strings to storage keys
+        /// </summary>
+        /// <param name="s"></param>
+        public static implicit operator StorageKey(String s) => new StringStorageKey(s);
     }
 }

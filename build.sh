@@ -4,8 +4,8 @@ IMAGE_TAG=${2:-alpha}
 LUCENT_VERSION="$(cat VERSION).$IMAGE_TAG"
 
 echo 'Pulling latest dotnet images'
-docker pull telefrek/lucent-builder:2.2
-docker pull telefrek/aspnet-core-ffmpeg:2.2
+docker pull telefrek/lucent-builder:3.0
+docker pull telefrek/aspnet-core-ffmpeg:3.0
 
 docker image prune -f
 [[ ! -z "$(docker ps -aq)" ]] && docker rm -vf $(docker ps -qa)
@@ -22,9 +22,6 @@ docker tag telefrek/lucent-bidder:$LUCENT_VERSION telefrek/lucent-bidder:latest
 
 docker tag $(docker ps -a -f "label=component=orchestrator" -f "status=exited" --format "{{.Image}}") telefrek/lucent-orchestrator:$LUCENT_VERSION
 docker tag telefrek/lucent-orchestrator:$LUCENT_VERSION telefrek/lucent-orchestrator:latest
-
-docker tag $(docker ps -a -f "label=component=scoring" -f "status=exited" --format "{{.Image}}") telefrek/lucent-scoring:$LUCENT_VERSION
-docker tag telefrek/lucent-scoring:$LUCENT_VERSION telefrek/lucent-scoring:latest
 
 echo 'Pushing images'
 

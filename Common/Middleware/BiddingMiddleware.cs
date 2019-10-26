@@ -1,17 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Lucent.Common.Bidding;
-using Lucent.Common.Budget;
 using Lucent.Common.Caching;
 using Lucent.Common.Entities;
-using Lucent.Common.Entities.Events;
-using Lucent.Common.Events;
 using Lucent.Common.Exchanges;
 using Lucent.Common.Messaging;
 using Lucent.Common.OpenRTB;
@@ -20,8 +15,6 @@ using Lucent.Common.Storage;
 using Lucent.Common.UserManagement;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Primitives;
-using Newtonsoft.Json;
 using Prometheus;
 
 namespace Lucent.Common.Middleware
@@ -46,7 +39,9 @@ namespace Lucent.Common.Middleware
         });
         StorageCache _storageCache;
 
-
+        /**
+        The last request */
+        public static string LastRequest { get; set; } = "unknown";
 
         /// <summary>
         /// Default constructor
@@ -93,7 +88,16 @@ namespace Lucent.Common.Middleware
         {
             try
             {
-                var request = await _serializationContext.ReadAs<BidRequest>(httpContext);
+
+                var request = (BidRequest)null;
+
+                using (var ms = new MemoryStream())
+                {
+                    await httpContext.Request.Body.CopyToAsync(ms);
+                    LastRequest = Encoding.UTF8.GetString(ms.ToArray());
+                    ms.Seek(0, SeekOrigin.Begin);
+                    request = await _serializationContext.ReadFrom<BidRequest>(ms, false, SerializationFormat.JSON);
+                }
 
                 if (request == null)
                 {
@@ -104,6 +108,9 @@ namespace Lucent.Common.Middleware
 
                 // Track ad hosting
                 BidCounters.AdHost.WithLabels(request.App != null ? "app" : request.Site != null ? "site" : "unknown").Inc();
+                var source = request.App != null ? request.App.Name : request.Site != null ? request.Site.Name : null;
+                if (source != null && (request.Impressions ?? new Impression[0]).Length > 0)
+                    SourceCache.Sample(source, request.Impressions.First().BidFloor);
 
                 // Track some basic device metrics
                 if (request.Device != null)

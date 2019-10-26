@@ -89,26 +89,26 @@ namespace Lucent.Common.Storage.Test
 
             var bFilter = new BidTargets
             {
-                ImpressionTargets = new[] { new Target { Property = "BidCurrency", Value = "USD" }, new Target { Property = "Banner", TargetType = FilterType.HASVALUE, Modifier = -1d } },
-                GeoTargets = new[] { new Target { TargetType = FilterType.EQ, Property = "Country", Value = "CAN", Modifier = .2d } },
-                UserTargets = new[]{new Target { TargetType = FilterType.EQ, Property = "Gender", Value="M", Modifier = 0.0001},
-                new Target { TargetType = FilterType.EQ, Property = "Gender", Value="F", Modifier = .3d}}
+                ImpressionTargets = new[] { new Target { Property = "BidCurrency", Value = "USD", Modifier = 1 }, new Target { Property = "Banner", TargetType = FilterType.HASVALUE, Modifier = .5 } },
+                GeoTargets = new[] { new Target { TargetType = FilterType.EQ, Property = "Country", Value = "CAN", Modifier = 1.1d } },
+                UserTargets = new[]{new Target { TargetType = FilterType.EQ, Property = "Gender", Value="M", Modifier = 0.2},
+                new Target { TargetType = FilterType.EQ, Property = "Gender", Value="F"}}
             };
 
-            var f = bFilter.GenerateTargets();
+            var f = bFilter.GenerateTargets(1.5);
 
-            Assert.AreEqual(0d, f.Invoke(req), 0.001d, "No values set");
+            Assert.AreEqual(1.5 * .2, f.Invoke(req), 0.001d, "No values set");
 
             req.User.Geo = new Geo { Country = "CAN" };
 
-            Assert.AreEqual(0.2d, f.Invoke(req), 0.001d, "Value should have been positive");
+            Assert.AreEqual(1.5 * .2 * 1.1, f.Invoke(req), 0.001d, "Value should have been positive");
 
             req.Impressions.First().Banner = new Banner();
 
-            Assert.AreEqual(-0.8d, f.Invoke(req), 0.001d, "Value should have been negative");
+            Assert.AreEqual(1.5 * .2 * 1.1 * .5, f.Invoke(req), 0.001d, "Value should have been negative");
 
             req.User.Gender = "F";
-            Assert.AreEqual(-0.5d, f.Invoke(req), 0.001d, "Value should have been boosted by gender");
+            Assert.AreEqual(1.5 * 1.1 * .5, f.Invoke(req), 0.001d, "Value should have been boosted by gender");
         }
 
         [TestMethod]

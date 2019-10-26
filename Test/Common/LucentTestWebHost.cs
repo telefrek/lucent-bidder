@@ -26,23 +26,23 @@ namespace Lucent.Common.Test
             {
                 logBuilder.AddConsole();
             })
-            
+
             .UseStartup(typeof(TStartup))
             .UseSockets()
             .ConfigureServices(services =>
             {
                 if (typeof(TStartup) == typeof(OrchestrationStartup))
                 {
-                    
+
                     services.AddCors(options =>
                     {
                         options.AddPolicy("localhostPolicy",
                         bld =>
                         {
-                            bld.AllowAnyOrigin()
-                                .AllowAnyHeader()
-                                .AllowAnyMethod()
-                                .AllowCredentials();
+                            bld.AllowAnyHeader()
+                                    .AllowAnyMethod()
+                                    .AllowCredentials();
+                            bld.SetIsOriginAllowed((o) => true);
                         });
                     });
 
@@ -64,10 +64,10 @@ namespace Lucent.Common.Test
                 }
                 // Add ALL the services muhahahaha
                 services.AddLucentServices(new ConfigurationBuilder()
-                .AddEnvironmentVariables()
-                .AddJsonFile("appsettings.json", false, true)
-                .AddJsonFile("testsettings.json", true, true)
-                .Build(), true, true, true, true, true);
+                        .AddEnvironmentVariables()
+                        .AddJsonFile("appsettings.json", false, true)
+                        .AddJsonFile("testsettings.json", true, true)
+                        .Build(), true, true, true, true, true);
 
                 UpdateServices(services);
 
