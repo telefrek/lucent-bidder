@@ -1,7 +1,7 @@
-image:
-  repo: "cassandra"
-  tag: "3"
-  pullPolicy: IfNotPresent
+# image:
+#   repo: "cassandra"
+#   tag: "3"
+#   pullPolicy: IfNotPresent
   
 service:
   type: ClusterIP
@@ -34,6 +34,7 @@ config:
   ports:
     cql: 9042
     thrift: 9160
+    
 podLabels:
   component: cassandra
 
@@ -61,4 +62,20 @@ affinity:
             values:
             - cassandra
         topologyKey: kubernetes.io/hostname
-
+        
+exporter:
+  # If exporter is enabled this will create a ServiceMonitor by default as well
+  servicemonitor: true
+  enabled: true
+  image:
+    repo: criteord/cassandra_exporter
+    tag: 2.0.2
+  port: 5556
+  jvmOpts: ""
+  resources: {}
+    # limits:
+    #   cpu: 1
+    #   memory: 1Gi
+    # requests:
+    #   cpu: 1
+    #   memory: 1Gi

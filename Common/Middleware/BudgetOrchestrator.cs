@@ -77,13 +77,10 @@ namespace Lucent.Common.Middleware
         /// <returns></returns>
         public async Task InvokeAsync(HttpContext httpContext)
         {
-            _logger.LogInformation("Reading request");
             var request = await _serializationContext.ReadAs<BudgetRequest>(httpContext);
 
             if (request != null)
             {
-                _logger.LogInformation("Request : {0}", request.CorrelationId);
-
                 // Validate
                 var evt = new EntityEvent
                 {
@@ -99,7 +96,6 @@ namespace Lucent.Common.Middleware
                         await _budgetLock.WaitAsync();
                         try
                         {
-
                             var schedule = (BudgetSchedule)null;
                             var entityName = (string)null;
 
@@ -138,15 +134,11 @@ namespace Lucent.Common.Middleware
                                     var elapsed = DateTime.UtcNow.Subtract(status.LastUpdate).TotalMinutes;
                                     scheduleTable.Current = status.LastUpdate;
 
-                                    _logger.LogInformation("ScheduleTable: {0}:{1} {2}:{3} {4}", scheduleTable.Day, scheduleTable.IsNextDay, scheduleTable.Hour, scheduleTable.IsNextHour, scheduleTable.Current);
-
                                     if (schedule == null)
                                     {
                                         httpContext.Response.StatusCode = 400;
                                         return;
                                     }
-
-                                    _logger.LogInformation("Budget Elapsed: ({0} - {1} = {2}) [{3},{4},{5},{6},{7}]", DateTime.UtcNow, status.LastUpdate, elapsed, status.Spend, status.TotalSpend, schedule.HourlyCap, schedule.DailyCap, scheduleTable.Hour);
 
                                     if (status.TotalSpend < schedule.DailyCap || scheduleTable.IsNextDay)
                                     {
@@ -197,8 +189,6 @@ namespace Lucent.Common.Middleware
                                     }
                                 }
                             }
-                            else
-                                _logger.LogInformation("Scheduling not possible at hour {0}", scheduleTable.Hour);
 
 
                             var msg = _messageFactory.CreateMessage<BudgetEventMessage>();

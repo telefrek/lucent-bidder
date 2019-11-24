@@ -60,7 +60,8 @@ namespace Lucent.Common.Bidding
 
             try
             {
-                _campaign.GetModifier = (_campaign.JsonTargets ?? new JsonFilter[0]).MergeTarget(_campaign.BidTargets, _log).GenerateTargets(_campaign.TargetCPM == 0 ? _campaign.MaxCPM / 2 : _campaign.TargetCPM);
+                _log.LogInformation("Generating expression for : " + _campaign.Name);
+                _campaign.GetModifier = (_campaign.JsonTargets ?? new JsonFilter[0]).MergeTarget(_campaign.BidTargets, _log).GenerateTargets(_campaign.TargetCPM == 0 ? _campaign.MaxCPM / 2 : _campaign.TargetCPM, _log);
             }
             catch (Exception e)
             {
@@ -88,8 +89,6 @@ namespace Lucent.Common.Bidding
                         _isBudgetExhausted = true;
                         _log.LogWarning("Failed to sync campaign budget for {0}, stopping to be safe", _campaign.Name);
                     }
-
-                    _log.LogInformation("Budget change for campaign : {0} ({1})", _campaign.Name, _isBudgetExhausted);
                 }
             });
         }
@@ -203,7 +202,7 @@ namespace Lucent.Common.Bidding
 
                 var ret = impList.Select(bidContext =>
                 {
-                    var cpm = Math.Round(Math.Min(Campaign.MaxCPM, modifier), 5);
+                    var cpm = Math.Round(Math.Min(Campaign.MaxCPM, modifier), 6);
 
                     if (cpm < bidContext.Impression.BidFloor)
                         BidCounters.NoBidReason.WithLabels("bid_too_low", Campaign.Name).Inc();

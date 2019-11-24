@@ -50,5 +50,12 @@ namespace Lucent.Common.Entities
         /// <value></value>
         [SerializationProperty(6, "user")]
         public Target[] UserTargets { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
+        [SerializationProperty(7, "banner")]
+        public Target[] BannerTargets { get; set; }
     }
 }

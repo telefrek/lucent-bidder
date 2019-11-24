@@ -1,20 +1,10 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using Cassandra;
 using Lucent.Common.Entities;
 using Lucent.Common.Filters;
 using Lucent.Common.OpenRTB;
-using Lucent.Common.Serialization;
 using Lucent.Common.Test;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Lucent.Common.Storage.Test
@@ -92,10 +82,13 @@ namespace Lucent.Common.Storage.Test
                 ImpressionTargets = new[] { new Target { Property = "BidCurrency", Value = "USD", Modifier = 1 }, new Target { Property = "Banner", TargetType = FilterType.HASVALUE, Modifier = .5 } },
                 GeoTargets = new[] { new Target { TargetType = FilterType.EQ, Property = "Country", Value = "CAN", Modifier = 1.1d } },
                 UserTargets = new[]{new Target { TargetType = FilterType.EQ, Property = "Gender", Value="M", Modifier = 0.2},
-                new Target { TargetType = FilterType.EQ, Property = "Gender", Value="F"}}
+                new Target { TargetType = FilterType.EQ, Property = "Gender", Value="F"}},
+                BannerTargets = new[] { new Target { Property = "H", Value = 50, Modifier = .1 } }
             };
 
-            var f = bFilter.GenerateTargets(1.5);
+            var log = ServiceProvider.GetRequiredService<ILogger<FilterTests>>();
+
+            var f = bFilter.GenerateTargets(1.5, log);
 
             Assert.AreEqual(1.5 * .2, f.Invoke(req), 0.001d, "No values set");
 
@@ -109,6 +102,10 @@ namespace Lucent.Common.Storage.Test
 
             req.User.Gender = "F";
             Assert.AreEqual(1.5 * 1.1 * .5, f.Invoke(req), 0.001d, "Value should have been boosted by gender");
+
+            req.Impressions.First().Banner.H = 50;
+
+            Assert.AreEqual(1.5 * 1.1 * .5 * .1, f.Invoke(req), 0.001d, "Value should have been decreased by banner height");
         }
 
         [TestMethod]
@@ -142,7 +139,7 @@ namespace Lucent.Common.Storage.Test
         {
             var req = new BidRequest
             {
-                Impressions = new Impression[] { new Impression { ImpressionId = "test" } },
+                Impressions = new Impression[] { new Impression { ImpressionId = "test", Banner = new Banner { H = 5 } } },
                 User = new User { Gender = "M" }
             };
 
@@ -150,7 +147,8 @@ namespace Lucent.Common.Storage.Test
             {
                 ImpressionFilters = new[] { new Filter { Property = "BidCurrency", Value = "CAN" } },
                 UserFilters = new[] { new Filter { Property = "Gender", Value = "U" } },
-                GeoFilters = new[] { new Filter { FilterType = FilterType.HASVALUE, Property = "Country", Value = "CAN" } }
+                GeoFilters = new[] { new Filter { FilterType = FilterType.HASVALUE, Property = "Country", Value = "CAN" } },
+                BannerFilters = new[] { new Filter { FilterType = FilterType.EQ, Property = "H", Value = 50 } }
             };
 
 

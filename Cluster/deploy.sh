@@ -18,7 +18,7 @@ if [ "${1:-infra}" == "infra" ]; then
     helm repo update charts/stable
     sleep 10
 
-    helm upgrade --install --tiller-namespace=lucent --namespace=lucent cassandra ./charts/cassandra
+    helm upgrade --install --tiller-namespace=lucent --namespace=lucent -f ./charts/cassandra/values.yaml cassandra incubator/cassandra
     helm upgrade --install --tiller-namespace=lucent --namespace=lucent rabbitmq ./charts/rabbitmq-ha
 fi
 

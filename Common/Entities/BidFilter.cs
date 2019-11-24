@@ -50,5 +50,13 @@ namespace Lucent.Common.Entities
         /// <value></value>
         [SerializationProperty(6, "user")]
         public Filter[] UserFilters { get; set; }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
+        [SerializationProperty(7, "banner")]
+        public Filter[] BannerFilters { get; set; }
     }
 }

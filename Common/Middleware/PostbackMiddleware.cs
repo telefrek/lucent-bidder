@@ -119,7 +119,7 @@ namespace Lucent.Common.Middleware
                             cpm = bidContext.CPM;
                         // Update the exchange and campaign amounts
                         // TODO: handle errors
-                        var acpm = Math.Round(cpm / 1000d, 5);
+                        var acpm = Math.Round(cpm / 1000d, 6);
                         stats.CPM.Inc(acpm);
                         if (bidContext.Operation == BidOperation.Win)
                             stats.Wins.Inc(1);
@@ -134,6 +134,7 @@ namespace Lucent.Common.Middleware
 
                         foreach (var key in response.Keys)
                             metadata.Add(key, response[key]);
+                        metadata.Add("id", bidContext.BidId.ToString());
 
                         if (bidContext.Operation == BidOperation.Win)
                         {

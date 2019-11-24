@@ -120,6 +120,8 @@ namespace Lucent.Common.Budget
 
                 foreach (var row in await ExecuteAsync((detailed ?? false ? _getDetailedRangeStatement : _getRangeStatement).Bind(entityId, TimeUuid.Min(begin), TimeUuid.Max(next)), "get_ledger_range"))
                 {
+                    summary.Amount += row.GetValue<double>("amount");
+                                    summary.Bids++;
                     if (detailed ?? false && row.GetColumn("contents") != null)
                     {
                         try
@@ -137,9 +139,6 @@ namespace Lucent.Common.Budget
                                             summary.Metadata.Add(key, 0);
                                         summary.Metadata[key] += obj[key];
                                     }
-
-                                    summary.Amount += row.GetValue<double>("amount");
-                                    summary.Bids++;
                                 }
                                 else if (!(clickOnly ?? false))
                                 {
@@ -149,9 +148,6 @@ namespace Lucent.Common.Budget
                                             summary.Metadata.Add(key, 0);
                                         summary.Metadata[key] += obj[key];
                                     }
-
-                                    summary.Amount += row.GetValue<double>("amount");
-                                    summary.Bids++;
                                 }
                             }
                         }

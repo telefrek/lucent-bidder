@@ -4,10 +4,7 @@ using System.Collections.Generic;
 using Cassandra;
 using Lucent.Common.Serialization;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Microsoft.Extensions.DependencyInjection;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace Lucent.Common.Storage
 {

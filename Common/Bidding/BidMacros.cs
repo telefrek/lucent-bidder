@@ -171,6 +171,12 @@ namespace Lucent.Common.Bidding
         public static readonly string CREATIVE_GROUP = "{creative_group}";
 
         /// <summary>
+        /// name of the app or site
+        /// </summary>
+        /// <value></value>
+        public static readonly string SOURCE_NAME = "{source_name}";
+
+        /// <summary>
         /// Static collection of supported macros
         /// </summary>
         /// <value></value>
@@ -202,6 +208,7 @@ namespace Lucent.Common.Bidding
             USER_ID,
             CREATIVE_ID,
             CREATIVE_GROUP,
+            SOURCE_NAME,
         };
     }
 }

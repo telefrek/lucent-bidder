@@ -36,7 +36,8 @@ namespace Lucent.Common
                         s = s.Replace(token.ToString(), "");
                         break;
                     case "{pub_id}":
-                        s = s.Replace(token.ToString(), bidContext.Request.App != null ? bidContext.Request.App.Name ?? bidContext.Request.App.Id ?? "" : bidContext.Request.Site != null ? bidContext.Request.Site.Name ?? bidContext.Request.Site.Id ?? "" : "");
+                        var pub = bidContext.Request.App != null ? bidContext.Request.App.Publisher : bidContext.Request.Site != null ? bidContext.Request.Site.Publisher : null;
+                        s = s.Replace(token.ToString(), pub != null ? pub.Id ?? pub.Name ?? "" : "");
                         break;
                     case "{exc_id}":
                         s = s.Replace(token.ToString(), bidContext.ExchangeId.EncodeGuid());
@@ -110,6 +111,9 @@ namespace Lucent.Common
                         break;
                     case "{creative_group}":
                         s = s.Replace(token.ToString(), bidContext.Creative.Id);
+                        break;
+                    case "{source_name}":
+                        s = s.Replace(token.ToString(), bidContext.Request.App != null ? bidContext.Request.App.Name ?? bidContext.Request.App.Id ?? "" : bidContext.Request.Site != null ? bidContext.Request.Site.Name ?? bidContext.Request.Site.Id ?? "" : "");
                         break;
                     case "{" + QueryParameters.LUCENT_BID_CONTEXT_PARAMETER + "}":
                         s = s.Replace(token.ToString(), bidContext.GetOperationString(BidOperation.Action));

@@ -69,8 +69,9 @@ namespace Lucent.Common
         /// </summary>
         /// <param name="bidTarget"></param>
         /// <param name="targetCpm"></param>
+        /// <param name="log"></param>
         /// <returns></returns>
-        public static Func<BidRequest, double> GenerateTargets(this BidTargets bidTarget, double targetCpm)
+        public static Func<BidRequest, double> GenerateTargets(this BidTargets bidTarget, double targetCpm, ILogger log)
         {
             // Need our input parameter :)
             var bidParam = Expression.Parameter(typeof(BidRequest), "bid");
@@ -102,6 +103,19 @@ namespace Lucent.Common
                 foreach (var impTarget in bidTarget.ImpressionTargets)
                     bodyExp.Add(Expression.IfThen(impTarget.CreateExpression(impParam),
                         Expression.MultiplyAssign(fModifier, Expression.Constant(impTarget.Modifier.SafeModifier()))));
+
+                var bannerParam = Expression.Parameter(typeof(Banner), "banner");
+                var bannerProp = Expression.Property(impParam, "Banner");
+
+                var bannerExp = new List<Expression>();
+                if (bidTarget.BannerTargets != null)
+                {
+                    foreach (var bannerTarget in bidTarget.BannerTargets)
+                        bannerExp.Add(Expression.IfThen(bannerTarget.CreateExpression(bannerProp),
+                            Expression.MultiplyAssign(fModifier, Expression.Constant(bannerTarget.Modifier.SafeModifier()))));
+
+                    bodyExp.Add(Expression.IfThen(Expression.NotEqual(bannerProp, Expression.Constant(null)), Expression.Block(bannerExp)));
+                }
 
                 // Run the modifier on each impression
                 // foreach(var imp in impressions) { if(imp != null) { bodyExp }}
@@ -195,7 +209,7 @@ namespace Lucent.Common
                 var appProp = Expression.Property(bidParam, "App");
 
                 var bodyExp = new List<Expression>();
-                foreach (var appTarget in bidTarget.SiteTargets)
+                foreach (var appTarget in bidTarget.AppTargets)
                     bodyExp.Add(Expression.IfThen(appTarget.CreateExpression(appProp),
                         Expression.MultiplyAssign(fModifier, Expression.Constant(appTarget.Modifier.SafeModifier()))));
 
@@ -206,6 +220,8 @@ namespace Lucent.Common
             expList.Add(Expression.Label(ret, fModifier));
 
             var final = Expression.Block(new ParameterExpression[] { fModifier }, expList);
+
+            log.LogInformation("Target expression: {0}", typeof(Expression).GetProperty("DebugView", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(final) as string);
 
             var ftype = typeof(Func<,>).MakeGenericType(typeof(BidRequest), typeof(double));
             var comp = makeLambda.MakeGenericMethod(ftype).Invoke(null, new object[] { final, new ParameterExpression[] { bidParam } });
@@ -275,6 +291,15 @@ namespace Lucent.Common
                             Array.Resize(ref filters, filters.Length + 1);
                             filters[filters.Length - 1] = filter;
                             original.ImpressionFilters = filters;
+                        }
+                        break;
+                    case "banner":
+                        if (TryParseProperty<Banner>(filter, jsonObj))
+                        {
+                            var filters = original.BannerFilters ?? new Filter[0];
+                            Array.Resize(ref filters, filters.Length + 1);
+                            filters[filters.Length - 1] = filter;
+                            original.BannerFilters = filters;
                         }
                         break;
                     case "user":
@@ -359,6 +384,15 @@ namespace Lucent.Common
                                 Array.Resize(ref filters, filters.Length + 1);
                                 filters[filters.Length - 1] = filter;
                                 original.ImpressionTargets = filters;
+                            }
+                            break;
+                        case "banner":
+                            if (TryParseProperty<Banner>(filter, jsonObj))
+                            {
+                                var filters = original.BannerTargets ?? new Target[0];
+                                Array.Resize(ref filters, filters.Length + 1);
+                                filters[filters.Length - 1] = filter;
+                                original.BannerTargets = filters;
                             }
                             break;
                         case "user":
